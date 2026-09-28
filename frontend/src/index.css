@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
   --color-ecoplaza-primary: #1f7a4d;
   --color-ecoplaza-primary-dark: #155d3a;
   --color-ecoplaza-secondary: #2cb67d;
@@ -15,4 +17,7 @@
 
   --color-ecoplaza-warning: #d99a16;
   --color-ecoplaza-danger: #c94a4a;
+}
+body {
+  font-family: var(--font-sans);
 }
