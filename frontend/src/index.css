@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ecoplaza-primary: #1f7a4d;
+  --color-ecoplaza-primary-dark: #155d3a;
+  --color-ecoplaza-secondary: #2cb67d;
+  --color-ecoplaza-accent: #1f9d8a;
+
+  --color-ecoplaza-background: #f3f8f5;
+  --color-ecoplaza-surface: #ffffff;
+  --color-ecoplaza-border: #d8e4dc;
+
+  --color-ecoplaza-text: #18332a;
+  --color-ecoplaza-text-muted: #66776f;
+
+  --color-ecoplaza-warning: #d99a16;
+  --color-ecoplaza-danger: #c94a4a;
+}
