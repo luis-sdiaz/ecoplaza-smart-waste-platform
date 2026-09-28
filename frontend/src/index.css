@@ -19,5 +19,10 @@
   --color-ecoplaza-danger: #c94a4a;
 }
 body {
+  margin: 0;
+  min-width: 1024px;
+  min-height: 100vh;
   font-family: var(--font-sans);
+  background-color: var(--color-ecoplaza-background);
+  color: var(--color-ecoplaza-text);
 }
