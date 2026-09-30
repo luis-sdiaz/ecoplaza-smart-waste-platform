@@ -1,3 +1,4 @@
+import SensorStatusCard from "../components/SensorStatusCard";
 import MetricCard from "../components/MetricCard";
 function DashboardPage() {
   return (
@@ -40,6 +41,40 @@ function DashboardPage() {
           value="$2.480.000"
           description="Valor acumulado por ventas"
         />
+      </div>
+      <div className="mt-8">
+        <div>
+          <h2 className="text-lg font-semibold text-ecoplaza-text">
+            Estado de sensores
+          </h2>
+
+          <p className="mt-1 text-sm text-ecoplaza-text-muted">
+            Monitoreo actual de los contenedores registrados.
+          </p>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <SensorStatusCard
+            name="Contenedor 01"
+            category="Residuos orgánicos"
+            fillLevel={68}
+            status="Activo"
+          />
+
+          <SensorStatusCard
+            name="Contenedor 02"
+            category="Residuos reciclables"
+            fillLevel={42}
+            status="Activo"
+          />
+
+          <SensorStatusCard
+            name="Contenedor 03"
+            category="Residuos no aprovechables"
+            fillLevel={81}
+            status="Activo"
+          />
+        </div>
       </div>
     </section>
   );
