@@ -1,9 +1,10 @@
 import AppLayout from "./layouts/AppLayout";
+import DashboardPage from "./pages/DashboardPage";
 
 function App() {
   return (
     <AppLayout>
-      <h1>EcoPlaza</h1>
+      <DashboardPage />
     </AppLayout>
   );
 }
