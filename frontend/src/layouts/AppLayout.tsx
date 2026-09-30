@@ -7,10 +7,10 @@ interface AppLayoutProps {
 
 function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div>
+    <div className="flex min-h-screen bg-ecoplaza-background">
       <Sidebar />
 
-      <main>{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }
