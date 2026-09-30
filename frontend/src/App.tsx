@@ -1,8 +1,10 @@
+import AppLayout from "./layouts/AppLayout";
+
 function App() {
   return (
-    <main>
+    <AppLayout>
       <h1>EcoPlaza</h1>
-    </main>
+    </AppLayout>
   );
 }
 
