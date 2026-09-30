@@ -1,3 +1,4 @@
+import WasteSummaryCard from "../components/WasteSummaryCard";
 import SensorStatusCard from "../components/SensorStatusCard";
 import MetricCard from "../components/MetricCard";
 function DashboardPage() {
@@ -73,6 +74,33 @@ function DashboardPage() {
             category="Residuos no aprovechables"
             fillLevel={81}
             status="Activo"
+          />
+        </div>
+      </div>
+      <div className="mt-8">
+        <div>
+          <h2 className="text-lg font-semibold text-ecoplaza-text">
+            Residuos por categoría
+          </h2>
+
+          <p className="mt-1 text-sm text-ecoplaza-text-muted">
+            Distribución actual de los residuos registrados en EcoPlaza.
+          </p>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <WasteSummaryCard title="Orgánicos" amount="540 kg" percentage={43} />
+
+          <WasteSummaryCard
+            title="Reciclables"
+            amount="430 kg"
+            percentage={34}
+          />
+
+          <WasteSummaryCard
+            title="No aprovechables"
+            amount="278 kg"
+            percentage={23}
           />
         </div>
       </div>
