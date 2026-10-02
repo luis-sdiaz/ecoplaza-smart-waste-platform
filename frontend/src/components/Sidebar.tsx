@@ -10,6 +10,7 @@ import {
   Bot,
   Settings,
 } from "lucide-react";
+import { NavLink } from "react-router-dom";
 
 function Sidebar() {
   return (
@@ -23,6 +24,7 @@ function Sidebar() {
           <span className="block text-lg font-semibold text-ecoplaza-text">
             EcoPlaza
           </span>
+
           <span className="block text-xs text-ecoplaza-text-muted">
             Gestión inteligente
           </span>
@@ -30,20 +32,35 @@ function Sidebar() {
       </div>
 
       <nav>
-        <button
-          type="button"
-          className="flex w-full items-center gap-3 rounded-xl bg-ecoplaza-primary px-4 py-3 text-left text-sm font-medium text-white"
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            `flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-ecoplaza-primary text-white"
+                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+            }`
+          }
         >
           <House size={20} strokeWidth={2.2} />
           <span>Inicio</span>
-        </button>
-        <button
-          type="button"
-          className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+        </NavLink>
+
+        <NavLink
+          to="/sensors"
+          className={({ isActive }) =>
+            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-ecoplaza-primary text-white"
+                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+            }`
+          }
         >
           <SlidersHorizontal size={20} strokeWidth={2.2} />
           <span>Sensores</span>
-        </button>
+        </NavLink>
+
         <button
           type="button"
           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -51,6 +68,7 @@ function Sidebar() {
           <Recycle size={20} strokeWidth={2.2} />
           <span>Residuos</span>
         </button>
+
         <button
           type="button"
           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -58,6 +76,7 @@ function Sidebar() {
           <PackageOpen size={20} strokeWidth={2.2} />
           <span>Inventario</span>
         </button>
+
         <button
           type="button"
           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -65,6 +84,7 @@ function Sidebar() {
           <Users size={20} strokeWidth={2.2} />
           <span>Compradores</span>
         </button>
+
         <button
           type="button"
           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -72,6 +92,7 @@ function Sidebar() {
           <ShoppingCart size={20} strokeWidth={2.2} />
           <span>Ventas</span>
         </button>
+
         <button
           type="button"
           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -79,6 +100,7 @@ function Sidebar() {
           <ChartNoAxesCombined size={20} strokeWidth={2.2} />
           <span>Reportes</span>
         </button>
+
         <button
           type="button"
           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -86,6 +108,7 @@ function Sidebar() {
           <Bot size={20} strokeWidth={2.2} />
           <span>Asistente IA</span>
         </button>
+
         <button
           type="button"
           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
