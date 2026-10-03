@@ -1,23 +1,15 @@
 import WasteSummaryCard from "../components/WasteSummaryCard";
 import SensorStatusCard from "../components/SensorStatusCard";
 import MetricCard from "../components/MetricCard";
+import PageHeader from "../components/PageHeader";
 function DashboardPage() {
   return (
     <section className="p-8">
-      <div>
-        <p className="text-sm font-medium text-ecoplaza-primary">
-          Resumen general
-        </p>
-
-        <h1 className="mt-1 text-3xl font-semibold text-ecoplaza-text">
-          Panel de control
-        </h1>
-
-        <p className="mt-2 text-sm text-ecoplaza-text-muted">
-          Supervisa el estado general de EcoPlaza y la gestión inteligente de
-          residuos.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Resumen general"
+        title="Panel de control"
+        description="Supervisa el estado general de EcoPlaza y la gestión inteligente de residuos."
+      />
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard
           title="Residuos registrados"
