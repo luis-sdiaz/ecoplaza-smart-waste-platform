@@ -8,6 +8,7 @@ import SensorsPage from "./pages/SensorsPage";
 import WastePage from "./pages/WastePage";
 import ReportsPage from "./pages/ReportsPage";
 import AssistantPage from "./pages/AssistantPage";
+import SettingsPage from "./pages/SettingsPage";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/sales" element={<SalesPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/assistant" element={<AssistantPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </AppLayout>
   );
