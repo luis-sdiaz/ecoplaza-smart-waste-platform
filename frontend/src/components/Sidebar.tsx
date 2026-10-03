@@ -130,13 +130,19 @@ function Sidebar() {
           <ChartNoAxesCombined size={20} strokeWidth={2.2} />
           <span>Informes</span>
         </NavLink>
-        <button
-          type="button"
-          className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+        <NavLink
+          to="/assistant"
+          className={({ isActive }) =>
+            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-ecoplaza-primary text-white"
+                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+            }`
+          }
         >
           <Bot size={20} strokeWidth={2.2} />
           <span>Asistente IA</span>
-        </button>
+        </NavLink>
 
         <button
           type="button"

@@ -7,6 +7,7 @@ import SalesPage from "./pages/SalesPage";
 import SensorsPage from "./pages/SensorsPage";
 import WastePage from "./pages/WastePage";
 import ReportsPage from "./pages/ReportsPage";
+import AssistantPage from "./pages/AssistantPage";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/buyers" element={<BuyersPage />} />
         <Route path="/sales" element={<SalesPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/assistant" element={<AssistantPage />} />
       </Routes>
     </AppLayout>
   );
