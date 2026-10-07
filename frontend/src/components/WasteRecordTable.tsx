@@ -1,7 +1,9 @@
-interface WasteRecord {
+import { useTranslation } from "react-i18next";
+
+export interface WasteRecord {
   id: string;
   category: string;
-  weight: string;
+  weight: string | number;
   container: string;
   date: string;
   status: string;
@@ -14,21 +16,31 @@ interface WasteRecordTableProps {
 function WasteRecordTable({ records }: WasteRecordTableProps) {
   const { t } = useTranslation();
   const translateCategory = (value: string) =>
-    value === "Orgánicos"
+    value === "organic" || value === "Orgánicos"
       ? t("common.organic")
-      : value === "Reciclables"
+      : value === "recyclable" || value === "Reciclables"
         ? t("common.recyclable")
-        : value === "No aprovechables"
-          ? t("common.nonRecyclable")
+        :         value === "nonRecyclable"
+          ? t("common.wasteNonRecoverable")
+          : value === "No aprovechables"
+              ? t("common.nonRecyclable")
           : value;
   const translateStatus = (value: string) =>
-    value === "Disponible"
+    value === "available" || value === "Disponible"
       ? t("common.available")
-      : value === "Registrado"
+      : value === "registered" || value === "Registrado"
         ? t("common.registered")
         : value;
   const translateContainer = (value: string) =>
-    value.replace(/^Contenedor\b/, t("waste.container"));
+    value === "container01"
+      ? `${t("waste.container")} 01`
+      : value === "container02"
+        ? `${t("waste.container")} 02`
+        : value === "container03"
+          ? `${t("waste.container")} 03`
+          : value.replace(/^Contenedor\b/, t("waste.container"));
+  const formatWeight = (value: string | number) =>
+    typeof value === "number" ? `${value} ${t("common.kg")}` : value;
   return (
     <div className="overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
       <table className="w-full">
@@ -67,7 +79,7 @@ function WasteRecordTable({ records }: WasteRecordTableProps) {
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text">
-                {record.weight}
+                {formatWeight(record.weight)}
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
@@ -92,4 +104,3 @@ function WasteRecordTable({ records }: WasteRecordTableProps) {
 }
 
 export default WasteRecordTable;
-import { useTranslation } from "react-i18next";

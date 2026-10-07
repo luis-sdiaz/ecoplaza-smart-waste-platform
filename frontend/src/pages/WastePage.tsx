@@ -1,9 +1,17 @@
+import { useState } from "react";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
-import WasteRecordTable from "../components/WasteRecordTable";
+import WasteRecordTable, {
+  type WasteRecord,
+} from "../components/WasteRecordTable";
+import WasteRegistrationModal, {
+  type WasteRegistrationValues,
+} from "../components/WasteRegistrationModal";
 import { useTranslation } from "react-i18next";
 
-const wasteRecords = [
+const WASTE_RECORDS_STORAGE_KEY = "ecoplaza-waste-records";
+
+const baseWasteRecords: WasteRecord[] = [
   {
     id: "RES-001",
     category: "Orgánicos",
@@ -37,8 +45,76 @@ const wasteRecords = [
     status: "Disponible",
   },
 ];
+
+function readSavedWasteRecords(): WasteRecord[] {
+  const storedRecords = localStorage.getItem(WASTE_RECORDS_STORAGE_KEY);
+  if (!storedRecords) {
+    return [];
+  }
+
+  try {
+    const parsedRecords: unknown = JSON.parse(storedRecords);
+    if (!Array.isArray(parsedRecords)) {
+      return [];
+    }
+
+    return parsedRecords.filter(
+      (record): record is WasteRecord =>
+        typeof record === "object" &&
+        record !== null &&
+        typeof record.id === "string" &&
+        typeof record.category === "string" &&
+        typeof record.weight === "number" &&
+        Number.isFinite(record.weight) &&
+        record.weight > 0 &&
+        typeof record.container === "string" &&
+        typeof record.date === "string" &&
+        record.status === "available",
+    );
+  } catch {
+    return [];
+  }
+}
+
+function getCurrentDate() {
+  const date = new Date();
+  return `${String(date.getDate()).padStart(2, "0")}/${String(
+    date.getMonth() + 1,
+  ).padStart(2, "0")}/${date.getFullYear()}`;
+}
+
 function WastePage() {
   const { t } = useTranslation();
+  const [savedRecords, setSavedRecords] = useState<WasteRecord[]>(
+    readSavedWasteRecords,
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const records = [...baseWasteRecords, ...savedRecords];
+
+  const handleRegisterWaste = (values: WasteRegistrationValues) => {
+    const highestId = records.reduce((highest, record) => {
+      const match = /^RES-(\d+)$/.exec(record.id);
+      return match ? Math.max(highest, Number(match[1])) : highest;
+    }, 0);
+    const newRecord: WasteRecord = {
+      id: `RES-${String(highestId + 1).padStart(3, "0")}`,
+      category: values.category,
+      weight: values.weight,
+      container: values.container,
+      date: getCurrentDate(),
+      status: "available",
+    };
+    const updatedRecords = [...savedRecords, newRecord];
+    setSavedRecords(updatedRecords);
+    localStorage.setItem(
+      WASTE_RECORDS_STORAGE_KEY,
+      JSON.stringify(updatedRecords),
+    );
+    setIsModalOpen(false);
+    setShowSuccess(true);
+  };
+
   return (
     <section className="p-8">
       <PageHeader
@@ -73,7 +149,8 @@ function WastePage() {
         />
       </div>
       <div className="mt-8">
-        <div>
+        <div className="flex items-end justify-between gap-4">
+          <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
             {t("waste.recentRecords")}
           </h2>
@@ -81,12 +158,38 @@ function WastePage() {
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
             {t("waste.recentDescription")}
           </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSuccess(false);
+              setIsModalOpen(true);
+            }}
+            className="shrink-0 rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-white"
+          >
+            + {t("waste.registerButton")}
+          </button>
         </div>
 
+        {showSuccess && (
+          <p
+            role="status"
+            className="mt-4 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-primary"
+          >
+            {t("waste.registerSuccess")}
+          </p>
+        )}
+
         <div className="mt-4">
-          <WasteRecordTable records={wasteRecords} />
+          <WasteRecordTable records={records} />
         </div>
       </div>
+      {isModalOpen && (
+        <WasteRegistrationModal
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleRegisterWaste}
+        />
+      )}
     </section>
   );
 }

@@ -10,6 +10,7 @@ const en = {
     organic: "Organic", recyclable: "Recyclable", nonRecyclable: "Non-recyclable",
     wasteOrganic: "Organic waste", wasteRecyclable: "Recyclable waste",
     wasteNonRecyclable: "Non-recyclable waste", kg: "kg", category: "Category",
+    wasteNonRecoverable: "Non-recoverable waste",
     status: "Status", quantity: "Quantity", date: "Date", material: "Material",
   },
   dashboard: {
@@ -39,7 +40,12 @@ const en = {
     totalRegistered: "Total registered", accumulatedWaste: "Accumulated waste",
     percentageOfTotal: "{{percentage}}% of total registered", recentRecords: "Recent records",
     recentDescription: "Latest waste records from EcoPlaza containers.",
-    record: "Record", container: "Container",
+    record: "Record", container: "Container", registerButton: "Register waste",
+    modalTitle: "Register new waste", cancel: "Cancel", register: "Register",
+    selectCategory: "Select a category.", selectContainer: "Select a container.",
+    invalidWeight: "Enter a valid weight greater than 0 kg.",
+    categoryField: "Category", containerField: "Container", weightField: "Weight",
+    registerSuccess: "Waste registered successfully.", selectOption: "Select an option",
   },
   inventory: {
     eyebrow: "Available material", title: "Inventory",

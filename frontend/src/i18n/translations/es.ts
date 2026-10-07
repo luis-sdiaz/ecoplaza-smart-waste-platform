@@ -10,6 +10,7 @@ const es = {
     organic: "Orgánicos", recyclable: "Reciclables", nonRecyclable: "No aprovechables",
     wasteOrganic: "Residuos orgánicos", wasteRecyclable: "Residuos reciclables",
     wasteNonRecyclable: "Residuos no aprovechables", kg: "kg", category: "Categoría",
+    wasteNonRecoverable: "Residuos no aprovechables",
     status: "Estado", quantity: "Cantidad", date: "Fecha", material: "Material",
   },
   dashboard: {
@@ -39,7 +40,12 @@ const es = {
     totalRegistered: "Total registrado", accumulatedWaste: "Residuos acumulados",
     percentageOfTotal: "{{percentage}}% del total registrado", recentRecords: "Registros recientes",
     recentDescription: "Últimos residuos registrados por los contenedores de EcoPlaza.",
-    record: "Registro", container: "Contenedor",
+    record: "Registro", container: "Contenedor", registerButton: "Registrar residuo",
+    modalTitle: "Registrar nuevo residuo", cancel: "Cancelar", register: "Registrar",
+    selectCategory: "Selecciona una categoría.", selectContainer: "Selecciona un contenedor.",
+    invalidWeight: "Ingresa un peso válido mayor que 0 kg.",
+    categoryField: "Categoría", containerField: "Contenedor", weightField: "Peso",
+    registerSuccess: "Residuo registrado correctamente.", selectOption: "Selecciona una opción",
   },
   inventory: {
     eyebrow: "Material disponible", title: "Inventario",
