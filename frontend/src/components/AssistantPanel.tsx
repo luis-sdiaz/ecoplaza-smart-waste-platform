@@ -1,6 +1,8 @@
 import { Bot, Send, Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 function AssistantPanel() {
+  const { t } = useTranslation();
   return (
     <article className="rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
       <div className="flex items-center justify-between border-b border-ecoplaza-border px-6 py-5">
@@ -11,17 +13,17 @@ function AssistantPanel() {
 
           <div>
             <h2 className="text-sm font-semibold text-ecoplaza-text">
-              EcoPlaza IA
+              {t("assistant.panelTitle")}
             </h2>
 
             <p className="mt-1 text-xs text-ecoplaza-text-muted">
-              Asistente para análisis de residuos
+              {t("assistant.panelDescription")}
             </p>
           </div>
         </div>
 
         <span className="rounded-full bg-ecoplaza-background px-3 py-1 text-xs font-medium text-ecoplaza-primary">
-          IA local
+          {t("assistant.local")}
         </span>
       </div>
 
@@ -33,9 +35,7 @@ function AssistantPanel() {
 
           <div className="rounded-2xl bg-ecoplaza-background px-4 py-3">
             <p className="text-sm leading-6 text-ecoplaza-text">
-              Hola. Puedo ayudarte a interpretar los datos de EcoPlaza,
-              consultar información sobre residuos y analizar el estado general
-              de la operación.
+              {t("assistant.greeting")}
             </p>
           </div>
         </div>
@@ -45,7 +45,7 @@ function AssistantPanel() {
         <div className="flex items-end gap-3 rounded-xl border border-ecoplaza-border bg-ecoplaza-background p-2">
           <textarea
             rows={2}
-            placeholder="Escribe una pregunta sobre EcoPlaza..."
+            placeholder={t("assistant.placeholder")}
             className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-ecoplaza-text outline-none placeholder:text-ecoplaza-text-muted"
           />
 

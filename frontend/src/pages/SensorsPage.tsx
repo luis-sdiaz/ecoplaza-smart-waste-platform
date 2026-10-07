@@ -1,81 +1,83 @@
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import SensorDeviceCard from "../components/SensorDeviceCard";
+import { useTranslation } from "react-i18next";
 
 function SensorsPage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Monitoreo IoT"
-        title="Sensores"
-        description="Supervisa los sensores y contenedores conectados a EcoPlaza."
+        eyebrow={t("sensors.eyebrow")}
+        title={t("sensors.title")}
+        description={t("sensors.description")}
       />
 
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard
-          title="Sensores registrados"
+          title={t("sensors.registered")}
           value="10"
-          description="Dispositivos configurados"
+          description={t("sensors.configuredDevices")}
         />
 
         <MetricCard
-          title="Sensores activos"
+          title={t("sensors.active")}
           value="8"
-          description="Actualmente conectados"
+          description={t("sensors.currentlyConnected")}
         />
 
         <MetricCard
-          title="Nivel promedio"
+          title={t("sensors.averageLevel")}
           value="64%"
-          description="Promedio de llenado"
+          description={t("sensors.averageFill")}
         />
 
         <MetricCard
-          title="Alertas"
+          title={t("sensors.alerts")}
           value="2"
-          description="Contenedores que requieren atención"
+          description={t("sensors.attentionRequired")}
         />
       </div>
       <div className="mt-8">
         <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
-            Dispositivos registrados
+            {t("sensors.devices")}
           </h2>
 
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
-            Estado actual y últimas lecturas de los contenedores conectados.
+            {t("sensors.deviceDescription")}
           </p>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-4">
           <SensorDeviceCard
-            name="Contenedor 01"
+            name={`${t("waste.container")} 01`}
             sensorId="SEN-001"
-            category="Residuos orgánicos"
+            category={t("common.wasteOrganic")}
             fillLevel={68}
             weight={18.4}
-            status="Activo"
-            lastUpdate="Hace 2 min"
+            status={t("common.active")}
+            lastUpdate={t("sensors.minutesAgo", { count: 2 })}
           />
 
           <SensorDeviceCard
-            name="Contenedor 02"
+            name={`${t("waste.container")} 02`}
             sensorId="SEN-002"
-            category="Residuos reciclables"
+            category={t("common.wasteRecyclable")}
             fillLevel={42}
             weight={12.7}
-            status="Activo"
-            lastUpdate="Hace 4 min"
+            status={t("common.active")}
+            lastUpdate={t("sensors.minutesAgo", { count: 4 })}
           />
 
           <SensorDeviceCard
-            name="Contenedor 03"
+            name={`${t("waste.container")} 03`}
             sensorId="SEN-003"
-            category="Residuos no aprovechables"
+            category={t("common.wasteNonRecyclable")}
             fillLevel={81}
             weight={23.1}
-            status="Activo"
-            lastUpdate="Hace 1 min"
+            status={t("common.active")}
+            lastUpdate={t("sensors.minutesAgo", { count: 1 })}
           />
         </div>
       </div>

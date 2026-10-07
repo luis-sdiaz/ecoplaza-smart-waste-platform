@@ -1,6 +1,7 @@
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import WasteRecordTable from "../components/WasteRecordTable";
+import { useTranslation } from "react-i18next";
 
 const wasteRecords = [
   {
@@ -37,47 +38,48 @@ const wasteRecords = [
   },
 ];
 function WastePage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Gestión de materiales"
-        title="Residuos"
-        description="Consulta y administra los residuos registrados en EcoPlaza."
+        eyebrow={t("waste.eyebrow")}
+        title={t("waste.title")}
+        description={t("waste.description")}
       />
 
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard
-          title="Total registrado"
+          title={t("waste.totalRegistered")}
           value="1.248 kg"
-          description="Residuos acumulados"
+          description={t("waste.accumulatedWaste")}
         />
 
         <MetricCard
-          title="Orgánicos"
+          title={t("common.organic")}
           value="540 kg"
-          description="43% del total registrado"
+          description={t("waste.percentageOfTotal", { percentage: 43 })}
         />
 
         <MetricCard
-          title="Reciclables"
+          title={t("common.recyclable")}
           value="430 kg"
-          description="34% del total registrado"
+          description={t("waste.percentageOfTotal", { percentage: 34 })}
         />
 
         <MetricCard
-          title="No aprovechables"
+          title={t("common.nonRecyclable")}
           value="278 kg"
-          description="23% del total registrado"
+          description={t("waste.percentageOfTotal", { percentage: 23 })}
         />
       </div>
       <div className="mt-8">
         <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
-            Registros recientes
+            {t("waste.recentRecords")}
           </h2>
 
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
-            Últimos residuos registrados por los contenedores de EcoPlaza.
+            {t("waste.recentDescription")}
           </p>
         </div>
 

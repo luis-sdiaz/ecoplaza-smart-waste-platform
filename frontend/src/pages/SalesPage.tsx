@@ -1,6 +1,7 @@
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import SalesTable from "../components/SalesTable";
+import { useTranslation } from "react-i18next";
 
 const sales = [
   {
@@ -41,47 +42,48 @@ const sales = [
   },
 ];
 function SalesPage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Comercialización"
-        title="Ventas"
-        description="Registra y consulta las ventas de materiales gestionadas en EcoPlaza."
+        eyebrow={t("sales.eyebrow")}
+        title={t("sales.title")}
+        description={t("sales.description")}
       />
 
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard
-          title="Ventas realizadas"
+          title={t("sales.completedSales")}
           value="4"
-          description="Operaciones registradas"
+          description={t("sales.operations")}
         />
 
         <MetricCard
-          title="Ingresos generados"
+          title={t("dashboard.revenue")}
           value="$2.480.000"
-          description="Valor acumulado por ventas"
+          description={t("dashboard.accumulatedSales")}
         />
 
         <MetricCard
-          title="Material vendido"
+          title={t("sales.soldMaterial")}
           value="312 kg"
-          description="Cantidad comercializada"
+          description={t("sales.quantitySold")}
         />
 
         <MetricCard
-          title="Compradores atendidos"
+          title={t("sales.servedBuyers")}
           value="3"
-          description="Compradores con ventas registradas"
+          description={t("sales.buyersWithSales")}
         />
       </div>
       <div className="mt-8">
         <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
-            Ventas registradas
+            {t("sales.records")}
           </h2>
 
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
-            Historial reciente de comercialización de materiales en EcoPlaza.
+            {t("sales.recordsDescription")}
           </p>
         </div>
 

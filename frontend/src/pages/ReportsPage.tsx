@@ -1,6 +1,7 @@
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import WasteDistributionChart from "../components/WasteDistributionChart";
+import { useTranslation } from "react-i18next";
 
 const wasteDistribution = [
   {
@@ -21,37 +22,38 @@ const wasteDistribution = [
 ];
 
 function ReportsPage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Análisis de datos"
-        title="Informes"
-        description="Consulta indicadores y análisis sobre la gestión de residuos de EcoPlaza."
+        eyebrow={t("reports.eyebrow")}
+        title={t("reports.title")}
+        description={t("reports.description")}
       />
 
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard
-          title="Residuos registrados"
+          title={t("dashboard.registeredWaste")}
           value="1.248 kg"
-          description="Acumulado general"
+          description={t("reports.generalAccumulated")}
         />
 
         <MetricCard
-          title="Material vendido"
+          title={t("sales.soldMaterial")}
           value="312 kg"
-          description="Cantidad comercializada"
+          description={t("sales.quantitySold")}
         />
 
         <MetricCard
-          title="Ingresos generados"
+          title={t("dashboard.revenue")}
           value="$2.480.000"
-          description="Acumulado por ventas"
+          description={t("dashboard.accumulatedSales")}
         />
 
         <MetricCard
-          title="Eficiencia comercial"
+          title={t("reports.commercialEfficiency")}
           value="25%"
-          description="Material vendido frente al registrado"
+          description={t("reports.soldCompared")}
         />
       </div>
       <div className="mt-8">

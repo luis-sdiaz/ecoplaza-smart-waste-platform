@@ -11,6 +11,11 @@ interface InventoryTableProps {
 }
 
 function InventoryTable({ items }: InventoryTableProps) {
+  const { t } = useTranslation();
+  const translateCategory = (value: string) =>
+    value === "Orgánicos" ? t("common.organic") : value === "Reciclables" ? t("common.recyclable") : value;
+  const translateStatus = (value: string) =>
+    value === "Disponible" ? t("common.available") : value === "Reservado" ? t("common.reserved") : value;
   const currencyFormatter = new Intl.NumberFormat("es-CO", {
     style: "currency",
     currency: "COP",
@@ -23,27 +28,27 @@ function InventoryTable({ items }: InventoryTableProps) {
         <thead className="bg-ecoplaza-background">
           <tr>
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Lote
+              {t("inventory.lot")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Categoría
+              {t("common.category")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Cantidad
+              {t("common.quantity")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Precio por kg
+              {t("inventory.pricePerKg")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Valor estimado
+              {t("inventory.estimatedValue")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Estado
+              {t("common.status")}
             </th>
           </tr>
         </thead>
@@ -56,7 +61,7 @@ function InventoryTable({ items }: InventoryTableProps) {
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text">
-                {item.category}
+                {translateCategory(item.category)}
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text">
@@ -73,7 +78,7 @@ function InventoryTable({ items }: InventoryTableProps) {
 
               <td className="px-5 py-4">
                 <span className="rounded-full bg-ecoplaza-background px-3 py-1 text-xs font-medium text-ecoplaza-primary">
-                  {item.status}
+                  {translateStatus(item.status)}
                 </span>
               </td>
             </tr>
@@ -85,3 +90,4 @@ function InventoryTable({ items }: InventoryTableProps) {
 }
 
 export default InventoryTable;
+import { useTranslation } from "react-i18next";

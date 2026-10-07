@@ -9,15 +9,18 @@ interface WasteDistributionChartProps {
 }
 
 function WasteDistributionChart({ data }: WasteDistributionChartProps) {
+  const { t } = useTranslation();
+  const translateCategory = (value: string) =>
+    value === "Orgánicos" ? t("common.organic") : value === "Reciclables" ? t("common.recyclable") : t("common.nonRecyclable");
   return (
     <article className="rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6">
       <div>
         <h2 className="text-lg font-semibold text-ecoplaza-text">
-          Distribución de residuos
+          {t("reports.distribution")}
         </h2>
 
         <p className="mt-1 text-sm text-ecoplaza-text-muted">
-          Participación de cada categoría sobre el total registrado.
+          {t("reports.distributionDescription")}
         </p>
       </div>
 
@@ -27,7 +30,7 @@ function WasteDistributionChart({ data }: WasteDistributionChartProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-ecoplaza-text">
-                  {item.label}
+                  {translateCategory(item.label)}
                 </p>
 
                 <p className="mt-1 text-xs text-ecoplaza-text-muted">
@@ -54,3 +57,4 @@ function WasteDistributionChart({ data }: WasteDistributionChartProps) {
 }
 
 export default WasteDistributionChart;
+import { useTranslation } from "react-i18next";

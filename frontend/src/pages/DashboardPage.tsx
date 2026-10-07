@@ -2,95 +2,97 @@ import WasteSummaryCard from "../components/WasteSummaryCard";
 import SensorStatusCard from "../components/SensorStatusCard";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
+import { useTranslation } from "react-i18next";
 function DashboardPage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Resumen general"
-        title="Panel de control"
-        description="Supervisa el estado general de EcoPlaza y la gestión inteligente de residuos."
+        eyebrow={t("dashboard.eyebrow")}
+        title={t("dashboard.title")}
+        description={t("dashboard.description")}
       />
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard
-          title="Residuos registrados"
+          title={t("dashboard.registeredWaste")}
           value="1.248 kg"
-          description="Total acumulado"
+          description={t("dashboard.totalAccumulated")}
         />
 
         <MetricCard
-          title="Sensores activos"
+          title={t("dashboard.activeSensors")}
           value="8"
-          description="De 10 sensores registrados"
+          description={t("dashboard.registeredSensors", { count: 10 })}
         />
 
         <MetricCard
-          title="Inventario disponible"
+          title={t("dashboard.availableInventory")}
           value="386 kg"
-          description="Material disponible para comercialización"
+          description={t("dashboard.materialForSale")}
         />
 
         <MetricCard
-          title="Ingresos generados"
+          title={t("dashboard.revenue")}
           value="$2.480.000"
-          description="Valor acumulado por ventas"
+          description={t("dashboard.accumulatedSales")}
         />
       </div>
       <div className="mt-8">
         <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
-            Estado de sensores
+            {t("dashboard.sensorStatus")}
           </h2>
 
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
-            Monitoreo actual de los contenedores registrados.
+            {t("dashboard.sensorMonitoring")}
           </p>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-4">
           <SensorStatusCard
-            name="Contenedor 01"
-            category="Residuos orgánicos"
+            name={`${t("waste.container")} 01`}
+            category={t("common.wasteOrganic")}
             fillLevel={68}
-            status="Activo"
+            status={t("common.active")}
           />
 
           <SensorStatusCard
-            name="Contenedor 02"
-            category="Residuos reciclables"
+            name={`${t("waste.container")} 02`}
+            category={t("common.wasteRecyclable")}
             fillLevel={42}
-            status="Activo"
+            status={t("common.active")}
           />
 
           <SensorStatusCard
-            name="Contenedor 03"
-            category="Residuos no aprovechables"
+            name={`${t("waste.container")} 03`}
+            category={t("common.wasteNonRecyclable")}
             fillLevel={81}
-            status="Activo"
+            status={t("common.active")}
           />
         </div>
       </div>
       <div className="mt-8">
         <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
-            Residuos por categoría
+            {t("dashboard.wasteByCategory")}
           </h2>
 
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
-            Distribución actual de los residuos registrados en EcoPlaza.
+            {t("dashboard.wasteDistribution")}
           </p>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-4">
-          <WasteSummaryCard title="Orgánicos" amount="540 kg" percentage={43} />
+          <WasteSummaryCard title={t("common.organic")} amount="540 kg" percentage={43} />
 
           <WasteSummaryCard
-            title="Reciclables"
+            title={t("common.recyclable")}
             amount="430 kg"
             percentage={34}
           />
 
           <WasteSummaryCard
-            title="No aprovechables"
+            title={t("common.nonRecyclable")}
             amount="278 kg"
             percentage={23}
           />

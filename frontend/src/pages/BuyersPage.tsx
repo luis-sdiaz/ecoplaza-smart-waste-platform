@@ -1,6 +1,7 @@
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import BuyerTable from "../components/BuyerTable";
+import { useTranslation } from "react-i18next";
 
 const buyers = [
   {
@@ -37,47 +38,48 @@ const buyers = [
   },
 ];
 function BuyersPage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Red comercial"
-        title="Compradores"
-        description="Gestiona los compradores interesados en los materiales disponibles de EcoPlaza."
+        eyebrow={t("buyers.eyebrow")}
+        title={t("buyers.title")}
+        description={t("buyers.description")}
       />
 
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard
-          title="Compradores registrados"
+          title={t("buyers.registered")}
           value="4"
-          description="Contactos comerciales registrados"
+          description={t("buyers.registeredContacts")}
         />
 
         <MetricCard
-          title="Compradores activos"
+          title={t("buyers.active")}
           value="3"
-          description="Con actividad reciente"
+          description={t("buyers.recentActivity")}
         />
 
         <MetricCard
-          title="Interesados en reciclables"
+          title={t("buyers.recyclableInterest")}
           value="2"
-          description="Compradores registrados"
+          description={t("buyers.registered")}
         />
 
         <MetricCard
-          title="Interesados en orgánicos"
+          title={t("buyers.organicInterest")}
           value="2"
-          description="Compradores registrados"
+          description={t("buyers.registered")}
         />
       </div>
       <div className="mt-8">
         <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
-            Compradores registrados
+            {t("buyers.records")}
           </h2>
 
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
-            Contactos interesados en los materiales disponibles de EcoPlaza.
+            {t("buyers.recordsDescription")}
           </p>
         </div>
 

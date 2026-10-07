@@ -1,13 +1,15 @@
 import AssistantPanel from "../components/AssistantPanel";
 import PageHeader from "../components/PageHeader";
+import { useTranslation } from "react-i18next";
 
 function AssistantPage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Inteligencia artificial"
-        title="Asistente IA"
-        description="Analiza información de EcoPlaza y obtén apoyo inteligente para la gestión de residuos."
+        eyebrow={t("assistant.eyebrow")}
+        title={t("assistant.title")}
+        description={t("assistant.description")}
       />
 
       <div className="mt-8">

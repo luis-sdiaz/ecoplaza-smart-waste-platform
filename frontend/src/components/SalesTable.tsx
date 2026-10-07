@@ -13,6 +13,11 @@ interface SalesTableProps {
 }
 
 function SalesTable({ sales }: SalesTableProps) {
+  const { t } = useTranslation();
+  const translateCategory = (value: string) =>
+    value === "Orgánicos" ? t("common.organic") : value === "Reciclables" ? t("common.recyclable") : value;
+  const translateStatus = (value: string) =>
+    value === "Completada" ? t("common.completed") : value;
   const currencyFormatter = new Intl.NumberFormat("es-CO", {
     style: "currency",
     currency: "COP",
@@ -25,31 +30,31 @@ function SalesTable({ sales }: SalesTableProps) {
         <thead className="bg-ecoplaza-background">
           <tr>
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Venta
+              {t("sales.sale")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Comprador
+              {t("buyers.buyer")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Material
+              {t("common.material")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Cantidad
+              {t("common.quantity")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Total
+              {t("sales.total")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Fecha
+              {t("common.date")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Estado
+              {t("common.status")}
             </th>
           </tr>
         </thead>
@@ -66,7 +71,7 @@ function SalesTable({ sales }: SalesTableProps) {
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text">
-                {sale.material}
+                {translateCategory(sale.material)}
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text">
@@ -83,7 +88,7 @@ function SalesTable({ sales }: SalesTableProps) {
 
               <td className="px-5 py-4">
                 <span className="rounded-full bg-ecoplaza-background px-3 py-1 text-xs font-medium text-ecoplaza-primary">
-                  {sale.status}
+                  {translateStatus(sale.status)}
                 </span>
               </td>
             </tr>
@@ -95,3 +100,4 @@ function SalesTable({ sales }: SalesTableProps) {
 }
 
 export default SalesTable;
+import { useTranslation } from "react-i18next";

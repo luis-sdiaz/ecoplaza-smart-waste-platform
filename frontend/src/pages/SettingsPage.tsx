@@ -1,13 +1,15 @@
 import PageHeader from "../components/PageHeader";
 import SettingsPanel from "../components/SettingsPanel";
+import { useTranslation } from "react-i18next";
 
 function SettingsPage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Preferencias del sistema"
-        title="Configuración"
-        description="Administra las preferencias generales y parámetros de EcoPlaza."
+        eyebrow={t("settings.eyebrow")}
+        title={t("settings.title")}
+        description={t("settings.description")}
       />
 
       <div className="mt-8">

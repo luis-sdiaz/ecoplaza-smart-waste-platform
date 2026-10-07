@@ -12,33 +12,48 @@ interface BuyerTableProps {
 }
 
 function BuyerTable({ buyers }: BuyerTableProps) {
+  const { t } = useTranslation();
+  const translateType = (value: string) =>
+    value === "Empresa recicladora"
+      ? t("buyers.recyclerCompany")
+      : value === "Productor de compost"
+        ? t("buyers.compostProducer")
+        : value === "Comerciante"
+          ? t("buyers.merchant")
+          : value === "Asociación"
+            ? t("buyers.association")
+            : value;
+  const translateCategory = (value: string) =>
+    value === "Orgánicos" ? t("common.organic") : value === "Reciclables" ? t("common.recyclable") : value;
+  const translateStatus = (value: string) =>
+    value === "Activo" ? t("common.active") : value === "Interesado" ? t("common.interested") : value;
   return (
     <div className="overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
       <table className="w-full">
         <thead className="bg-ecoplaza-background">
           <tr>
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Código
+              {t("buyers.code")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Comprador
+              {t("buyers.buyer")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Tipo
+              {t("buyers.type")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Interés
+              {t("buyers.interest")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Contacto
+              {t("buyers.contact")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              Estado
+              {t("common.status")}
             </th>
           </tr>
         </thead>
@@ -55,11 +70,11 @@ function BuyerTable({ buyers }: BuyerTableProps) {
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
-                {buyer.type}
+                {translateType(buyer.type)}
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text">
-                {buyer.interest}
+                {translateCategory(buyer.interest)}
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
@@ -68,7 +83,7 @@ function BuyerTable({ buyers }: BuyerTableProps) {
 
               <td className="px-5 py-4">
                 <span className="rounded-full bg-ecoplaza-background px-3 py-1 text-xs font-medium text-ecoplaza-primary">
-                  {buyer.status}
+                  {translateStatus(buyer.status)}
                 </span>
               </td>
             </tr>
@@ -80,3 +95,4 @@ function BuyerTable({ buyers }: BuyerTableProps) {
 }
 
 export default BuyerTable;
+import { useTranslation } from "react-i18next";

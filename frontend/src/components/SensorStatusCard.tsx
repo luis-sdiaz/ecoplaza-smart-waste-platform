@@ -11,6 +11,7 @@ function SensorStatusCard({
   fillLevel,
   status,
 }: SensorStatusCardProps) {
+  const { t } = useTranslation();
   return (
     <article className="rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
       <div className="flex items-start justify-between gap-4">
@@ -27,7 +28,7 @@ function SensorStatusCard({
 
       <div className="mt-5">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-ecoplaza-text-muted">Nivel de llenado</span>
+          <span className="text-ecoplaza-text-muted">{t("sensors.fillLevel")}</span>
 
           <span className="font-semibold text-ecoplaza-text">{fillLevel}%</span>
         </div>
@@ -44,3 +45,4 @@ function SensorStatusCard({
 }
 
 export default SensorStatusCard;
+import { useTranslation } from "react-i18next";

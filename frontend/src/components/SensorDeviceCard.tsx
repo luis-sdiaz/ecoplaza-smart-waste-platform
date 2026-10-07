@@ -17,6 +17,7 @@ function SensorDeviceCard({
   status,
   lastUpdate,
 }: SensorDeviceCardProps) {
+  const { t } = useTranslation();
   return (
     <article className="rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
       <div className="flex items-start justify-between gap-4">
@@ -35,7 +36,7 @@ function SensorDeviceCard({
         <p className="text-sm text-ecoplaza-text-muted">{category}</p>
 
         <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-ecoplaza-text-muted">Nivel de llenado</span>
+          <span className="text-ecoplaza-text-muted">{t("sensors.fillLevel")}</span>
 
           <span className="font-semibold text-ecoplaza-text">{fillLevel}%</span>
         </div>
@@ -49,7 +50,7 @@ function SensorDeviceCard({
 
         <div className="mt-5 flex items-center justify-between">
           <div>
-            <p className="text-xs text-ecoplaza-text-muted">Peso registrado</p>
+            <p className="text-xs text-ecoplaza-text-muted">{t("sensors.registeredWeight")}</p>
 
             <p className="mt-1 text-lg font-semibold text-ecoplaza-text">
               {weight} kg
@@ -57,7 +58,7 @@ function SensorDeviceCard({
           </div>
 
           <div className="text-right">
-            <p className="text-xs text-ecoplaza-text-muted">Última lectura</p>
+            <p className="text-xs text-ecoplaza-text-muted">{t("sensors.lastReading")}</p>
 
             <p className="mt-1 text-sm font-medium text-ecoplaza-text">
               {lastUpdate}
@@ -70,3 +71,4 @@ function SensorDeviceCard({
 }
 
 export default SensorDeviceCard;
+import { useTranslation } from "react-i18next";

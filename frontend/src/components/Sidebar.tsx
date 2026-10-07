@@ -11,8 +11,10 @@ import {
   Settings,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 function Sidebar() {
+  const { t } = useTranslation();
   return (
     <aside className="min-h-screen w-64 shrink-0 border-r border-ecoplaza-border bg-ecoplaza-surface p-6">
       <div className="mb-8 flex items-center gap-3">
@@ -26,7 +28,7 @@ function Sidebar() {
           </span>
 
           <span className="block text-xs text-ecoplaza-text-muted">
-            Gestión inteligente
+            {t("navigation.tagline")}
           </span>
         </div>
       </div>
@@ -44,7 +46,7 @@ function Sidebar() {
           }
         >
           <House size={20} strokeWidth={2.2} />
-          <span>Inicio</span>
+          <span>{t("navigation.home")}</span>
         </NavLink>
 
         <NavLink
@@ -58,7 +60,7 @@ function Sidebar() {
           }
         >
           <SlidersHorizontal size={20} strokeWidth={2.2} />
-          <span>Sensores</span>
+          <span>{t("navigation.sensors")}</span>
         </NavLink>
 
         <NavLink
@@ -72,7 +74,7 @@ function Sidebar() {
           }
         >
           <Recycle size={20} strokeWidth={2.2} />
-          <span>Residuos</span>
+          <span>{t("navigation.waste")}</span>
         </NavLink>
 
         <NavLink
@@ -86,7 +88,7 @@ function Sidebar() {
           }
         >
           <PackageOpen size={20} strokeWidth={2.2} />
-          <span>Inventario</span>
+          <span>{t("navigation.inventory")}</span>
         </NavLink>
 
         <NavLink
@@ -100,7 +102,7 @@ function Sidebar() {
           }
         >
           <Users size={20} strokeWidth={2.2} />
-          <span>Compradores</span>
+          <span>{t("navigation.buyers")}</span>
         </NavLink>
 
         <NavLink
@@ -114,7 +116,7 @@ function Sidebar() {
           }
         >
           <ShoppingCart size={20} strokeWidth={2.2} />
-          <span>Ventas</span>
+          <span>{t("navigation.sales")}</span>
         </NavLink>
 
         <NavLink
@@ -128,7 +130,7 @@ function Sidebar() {
           }
         >
           <ChartNoAxesCombined size={20} strokeWidth={2.2} />
-          <span>Informes</span>
+          <span>{t("navigation.reports")}</span>
         </NavLink>
         <NavLink
           to="/assistant"
@@ -141,7 +143,7 @@ function Sidebar() {
           }
         >
           <Bot size={20} strokeWidth={2.2} />
-          <span>Asistente IA</span>
+          <span>{t("navigation.assistant")}</span>
         </NavLink>
 
         <NavLink
@@ -155,7 +157,7 @@ function Sidebar() {
           }
         >
           <Settings size={20} strokeWidth={2.2} />
-          <span>Configuración</span>
+          <span>{t("navigation.settings")}</span>
         </NavLink>
       </nav>
     </aside>

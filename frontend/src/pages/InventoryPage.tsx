@@ -1,6 +1,7 @@
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import InventoryTable from "../components/InventoryTable";
+import { useTranslation } from "react-i18next";
 
 const inventoryItems = [
   {
@@ -34,47 +35,48 @@ const inventoryItems = [
 ];
 
 function InventoryPage() {
+  const { t } = useTranslation();
   return (
     <section className="p-8">
       <PageHeader
-        eyebrow="Material disponible"
-        title="Inventario"
-        description="Consulta los materiales disponibles para su aprovechamiento y comercialización."
+        eyebrow={t("inventory.eyebrow")}
+        title={t("inventory.title")}
+        description={t("inventory.description")}
       />
 
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard
-          title="Material en inventario"
+          title={t("inventory.inventoryMaterial")}
           value="386 kg"
-          description="Disponible y reservado"
+          description={t("inventory.availableReserved")}
         />
 
         <MetricCard
-          title="Lotes registrados"
+          title={t("inventory.lots")}
           value="4"
-          description="Registros activos en inventario"
+          description={t("inventory.activeInventory")}
         />
 
         <MetricCard
-          title="Categorías"
+          title={t("inventory.categories")}
           value="2"
-          description="Categorías disponibles en inventario"
+          description={t("inventory.availableCategories")}
         />
 
         <MetricCard
-          title="Valor estimado"
+          title={t("inventory.estimatedValue")}
           value="$731.800"
-          description="Estimación del inventario actual"
+          description={t("inventory.currentInventoryEstimate")}
         />
       </div>
       <div className="mt-8">
         <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
-            Lotes en inventario
+            {t("inventory.inventoryLots")}
           </h2>
 
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
-            Material registrado y preparado para su comercialización.
+            {t("inventory.lotsDescription")}
           </p>
         </div>
 
