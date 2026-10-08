@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Outlet, Route, Routes } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import BuyersPage from "./pages/BuyersPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -10,11 +10,19 @@ import ReportsPage from "./pages/ReportsPage";
 import AssistantPage from "./pages/AssistantPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import LoginPage from "./pages/LoginPage";
 
 function App() {
   return (
-    <AppLayout>
-      <Routes>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        element={
+          <AppLayout>
+            <Outlet />
+          </AppLayout>
+        }
+      >
         <Route path="/" element={<DashboardPage />} />
         <Route path="/sensors" element={<SensorsPage />} />
         <Route path="/waste" element={<WastePage />} />
@@ -25,8 +33,8 @@ function App() {
         <Route path="/assistant" element={<AssistantPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </AppLayout>
+      </Route>
+    </Routes>
   );
 }
 
