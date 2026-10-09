@@ -1,0 +1,49 @@
+.ecoplaza-login-card {
+  box-shadow: 0 24px 64px -28px rgb(21 93 58 / 18%), 0 4px 16px rgb(21 93 58 / 3%);
+}
+
+.ecoplaza-login-green-deep {
+  stop-color: color-mix(in srgb, var(--color-ecoplaza-primary-dark) 58%, #061b15);
+}
+
+.ecoplaza-login-visual {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 300px;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.ecoplaza-login-scene {
+  position: relative;
+  width: 100%;
+  height: clamp(300px, calc(100vh - 406px), 370px);
+  max-height: 100%;
+}
+
+.ecoplaza-login dl {
+  margin-bottom: 10px;
+}
+
+.ecoplaza-login dl > div {
+  padding-block: 8px;
+}
+
+.ecoplaza-login-scene::before {
+  position: absolute;
+  inset: 8% -4%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgb(44 182 125 / 10%), transparent 66%);
+  content: "";
+}
+
+.ecoplaza-login-scene-placeholder {
+  position: absolute;
+  inset: 23% 32% 14%;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 16px 16px 24px 24px;
+  background: linear-gradient(135deg, rgb(44 182 125 / 12%), rgb(21 93 58 / 20%));
+}
