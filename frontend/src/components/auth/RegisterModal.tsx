@@ -39,7 +39,11 @@ function validateRegistration(values: RegisterValues): RegisterErrors {
   }
 
   if (!values.password) errors.password = "Ingresa una contraseña.";
-  if (!values.confirmPassword) errors.confirmPassword = "Confirma tu contraseña.";
+  if (!values.confirmPassword) {
+    errors.confirmPassword = "Confirma tu contraseña.";
+  } else if (values.password && values.password !== values.confirmPassword) {
+    errors.confirmPassword = "Las contraseñas no coinciden.";
+  }
 
   return errors;
 }
