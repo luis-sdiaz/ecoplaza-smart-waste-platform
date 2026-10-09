@@ -103,7 +103,7 @@ function LoginPage() {
           aria-labelledby="login-title"
           className="relative flex items-center justify-center px-16 py-16"
         >
-          <div className="relative z-20 w-full max-w-[400px] pb-10">
+          <div className="relative z-20 w-full max-w-[400px] pb-1">
             <header>
               <h1
                 id="login-title"
@@ -207,6 +207,16 @@ function LoginPage() {
                 <ArrowRight size={18} strokeWidth={1.8} aria-hidden="true" />
               </button>
             </form>
+
+            <p className="mt-4 text-center text-sm leading-5 text-ecoplaza-text-muted">
+              ¿Aún no tienes una cuenta?{" "}
+              <button
+                type="button"
+                className="cursor-pointer rounded font-semibold text-ecoplaza-primary transition-colors duration-150 hover:text-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary"
+              >
+                Crear cuenta
+              </button>
+            </p>
           </div>
 
           <footer className="absolute right-8 bottom-7 left-8 z-20 text-center text-xs text-ecoplaza-text-muted">
