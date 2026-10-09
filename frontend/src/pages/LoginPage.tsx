@@ -1,5 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { ArrowRight, Eye, Leaf, Lock, Mail } from "lucide-react";
+import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
 
 const EcoContainer3D = lazy(() => import("../components/auth/EcoContainer3D"));
@@ -11,6 +12,8 @@ const loginMetrics = [
 ];
 
 function LoginPage() {
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+
   return (
     <main
       lang="es"
@@ -212,6 +215,7 @@ function LoginPage() {
               ¿Aún no tienes una cuenta?{" "}
               <button
                 type="button"
+                onClick={() => setIsRegisterOpen(true)}
                 className="cursor-pointer rounded font-semibold text-ecoplaza-primary transition-colors duration-150 hover:text-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary"
               >
                 Crear cuenta
@@ -224,6 +228,7 @@ function LoginPage() {
           </footer>
         </section>
       </div>
+      <RegisterModal isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} />
     </main>
   );
 }
