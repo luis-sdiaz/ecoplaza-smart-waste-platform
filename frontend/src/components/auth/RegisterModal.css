@@ -16,3 +16,7 @@
   background: rgb(10 30 20 / 22%);
   backdrop-filter: blur(2px);
 }
+
+.ecoplaza-register-modal input[aria-invalid="true"] {
+  border-color: var(--color-ecoplaza-danger);
+}
