@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowRight, Lock, Mail, User, X } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, User, X } from "lucide-react";
 import "./RegisterModal.css";
 
 type RegisterModalProps = {
@@ -54,11 +54,15 @@ function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
   const firstInputRef = useRef<HTMLInputElement>(null);
   const [values, setValues] = useState(initialValues);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const errors = hasSubmitted ? validateRegistration(values) : {};
 
   const handleClose = () => {
     setValues(initialValues);
     setHasSubmitted(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     onClose();
   };
 
@@ -129,43 +133,66 @@ function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
 
       <form className="mt-5" noValidate onSubmit={handleSubmit}>
         <div className="space-y-3">
-          {registerFields.map(({ name, label, type, autoComplete, placeholder, icon: Icon }, index) => (
-            <div key={name}>
-              <label
-                htmlFor={`${formId}-${name}`}
-                className="mb-1.5 block text-sm font-medium text-ecoplaza-text"
-              >
-                {label}
-              </label>
-              <div className="relative">
-                <Icon
-                  size={19}
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ecoplaza-text-muted"
-                />
-                <input
-                  ref={index === 0 ? firstInputRef : undefined}
-                  id={`${formId}-${name}`}
-                  name={name}
-                  type={type}
-                  autoComplete={autoComplete}
-                  placeholder={placeholder}
-                  required
-                  value={values[name]}
-                  onChange={(event) => setValues({ ...values, [name]: event.target.value })}
-                  aria-invalid={Boolean(errors[name])}
-                  aria-describedby={errors[name] ? `${formId}-${name}-error` : undefined}
-                  className="h-12 w-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-background/70 pr-4 pl-12 text-sm text-ecoplaza-text transition-colors placeholder:text-ecoplaza-text-muted/80 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
-                />
+          {registerFields.map(({ name, label, type, autoComplete, placeholder, icon: Icon }, index) => {
+            const isPassword = type === "password";
+            const isVisible = name === "password" ? showPassword : showConfirmPassword;
+            const VisibilityIcon = isVisible ? EyeOff : Eye;
+
+            return (
+              <div key={name}>
+                <label
+                  htmlFor={`${formId}-${name}`}
+                  className="mb-1.5 block text-sm font-medium text-ecoplaza-text"
+                >
+                  {label}
+                </label>
+                <div className="relative">
+                  <Icon
+                    size={19}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-ecoplaza-text-muted"
+                  />
+                  <input
+                    ref={index === 0 ? firstInputRef : undefined}
+                    id={`${formId}-${name}`}
+                    name={name}
+                    type={isPassword && isVisible ? "text" : type}
+                    autoComplete={autoComplete}
+                    placeholder={placeholder}
+                    required
+                    value={values[name]}
+                    onChange={(event) => setValues({ ...values, [name]: event.target.value })}
+                    aria-invalid={Boolean(errors[name])}
+                    aria-describedby={errors[name] ? `${formId}-${name}-error` : undefined}
+                    className={`h-12 w-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-background/70 ${isPassword ? "pr-12" : "pr-4"} pl-12 text-sm text-ecoplaza-text transition-colors placeholder:text-ecoplaza-text-muted/80 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary`}
+                  />
+                  {isPassword && (
+                    <button
+                      type="button"
+                      aria-label={`${isVisible ? "Ocultar" : "Mostrar"} ${name === "confirmPassword" ? "confirmación de contraseña" : "contraseña"}`}
+                      aria-controls={`${formId}-${name}`}
+                      onClick={() => {
+                        if (name === "password") {
+                          setShowPassword((visible) => !visible);
+                        } else {
+                          setShowConfirmPassword((visible) => !visible);
+                        }
+                      }}
+                      className="absolute top-1/2 right-2.5 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-ecoplaza-text-muted transition-colors hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                    >
+                      <VisibilityIcon size={19} strokeWidth={1.8} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+                {errors[name] && (
+                  <p id={`${formId}-${name}-error`} className="mt-1 text-xs leading-4 text-ecoplaza-danger">
+                    {errors[name]}
+                  </p>
+                )}
               </div>
-              {errors[name] && (
-                <p id={`${formId}-${name}-error`} className="mt-1 text-xs leading-4 text-ecoplaza-danger">
-                  {errors[name]}
-                </p>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <button

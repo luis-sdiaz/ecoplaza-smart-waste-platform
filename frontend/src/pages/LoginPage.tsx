@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { ArrowRight, Eye, Leaf, Lock, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Leaf, Lock, Mail } from "lucide-react";
 import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
 
@@ -13,6 +13,7 @@ const loginMetrics = [
 
 function LoginPage() {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <main
@@ -165,17 +166,24 @@ function LoginPage() {
                   <input
                     id="login-password"
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     placeholder="•••••••••••"
                     className="h-12 w-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-background/70 px-12 text-sm text-ecoplaza-text transition-colors placeholder:text-ecoplaza-text-muted/80 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
                   />
-                  <Eye
-                    size={19}
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                    className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-ecoplaza-text-muted"
-                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-controls="login-password"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    className="absolute top-1/2 right-2.5 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-ecoplaza-text-muted transition-colors hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  >
+                    {showPassword ? (
+                      <EyeOff size={19} strokeWidth={1.8} aria-hidden="true" />
+                    ) : (
+                      <Eye size={19} strokeWidth={1.8} aria-hidden="true" />
+                    )}
+                  </button>
                 </div>
               </div>
 
