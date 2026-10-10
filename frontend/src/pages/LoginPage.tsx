@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import type { FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, Leaf, Lock, Mail } from "lucide-react";
 import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
@@ -11,9 +12,53 @@ const loginMetrics = [
   { value: "386", unit: "kg", label: "Material disponible" },
 ];
 
+type LoginValues = {
+  email: string;
+  password: string;
+};
+
+type LoginErrors = Partial<Record<keyof LoginValues, string>>;
+
+function validateLogin(values: LoginValues): LoginErrors {
+  const errors: LoginErrors = {};
+  const email = values.email.trim();
+
+  if (!email) {
+    errors.email = "Ingresa tu correo electrónico.";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.email = "Ingresa un correo electrónico válido.";
+  }
+
+  if (!values.password) errors.password = "Ingresa tu contraseña.";
+
+  return errors;
+}
+
 function LoginPage() {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [values, setValues] = useState<LoginValues>({ email: "", password: "" });
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const errors = hasSubmitted ? validateLogin(values) : {};
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setHasSubmitted(true);
+
+    const validationErrors = validateLogin(values);
+    const firstInvalidField = (["email", "password"] as const).find((name) => validationErrors[name]);
+    if (firstInvalidField) {
+      const input = event.currentTarget.elements.namedItem(firstInvalidField);
+      if (input instanceof HTMLInputElement) {
+        // Wait for the error text and aria-describedby to render before focusing.
+        requestAnimationFrame(() => {
+          if (input.isConnected) input.focus({ preventScroll: true });
+        });
+      }
+    }
+
+    // Authentication is not connected yet; valid submissions stay on this page.
+  };
 
   return (
     <main
@@ -122,7 +167,8 @@ function LoginPage() {
 
             <form
               className="mt-7"
-              onSubmit={(event) => event.preventDefault()}
+              noValidate
+              onSubmit={handleSubmit}
             >
               <div>
                 <label
@@ -144,9 +190,19 @@ function LoginPage() {
                     type="email"
                     autoComplete="email"
                     placeholder="usuario@correo.com"
+                    required
+                    value={values.email}
+                    onChange={(event) => setValues({ ...values, email: event.target.value })}
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "login-email-error" : undefined}
                     className="h-12 w-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-background/70 pr-4 pl-12 text-sm text-ecoplaza-text transition-colors placeholder:text-ecoplaza-text-muted/80 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
                   />
                 </div>
+                {errors.email && (
+                  <p id="login-email-error" className="mt-1 text-xs leading-4 text-ecoplaza-danger">
+                    {errors.email}
+                  </p>
+                )}
               </div>
 
               <div className="mt-5">
@@ -169,6 +225,11 @@ function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     placeholder="•••••••••••"
+                    required
+                    value={values.password}
+                    onChange={(event) => setValues({ ...values, password: event.target.value })}
+                    aria-invalid={Boolean(errors.password)}
+                    aria-describedby={errors.password ? "login-password-error" : undefined}
                     className="h-12 w-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-background/70 px-12 text-sm text-ecoplaza-text transition-colors placeholder:text-ecoplaza-text-muted/80 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
                   />
                   <button
@@ -185,6 +246,11 @@ function LoginPage() {
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p id="login-password-error" className="mt-1 text-xs leading-4 text-ecoplaza-danger">
+                    {errors.password}
+                  </p>
+                )}
               </div>
 
               <div className="mt-5 flex items-center justify-between gap-4 text-xs">

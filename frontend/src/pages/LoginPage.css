@@ -2,6 +2,10 @@
   box-shadow: 0 24px 64px -28px rgb(21 93 58 / 18%), 0 4px 16px rgb(21 93 58 / 3%);
 }
 
+.ecoplaza-login-card input[aria-invalid="true"] {
+  border-color: var(--color-ecoplaza-danger);
+}
+
 .ecoplaza-login-green-deep {
   stop-color: color-mix(in srgb, var(--color-ecoplaza-primary-dark) 58%, #061b15);
 }
