@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, Leaf, Lock, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { verifyDemoCredentials } from "../auth/demoAuth";
+import { useAuth } from "../auth/AuthContext";
 import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
 
@@ -38,6 +38,7 @@ function validateLogin(values: LoginValues): LoginErrors {
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState<LoginValues>({ email: "", password: "" });
@@ -68,7 +69,7 @@ function LoginPage() {
       return;
     }
 
-    if (!verifyDemoCredentials(values.email, values.password)) {
+    if (!signIn(values.email, values.password)) {
       setHasCredentialError(true);
       return;
     }
