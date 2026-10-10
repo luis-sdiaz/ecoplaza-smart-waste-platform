@@ -1,6 +1,8 @@
 import { lazy, Suspense, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, Leaf, Lock, Mail } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { verifyDemoCredentials } from "../auth/demoAuth";
 import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
 
@@ -35,15 +37,23 @@ function validateLogin(values: LoginValues): LoginErrors {
 }
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState<LoginValues>({ email: "", password: "" });
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [hasCredentialError, setHasCredentialError] = useState(false);
   const errors = hasSubmitted ? validateLogin(values) : {};
+
+  const handleChange = (name: keyof LoginValues, value: string) => {
+    setValues((current) => ({ ...current, [name]: value }));
+    setHasCredentialError(false);
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setHasSubmitted(true);
+    setHasCredentialError(false);
 
     const validationErrors = validateLogin(values);
     const firstInvalidField = (["email", "password"] as const).find((name) => validationErrors[name]);
@@ -55,9 +65,15 @@ function LoginPage() {
           if (input.isConnected) input.focus({ preventScroll: true });
         });
       }
+      return;
     }
 
-    // Authentication is not connected yet; valid submissions stay on this page.
+    if (!verifyDemoCredentials(values.email, values.password)) {
+      setHasCredentialError(true);
+      return;
+    }
+
+    navigate("/");
   };
 
   return (
@@ -192,7 +208,7 @@ function LoginPage() {
                     placeholder="usuario@correo.com"
                     required
                     value={values.email}
-                    onChange={(event) => setValues({ ...values, email: event.target.value })}
+                    onChange={(event) => handleChange("email", event.target.value)}
                     aria-invalid={Boolean(errors.email)}
                     aria-describedby={errors.email ? "login-email-error" : undefined}
                     className="h-12 w-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-background/70 pr-4 pl-12 text-sm text-ecoplaza-text transition-colors placeholder:text-ecoplaza-text-muted/80 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
@@ -227,7 +243,7 @@ function LoginPage() {
                     placeholder="•••••••••••"
                     required
                     value={values.password}
-                    onChange={(event) => setValues({ ...values, password: event.target.value })}
+                    onChange={(event) => handleChange("password", event.target.value)}
                     aria-invalid={Boolean(errors.password)}
                     aria-describedby={errors.password ? "login-password-error" : undefined}
                     className="h-12 w-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-background/70 px-12 text-sm text-ecoplaza-text transition-colors placeholder:text-ecoplaza-text-muted/80 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
@@ -283,6 +299,11 @@ function LoginPage() {
                 Iniciar sesión
                 <ArrowRight size={18} strokeWidth={1.8} aria-hidden="true" />
               </button>
+              {hasCredentialError && (
+                <p role="alert" className="mt-3 text-center text-xs leading-4 text-ecoplaza-danger">
+                  El correo o la contraseña son incorrectos.
+                </p>
+              )}
             </form>
 
             <p className="mt-4 text-center text-sm leading-5 text-ecoplaza-text-muted">
