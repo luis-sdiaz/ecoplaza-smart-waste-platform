@@ -1,11 +1,51 @@
-import { CircleCheck, IdCard, Info, Leaf, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { CircleCheck, IdCard, Info, Leaf, Mail, Pencil, ShieldCheck, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
+import { isValidProfileName, normalizeProfileName } from "../auth/profileStorage";
 import "./ProfilePage.css";
 
 function ProfilePage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, updateUserName } = useAuth();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [nameError, setNameError] = useState<"validation" | "storage" | null>(null);
+
+  const startNameEditing = (): void => {
+    if (!user) return;
+
+    setDraftName(user.name);
+    setNameError(null);
+    setIsEditingName(true);
+  };
+
+  const cancelNameEditing = (): void => {
+    setDraftName(user?.name ?? "");
+    setNameError(null);
+    setIsEditingName(false);
+  };
+
+  const handleNameSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+
+    const normalizedName = normalizeProfileName(draftName);
+
+    if (!isValidProfileName(normalizedName)) {
+      setNameError("validation");
+      return;
+    }
+
+    if (!updateUserName(normalizedName)) {
+      setNameError("storage");
+      return;
+    }
+
+    setDraftName(normalizedName);
+    setNameError(null);
+    setIsEditingName(false);
+  };
 
   return (
     <section className="profile-page" aria-label={t("profile.title")}>
@@ -38,7 +78,55 @@ function ProfilePage() {
                 </div>
 
                 <div className="profile-identity-text">
-                  <h2 id="profile-user-name" title={user.name}>{user.name}</h2>
+                  {isEditingName ? (
+                    <>
+                      <h2 id="profile-user-name" className="profile-sr-only">{user.name}</h2>
+                      <form className="profile-name-form" onSubmit={handleNameSubmit} noValidate>
+                        <label className="profile-sr-only" htmlFor="profile-name-input">
+                          {t("profile.name")}
+                        </label>
+                        <div className="profile-name-editor">
+                          <input
+                            id="profile-name-input"
+                            type="text"
+                            value={draftName}
+                            onChange={(event) => {
+                              setDraftName(event.target.value);
+                              if (nameError) setNameError(null);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") cancelNameEditing();
+                            }}
+                            aria-invalid={nameError !== null}
+                            aria-describedby={nameError ? "profile-name-error" : undefined}
+                            autoComplete="name"
+                            autoFocus
+                          />
+                          <div className="profile-name-actions">
+                            <button type="submit" className="profile-name-save">
+                              {t("profile.save")}
+                            </button>
+                            <button type="button" className="profile-name-cancel" onClick={cancelNameEditing}>
+                              {t("profile.cancel")}
+                            </button>
+                          </div>
+                        </div>
+                        {nameError && (
+                          <p id="profile-name-error" className="profile-name-error" role="alert">
+                            {t(nameError === "validation" ? "profile.nameValidation" : "profile.nameSaveError")}
+                          </p>
+                        )}
+                      </form>
+                    </>
+                  ) : (
+                    <div className="profile-name-row">
+                      <h2 id="profile-user-name" title={user.name}>{user.name}</h2>
+                      <button type="button" className="profile-name-edit" onClick={startNameEditing}>
+                        <Pencil size={14} strokeWidth={1.8} aria-hidden="true" />
+                        {t("profile.editName")}
+                      </button>
+                    </div>
+                  )}
                   <p className="profile-account-type">
                     <span>{t("profile.accountType")}</span>
                     <strong>{t("profile.demo")}</strong>

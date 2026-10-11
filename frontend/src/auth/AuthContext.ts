@@ -11,6 +11,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   signIn: (email: string, password: string, remember: boolean) => boolean;
   signOut: () => void;
+  updateUserName: (name: string) => boolean;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
