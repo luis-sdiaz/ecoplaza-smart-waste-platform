@@ -6,10 +6,11 @@ import {
   readDemoSession,
   storeDemoSession,
 } from "./authStorage";
-import { verifyDemoCredentials } from "./demoAuth";
+import { DEMO_USER, verifyDemoCredentials } from "./demoAuth";
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(readDemoSession);
+  const user = isAuthenticated ? DEMO_USER : null;
 
   const signIn = (email: string, password: string, remember: boolean): boolean => {
     if (!verifyDemoCredentials(email, password)) return false;
@@ -25,7 +26,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, signIn, signOut }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,14 @@
+import type { AuthUser } from "./AuthContext";
+
 // Public demo credentials. This temporary frontend check provides no production security.
-const DEMO_EMAIL = "demo@ecoplaza.com";
+export const DEMO_USER: AuthUser = {
+  id: "demo-user",
+  name: "Usuario Demo",
+  email: "demo@ecoplaza.com",
+};
+
 const DEMO_PASSWORD = "EcoPlaza2026!";
 
 export function verifyDemoCredentials(email: string, password: string): boolean {
-  return email.trim().toLowerCase() === DEMO_EMAIL && password === DEMO_PASSWORD;
+  return email.trim().toLowerCase() === DEMO_USER.email && password === DEMO_PASSWORD;
 }
