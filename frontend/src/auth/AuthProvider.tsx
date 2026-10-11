@@ -4,40 +4,73 @@ import { AuthContext } from "./AuthContext";
 import { verifyDemoCredentials } from "./demoAuth";
 
 const DEMO_SESSION_STORAGE_KEY = "ecoplaza-demo-session";
+const DEMO_REMEMBERED_STORAGE_KEY = "ecoplaza-demo-remembered";
 
-function readDemoSession(): boolean {
+type StorageAccessor = () => Storage;
+
+function hasStorageMark(getStorage: StorageAccessor, key: string): boolean {
   try {
-    return sessionStorage.getItem(DEMO_SESSION_STORAGE_KEY) === "true";
+    return getStorage().getItem(key) === "true";
   } catch {
     return false;
   }
 }
 
-function storeDemoSession(isAuthenticated: boolean): void {
+function setStorageMark(getStorage: StorageAccessor, key: string): void {
   try {
-    if (isAuthenticated) {
-      sessionStorage.setItem(DEMO_SESSION_STORAGE_KEY, "true");
-    } else {
-      sessionStorage.removeItem(DEMO_SESSION_STORAGE_KEY);
-    }
+    getStorage().setItem(key, "true");
   } catch {
     return;
   }
 }
 
+function removeStorageMark(getStorage: StorageAccessor, key: string): void {
+  try {
+    getStorage().removeItem(key);
+  } catch {
+    return;
+  }
+}
+
+const getSessionStorage = () => sessionStorage;
+const getLocalStorage = () => localStorage;
+
+function readDemoSession(): boolean {
+  return (
+    hasStorageMark(getSessionStorage, DEMO_SESSION_STORAGE_KEY) ||
+    hasStorageMark(getLocalStorage, DEMO_REMEMBERED_STORAGE_KEY)
+  );
+}
+
+function storeDemoSession(remember: boolean): void {
+  if (remember) {
+    setStorageMark(getLocalStorage, DEMO_REMEMBERED_STORAGE_KEY);
+    removeStorageMark(getSessionStorage, DEMO_SESSION_STORAGE_KEY);
+    return;
+  }
+
+  setStorageMark(getSessionStorage, DEMO_SESSION_STORAGE_KEY);
+  removeStorageMark(getLocalStorage, DEMO_REMEMBERED_STORAGE_KEY);
+}
+
+function clearDemoSession(): void {
+  removeStorageMark(getSessionStorage, DEMO_SESSION_STORAGE_KEY);
+  removeStorageMark(getLocalStorage, DEMO_REMEMBERED_STORAGE_KEY);
+}
+
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(readDemoSession);
 
-  const signIn = (email: string, password: string): boolean => {
+  const signIn = (email: string, password: string, remember: boolean): boolean => {
     if (!verifyDemoCredentials(email, password)) return false;
 
-    storeDemoSession(true);
+    storeDemoSession(remember);
     setIsAuthenticated(true);
     return true;
   };
 
   const signOut = (): void => {
-    storeDemoSession(false);
+    clearDemoSession();
     setIsAuthenticated(false);
   };
 

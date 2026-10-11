@@ -69,7 +69,10 @@ function LoginPage() {
       return;
     }
 
-    if (!signIn(values.email, values.password)) {
+    const rememberInput = event.currentTarget.elements.namedItem("remember");
+    const remember = rememberInput instanceof HTMLInputElement && rememberInput.checked;
+
+    if (!signIn(values.email, values.password, remember)) {
       setHasCredentialError(true);
       return;
     }
