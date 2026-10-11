@@ -102,6 +102,11 @@ const en = {
     assignedCategory: "Assigned category", demoHelp: "This setting allows the same physical container to demonstrate the three categories managed by EcoPlaza.",
     appearance: "Appearance", appearanceDescription: "Customize EcoPlaza's visual theme.",
     lightTheme: "Light", darkTheme: "Dark", selectedTheme: "Selected theme",
+    resetPreferences: "Reset preferences",
+    resetPreferencesDescription: "Restore the default settings without deleting your personal data.",
+    resetDialogTitle: "Reset preferences?",
+    resetDialogDescription: "The default language, weight unit, demo container, and appearance preferences will be restored. Your personal data will not be deleted.",
+    resetCancel: "Cancel", resetConfirm: "Reset",
   },
   profile: {
     eyebrow: "Account", title: "My profile",

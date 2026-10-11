@@ -1,11 +1,58 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Moon, Sun } from "lucide-react";
+import { Check, Moon, RotateCcw, Sun } from "lucide-react";
 import i18n, { LANGUAGE_STORAGE_KEY } from "../i18n/config";
 import { useTheme } from "../theme/useTheme";
+import ResetPreferencesDialog from "./ResetPreferencesDialog";
+
+const WEIGHT_UNIT_STORAGE_KEY = "ecoplaza-weight-unit";
+const DEMO_CATEGORY_STORAGE_KEY = "ecoplaza-demo-category";
+
+const DEFAULT_LANGUAGE = "es";
+const DEFAULT_WEIGHT_UNIT = "kg";
+const DEFAULT_DEMO_CATEGORY = "organic";
+const DEFAULT_THEME = "light";
+
+type WeightUnit = typeof DEFAULT_WEIGHT_UNIT;
+type DemoCategory = "organic" | "recyclable" | "non-recyclable";
+
+function readWeightUnit(): WeightUnit {
+  try {
+    const unit = localStorage.getItem(WEIGHT_UNIT_STORAGE_KEY);
+    return unit === DEFAULT_WEIGHT_UNIT ? unit : DEFAULT_WEIGHT_UNIT;
+  } catch {
+    return DEFAULT_WEIGHT_UNIT;
+  }
+}
+
+function readDemoCategory(): DemoCategory {
+  try {
+    const category = localStorage.getItem(DEMO_CATEGORY_STORAGE_KEY);
+    return category === "organic" ||
+      category === "recyclable" ||
+      category === "non-recyclable"
+      ? category
+      : DEFAULT_DEMO_CATEGORY;
+  } catch {
+    return DEFAULT_DEMO_CATEGORY;
+  }
+}
+
+function storePreference(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // The current session remains usable when storage is unavailable.
+  }
+}
 
 function SettingsPanel() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>(readWeightUnit);
+  const [demoCategory, setDemoCategory] =
+    useState<DemoCategory>(readDemoCategory);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const language = event.target.value;
@@ -13,7 +60,46 @@ function SettingsPanel() {
       return;
     }
     void i18n.changeLanguage(language);
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    storePreference(LANGUAGE_STORAGE_KEY, language);
+  };
+
+  const handleWeightUnitChange = (
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ): void => {
+    if (event.target.value !== DEFAULT_WEIGHT_UNIT) return;
+
+    setWeightUnit(DEFAULT_WEIGHT_UNIT);
+    storePreference(WEIGHT_UNIT_STORAGE_KEY, DEFAULT_WEIGHT_UNIT);
+  };
+
+  const handleDemoCategoryChange = (
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ): void => {
+    const category = event.target.value;
+    if (
+      category !== "organic" &&
+      category !== "recyclable" &&
+      category !== "non-recyclable"
+    ) {
+      return;
+    }
+
+    setDemoCategory(category);
+    storePreference(DEMO_CATEGORY_STORAGE_KEY, category);
+  };
+
+  const handleResetPreferences = (): void => {
+    void i18n.changeLanguage(DEFAULT_LANGUAGE);
+    storePreference(LANGUAGE_STORAGE_KEY, DEFAULT_LANGUAGE);
+
+    setWeightUnit(DEFAULT_WEIGHT_UNIT);
+    storePreference(WEIGHT_UNIT_STORAGE_KEY, DEFAULT_WEIGHT_UNIT);
+
+    setDemoCategory(DEFAULT_DEMO_CATEGORY);
+    storePreference(DEMO_CATEGORY_STORAGE_KEY, DEFAULT_DEMO_CATEGORY);
+
+    setTheme(DEFAULT_THEME);
+    setIsResetDialogOpen(false);
   };
 
   return (
@@ -57,7 +143,8 @@ function SettingsPanel() {
 
             <select
               id="weight-unit"
-              defaultValue="kg"
+              value={weightUnit}
+              onChange={handleWeightUnitChange}
               className="mt-2 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text outline-none"
             >
               <option value="kg">{t("settings.kilograms")}</option>
@@ -85,7 +172,8 @@ function SettingsPanel() {
 
           <select
             id="demo-category"
-            defaultValue="organic"
+            value={demoCategory}
+            onChange={handleDemoCategoryChange}
             className="mt-2 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text outline-none"
           >
             <option value="organic">{t("common.wasteOrganic")}</option>
@@ -202,6 +290,37 @@ function SettingsPanel() {
           </label>
         </fieldset>
       </article>
+
+      <section className="ecoplaza-settings-card col-span-2 flex items-center justify-between gap-6 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ecoplaza-background text-ecoplaza-primary">
+            <RotateCcw size={20} strokeWidth={2} aria-hidden="true" />
+          </div>
+
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-ecoplaza-text">
+              {t("settings.resetPreferences")}
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-ecoplaza-text-muted">
+              {t("settings.resetPreferencesDescription")}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsResetDialogOpen(true)}
+          className="shrink-0 cursor-pointer rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+        >
+          {t("settings.resetPreferences")}
+        </button>
+      </section>
+
+      <ResetPreferencesDialog
+        isOpen={isResetDialogOpen}
+        onCancel={() => setIsResetDialogOpen(false)}
+        onConfirm={handleResetPreferences}
+      />
     </div>
   );
 }

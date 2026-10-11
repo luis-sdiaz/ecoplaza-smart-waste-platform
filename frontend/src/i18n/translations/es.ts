@@ -102,6 +102,11 @@ const es = {
     assignedCategory: "Categoría asignada", demoHelp: "Esta configuración permitirá usar el mismo contenedor físico para demostrar las tres categorías gestionadas por EcoPlaza.",
     appearance: "Apariencia", appearanceDescription: "Personaliza el tema visual de EcoPlaza.",
     lightTheme: "Claro", darkTheme: "Oscuro", selectedTheme: "Tema seleccionado",
+    resetPreferences: "Restablecer preferencias",
+    resetPreferencesDescription: "Restaura la configuración predeterminada sin eliminar tus datos personales.",
+    resetDialogTitle: "¿Restablecer preferencias?",
+    resetDialogDescription: "Se restaurarán las preferencias predeterminadas de idioma, unidad de peso, contenedor de demostración y apariencia. Tus datos personales no se eliminarán.",
+    resetCancel: "Cancelar", resetConfirm: "Restablecer",
   },
   profile: {
     eyebrow: "Cuenta", title: "Mi perfil",
