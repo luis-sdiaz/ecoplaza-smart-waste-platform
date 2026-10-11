@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+:root {
+  --ecoplaza-background: #f3f8f5;
+  --ecoplaza-surface: #ffffff;
+  --ecoplaza-surface-raised: #ffffff;
+  --ecoplaza-text-primary: #18332a;
+  --ecoplaza-text-secondary: #66776f;
+  --ecoplaza-border: #d8e4dc;
+  --ecoplaza-accent: #1f7a4d;
+  --ecoplaza-accent-hover: #155d3a;
+  --ecoplaza-interactive-hover: #e9f2ec;
+  --ecoplaza-interactive-focus: #1f9d8a;
+  --ecoplaza-shadow-card: 0 8px 24px rgb(24 51 42 / 8%);
+  --ecoplaza-shadow-overlay: 0 16px 48px rgb(24 51 42 / 16%);
+}
+
+[data-theme="dark"] {
+  --ecoplaza-background: #101a15;
+  --ecoplaza-surface: #18251e;
+  --ecoplaza-surface-raised: #203128;
+  --ecoplaza-text-primary: #e8f2eb;
+  --ecoplaza-text-secondary: #a6b8ac;
+  --ecoplaza-border: #34483b;
+  --ecoplaza-accent: #63c98d;
+  --ecoplaza-accent-hover: #83d9a4;
+  --ecoplaza-interactive-hover: #263b2e;
+  --ecoplaza-interactive-focus: #66d4bd;
+  --ecoplaza-shadow-card: 0 8px 24px rgb(0 0 0 / 24%);
+  --ecoplaza-shadow-overlay: 0 16px 48px rgb(0 0 0 / 40%);
+}
+
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 
