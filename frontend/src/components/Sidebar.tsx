@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { startTransition } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
@@ -21,8 +22,8 @@ function Sidebar() {
   const navigate = useNavigate();
 
   const handleSignOut = () => {
-    signOut();
-    navigate("/login", { replace: true });
+    navigate("/login", { replace: true, state: null });
+    startTransition(signOut);
   };
 
   return (

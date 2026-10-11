@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, Leaf, Lock, Mail } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
@@ -21,6 +21,35 @@ type LoginValues = {
 
 type LoginErrors = Partial<Record<keyof LoginValues, string>>;
 
+type InternalDestination = {
+  pathname: string;
+  search: string;
+  hash: string;
+};
+
+function getPostSignInDestination(state: unknown): InternalDestination | string {
+  if (typeof state !== "object" || state === null || !("from" in state)) return "/";
+
+  const from = state.from;
+  if (typeof from !== "object" || from === null) return "/";
+
+  const { pathname, search, hash } = from as Record<string, unknown>;
+  const isInternalPath =
+    typeof pathname === "string" &&
+    pathname.startsWith("/") &&
+    !pathname.startsWith("//") &&
+    !pathname.includes("\\") &&
+    !/^\/login(?:\/|$)/i.test(pathname);
+  const hasValidSearch =
+    typeof search === "string" && (search === "" || search.startsWith("?"));
+  const hasValidHash =
+    typeof hash === "string" && (hash === "" || hash.startsWith("#"));
+
+  if (!isInternalPath || !hasValidSearch || !hasValidHash) return "/";
+
+  return { pathname, search, hash };
+}
+
 function validateLogin(values: LoginValues): LoginErrors {
   const errors: LoginErrors = {};
   const email = values.email.trim();
@@ -37,6 +66,7 @@ function validateLogin(values: LoginValues): LoginErrors {
 }
 
 function LoginPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { signIn } = useAuth();
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -77,7 +107,10 @@ function LoginPage() {
       return;
     }
 
-    navigate("/");
+    navigate(getPostSignInDestination(location.state), {
+      replace: true,
+      state: null,
+    });
   };
 
   return (
