@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Camera, CircleCheck, IdCard, Info, Leaf, Mail, Pencil, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { isValidProfileName, normalizeProfileName } from "../auth/profileStorage";
 import { prepareProfileImage, ProfileImageError } from "../auth/profileImage";
+import SuccessToast from "../components/SuccessToast";
 import "./ProfilePage.css";
 
 type AvatarFeedback = {
@@ -17,6 +18,28 @@ type AvatarFeedback = {
     | "profile.avatarRemoved";
 };
 
+type ProfileSuccessOperation = "name" | "avatarUpdated" | "avatarRemoved";
+
+type ProfileSuccessToast = {
+  id: number;
+  operation: ProfileSuccessOperation;
+};
+
+const profileSuccessCopy = {
+  name: {
+    title: "profile.nameUpdatedToastTitle",
+    description: "profile.nameUpdatedToastDescription",
+  },
+  avatarUpdated: {
+    title: "profile.avatarUpdatedToastTitle",
+    description: "profile.avatarUpdatedToastDescription",
+  },
+  avatarRemoved: {
+    title: "profile.avatarRemovedToastTitle",
+    description: "profile.avatarRemovedToastDescription",
+  },
+} as const;
+
 function ProfilePage() {
   const { t } = useTranslation();
   const { user, updateUserName, updateUserAvatar, removeUserAvatar } = useAuth();
@@ -26,6 +49,17 @@ function ProfilePage() {
   const [nameError, setNameError] = useState<"validation" | "storage" | null>(null);
   const [isAvatarBusy, setIsAvatarBusy] = useState(false);
   const [avatarFeedback, setAvatarFeedback] = useState<AvatarFeedback | null>(null);
+  const [successToast, setSuccessToast] = useState<ProfileSuccessToast | null>(null);
+  const toastSequenceRef = useRef(0);
+
+  const showSuccessToast = (operation: ProfileSuccessOperation): void => {
+    toastSequenceRef.current += 1;
+    setSuccessToast({ id: toastSequenceRef.current, operation });
+  };
+
+  const closeSuccessToast = useCallback((): void => {
+    setSuccessToast(null);
+  }, []);
 
   const startNameEditing = (): void => {
     if (!user) return;
@@ -51,6 +85,13 @@ function ProfilePage() {
       return;
     }
 
+    if (normalizedName === user?.name) {
+      setDraftName(normalizedName);
+      setNameError(null);
+      setIsEditingName(false);
+      return;
+    }
+
     if (!updateUserName(normalizedName)) {
       setNameError("storage");
       return;
@@ -59,6 +100,7 @@ function ProfilePage() {
     setDraftName(normalizedName);
     setNameError(null);
     setIsEditingName(false);
+    showSuccessToast("name");
   };
 
   const handleAvatarSelection = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -79,6 +121,7 @@ function ProfilePage() {
       }
 
       setAvatarFeedback({ tone: "success", key: "profile.avatarUpdated" });
+      showSuccessToast("avatarUpdated");
     } catch (error) {
       const key =
         error instanceof ProfileImageError && error.code === "too-large"
@@ -92,6 +135,8 @@ function ProfilePage() {
   };
 
   const handleAvatarRemoval = async (): Promise<void> => {
+    if (!user?.avatarUrl) return;
+
     setAvatarFeedback(null);
     setIsAvatarBusy(true);
 
@@ -102,10 +147,15 @@ function ProfilePage() {
       }
 
       setAvatarFeedback({ tone: "success", key: "profile.avatarRemoved" });
+      showSuccessToast("avatarRemoved");
     } finally {
       setIsAvatarBusy(false);
     }
   };
+
+  const successCopy = successToast
+    ? profileSuccessCopy[successToast.operation]
+    : null;
 
   return (
     <section className="profile-page" aria-label={t("profile.title")}>
@@ -316,6 +366,16 @@ function ProfilePage() {
           <p role="status">{t("profile.unavailable")}</p>
         </div>
       )}
+
+      {successToast && successCopy ? (
+        <SuccessToast
+          key={successToast.id}
+          title={t(successCopy.title)}
+          description={t(successCopy.description)}
+          closeLabel={t("profile.dismissNotification")}
+          onClose={closeSuccessToast}
+        />
+      ) : null}
     </section>
   );
 }
