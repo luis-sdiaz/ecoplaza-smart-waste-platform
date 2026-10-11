@@ -7,7 +7,7 @@ function AssistantPanel() {
     <article className="rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
       <div className="flex items-center justify-between border-b border-ecoplaza-border px-6 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ecoplaza-primary text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-ecoplaza-primary text-ecoplaza-on-primary">
             <Bot size={22} strokeWidth={2.2} />
           </div>
 
@@ -51,7 +51,7 @@ function AssistantPanel() {
 
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-ecoplaza-primary text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-ecoplaza-primary text-ecoplaza-on-primary"
           >
             <Send size={18} />
           </button>

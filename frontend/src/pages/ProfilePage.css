@@ -30,6 +30,7 @@
   --profile-glow: rgb(44 182 125 / 8%);
   --profile-control-bg: rgb(255 255 255 / 86%);
   --profile-control-hover: rgb(229 245 236 / 92%);
+  --profile-on-accent: #ffffff;
   --profile-danger: #a33f45;
   --profile-danger-soft: #89575b;
   --profile-danger-border: rgb(163 63 69 / 20%);
@@ -45,8 +46,7 @@
   color: var(--profile-text);
 }
 
-/* Future opt-in theme hook. This class is intentionally not applied yet. */
-.profile-page.profile-theme-dark {
+[data-theme="dark"] .profile-page {
   --profile-bg: #07150f;
   --profile-panel-bg: rgb(6 24 18 / 88%);
   --profile-panel-glow-strong: rgb(22 130 84 / 34%);
@@ -73,6 +73,7 @@
   --profile-glow: rgb(42 152 96 / 11%);
   --profile-control-bg: rgb(3 26 19 / 72%);
   --profile-control-hover: rgb(28 108 72 / 54%);
+  --profile-on-accent: #062116;
   --profile-danger: #ffb7bd;
   --profile-danger-soft: #efb6ba;
   --profile-danger-border: rgb(255 183 189 / 24%);
@@ -517,7 +518,7 @@
 .profile-name-save {
   border: 1px solid var(--profile-accent);
   background: var(--profile-accent);
-  color: #fff;
+  color: var(--profile-on-accent);
   box-shadow: 0 6px 14px rgb(31 122 77 / 14%);
 }
 

@@ -28,18 +28,18 @@ function Sidebar() {
   };
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-ecoplaza-border bg-ecoplaza-surface p-6">
+    <aside className="ecoplaza-sidebar flex h-screen w-64 shrink-0 flex-col border-r border-ecoplaza-border bg-ecoplaza-surface p-6">
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ecoplaza-primary text-white">
+        <div className="ecoplaza-sidebar-logo flex h-11 w-11 items-center justify-center rounded-xl bg-ecoplaza-primary text-white">
           <Leaf size={24} strokeWidth={2.2} />
         </div>
 
         <div>
-          <span className="block text-lg font-semibold text-ecoplaza-text">
+          <span className="ecoplaza-sidebar-title block text-lg font-semibold text-ecoplaza-text">
             EcoPlaza
           </span>
 
-          <span className="block text-xs text-ecoplaza-text-muted">
+          <span className="ecoplaza-sidebar-secondary block text-xs text-ecoplaza-text-muted">
             {t("navigation.tagline")}
           </span>
         </div>
@@ -50,10 +50,10 @@ function Sidebar() {
           to="/"
           end
           className={({ isActive }) =>
-            `flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -64,10 +64,10 @@ function Sidebar() {
         <NavLink
           to="/sensors"
           className={({ isActive }) =>
-            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -78,10 +78,10 @@ function Sidebar() {
         <NavLink
           to="/waste"
           className={({ isActive }) =>
-            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -92,10 +92,10 @@ function Sidebar() {
         <NavLink
           to="/inventory"
           className={({ isActive }) =>
-            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -106,10 +106,10 @@ function Sidebar() {
         <NavLink
           to="/buyers"
           className={({ isActive }) =>
-            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -120,10 +120,10 @@ function Sidebar() {
         <NavLink
           to="/sales"
           className={({ isActive }) =>
-            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -134,10 +134,10 @@ function Sidebar() {
         <NavLink
           to="/reports"
           className={({ isActive }) =>
-            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -147,10 +147,10 @@ function Sidebar() {
         <NavLink
           to="/assistant"
           className={({ isActive }) =>
-            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -161,10 +161,10 @@ function Sidebar() {
         <NavLink
           to="/settings"
           className={({ isActive }) =>
-            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            `ecoplaza-sidebar-link mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
-                ? "bg-ecoplaza-primary text-white"
-                : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                ? "ecoplaza-sidebar-link-active bg-ecoplaza-primary text-white"
+                : "ecoplaza-sidebar-link-inactive text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             }`
           }
         >
@@ -174,19 +174,19 @@ function Sidebar() {
       </nav>
 
       {user && (
-        <div className="mt-6 min-w-0 border-t border-ecoplaza-border pt-3">
+        <div className="ecoplaza-sidebar-user-section mt-6 min-w-0 border-t border-ecoplaza-border pt-3">
           <NavLink
             to="/profile"
             aria-label={t("navigation.profile")}
             className={({ isActive }) =>
-              `flex min-w-0 items-center gap-3 rounded-xl p-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary motion-reduce:transition-none ${
+              `ecoplaza-sidebar-profile flex min-w-0 items-center gap-3 rounded-xl p-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary motion-reduce:transition-none ${
                 isActive
-                  ? "bg-ecoplaza-background"
+                  ? "ecoplaza-sidebar-profile-active bg-ecoplaza-background"
                   : "hover:bg-ecoplaza-background"
               }`
             }
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ecoplaza-primary/10 text-ecoplaza-primary-dark">
+            <div className="ecoplaza-sidebar-avatar flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ecoplaza-primary/10 text-ecoplaza-primary-dark">
               {user.avatarUrl ? (
                 <img
                   src={user.avatarUrl}
@@ -199,13 +199,13 @@ function Sidebar() {
             </div>
             <div className="min-w-0 flex-1 text-left">
               <p
-                className="truncate text-sm font-semibold text-ecoplaza-text"
+                className="ecoplaza-sidebar-user-name truncate text-sm font-semibold text-ecoplaza-text"
                 title={user.name}
               >
                 {user.name}
               </p>
               <p
-                className="mt-1 truncate text-xs text-ecoplaza-text-muted"
+                className="ecoplaza-sidebar-secondary mt-1 truncate text-xs text-ecoplaza-text-muted"
                 title={user.email}
               >
                 {user.email}
@@ -218,7 +218,7 @@ function Sidebar() {
       <button
         type="button"
         onClick={handleSignOut}
-        className="mt-3 flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors duration-150 hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary motion-reduce:transition-none"
+        className="ecoplaza-sidebar-sign-out mt-3 flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors duration-150 hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary motion-reduce:transition-none"
       >
         <LogOut size={20} strokeWidth={2.2} aria-hidden="true" />
         <span>{t("navigation.signOut")}</span>

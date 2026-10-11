@@ -148,7 +148,7 @@ function WasteRegistrationModal({
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-medium text-white"
+              className="rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-medium text-ecoplaza-on-primary"
             >
               {t("waste.register")}
             </button>

@@ -165,7 +165,7 @@ function WastePage() {
               setShowSuccess(false);
               setIsModalOpen(true);
             }}
-            className="shrink-0 rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-white"
+            className="shrink-0 rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary"
           >
             + {t("waste.registerButton")}
           </button>

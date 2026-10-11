@@ -149,15 +149,15 @@ function LoginPage() {
 
         <section
           aria-labelledby="login-brand-title"
-          className="relative flex min-h-0 flex-col px-9 py-7 text-ecoplaza-surface"
+          className="relative flex min-h-0 flex-col px-9 py-7 text-white"
         >
           <div className="relative z-20 flex items-center gap-3.5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-ecoplaza-surface/20 bg-ecoplaza-surface/10">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
               <Leaf size={26} strokeWidth={1.8} aria-hidden="true" />
             </div>
             <div>
               <p className="text-2xl font-semibold tracking-tight">EcoPlaza</p>
-              <p className="mt-1 text-xs text-ecoplaza-surface/75">
+              <p className="mt-1 text-xs text-white/75">
                 Tecnología + sostenibilidad
               </p>
             </div>
@@ -172,7 +172,7 @@ function LoginPage() {
               <br />
               de residuos
             </h2>
-            <p className="mt-3 max-w-[365px] text-[15px] leading-6 text-ecoplaza-surface/75">
+            <p className="mt-3 max-w-[365px] text-[15px] leading-6 text-white/75">
               Tecnología para una gestión de residuos más inteligente y
               sostenible.
             </p>
@@ -190,15 +190,15 @@ function LoginPage() {
             {loginMetrics.map(({ value, unit, label }) => (
               <div
                 key={label}
-                className="flex flex-col rounded-xl border border-ecoplaza-surface/10 bg-ecoplaza-surface/5 px-2.5 py-3"
+                className="flex flex-col rounded-xl border border-white/10 bg-white/5 px-2.5 py-3"
               >
-                <dt className="order-2 mt-1 text-[11px] leading-4 text-ecoplaza-surface/70">
+                <dt className="order-2 mt-1 text-[11px] leading-4 text-white/70">
                   {label}
                 </dt>
                 <dd className="text-[22px] leading-7 font-semibold tracking-tight tabular-nums">
                   {value}
                   {unit && (
-                    <span className="ml-1 text-sm font-normal text-ecoplaza-surface/80">
+                    <span className="ml-1 text-sm font-normal text-white/80">
                       {unit}
                     </span>
                   )}
@@ -338,7 +338,7 @@ function LoginPage() {
 
               <button
                 type="submit"
-                className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-ecoplaza-primary text-sm font-semibold text-ecoplaza-surface transition-colors hover:bg-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary"
+                className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-ecoplaza-primary text-sm font-semibold text-ecoplaza-on-primary transition-colors hover:bg-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary"
               >
                 Iniciar sesión
                 <ArrowRight size={18} strokeWidth={1.8} aria-hidden="true" />
