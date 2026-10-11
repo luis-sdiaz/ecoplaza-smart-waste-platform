@@ -174,25 +174,37 @@ function Sidebar() {
       </nav>
 
       {user && (
-        <section className="mt-6 flex min-w-0 items-center gap-3 border-t border-ecoplaza-border pt-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ecoplaza-primary/10 text-ecoplaza-primary-dark">
-            <UserRound size={21} strokeWidth={1.9} aria-hidden="true" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p
-              className="truncate text-sm font-semibold text-ecoplaza-text"
-              title={user.name}
-            >
-              {user.name}
-            </p>
-            <p
-              className="mt-1 truncate text-xs text-ecoplaza-text-muted"
-              title={user.email}
-            >
-              {user.email}
-            </p>
-          </div>
-        </section>
+        <div className="mt-6 min-w-0 border-t border-ecoplaza-border pt-3">
+          <NavLink
+            to="/profile"
+            aria-label={t("navigation.profile")}
+            className={({ isActive }) =>
+              `flex min-w-0 items-center gap-3 rounded-xl p-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary motion-reduce:transition-none ${
+                isActive
+                  ? "bg-ecoplaza-background"
+                  : "hover:bg-ecoplaza-background"
+              }`
+            }
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ecoplaza-primary/10 text-ecoplaza-primary-dark">
+              <UserRound size={21} strokeWidth={1.9} aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1 text-left">
+              <p
+                className="truncate text-sm font-semibold text-ecoplaza-text"
+                title={user.name}
+              >
+                {user.name}
+              </p>
+              <p
+                className="mt-1 truncate text-xs text-ecoplaza-text-muted"
+                title={user.email}
+              >
+                {user.email}
+              </p>
+            </div>
+          </NavLink>
+        </div>
       )}
 
       <button

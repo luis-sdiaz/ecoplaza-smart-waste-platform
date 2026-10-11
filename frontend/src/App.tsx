@@ -12,6 +12,7 @@ import AssistantPage from "./pages/AssistantPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import LoginPage from "./pages/LoginPage";
+import ProfilePage from "./pages/ProfilePage";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
