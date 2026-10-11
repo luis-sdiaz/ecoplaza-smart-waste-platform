@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, Leaf, Lock, Mail } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
@@ -68,12 +68,13 @@ function validateLogin(values: LoginValues): LoginErrors {
 function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { isAuthenticated, signIn } = useAuth();
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState<LoginValues>({ email: "", password: "" });
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [hasCredentialError, setHasCredentialError] = useState(false);
+  const [isCompletingSignIn, setIsCompletingSignIn] = useState(false);
   const errors = hasSubmitted ? validateLogin(values) : {};
 
   const handleChange = (name: keyof LoginValues, value: string) => {
@@ -102,7 +103,9 @@ function LoginPage() {
     const rememberInput = event.currentTarget.elements.namedItem("remember");
     const remember = rememberInput instanceof HTMLInputElement && rememberInput.checked;
 
+    setIsCompletingSignIn(true);
     if (!signIn(values.email, values.password, remember)) {
+      setIsCompletingSignIn(false);
       setHasCredentialError(true);
       return;
     }
@@ -112,6 +115,10 @@ function LoginPage() {
       state: null,
     });
   };
+
+  if (isAuthenticated && !isCompletingSignIn) {
+    return <Navigate to="/" replace state={null} />;
+  }
 
   return (
     <main
