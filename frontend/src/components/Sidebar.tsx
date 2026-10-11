@@ -9,12 +9,22 @@ import {
   ChartNoAxesCombined,
   Bot,
   Settings,
+  LogOut,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../auth/AuthContext";
 
 function Sidebar() {
   const { t } = useTranslation();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = () => {
+    signOut();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <aside className="min-h-screen w-64 shrink-0 border-r border-ecoplaza-border bg-ecoplaza-surface p-6">
       <div className="mb-8 flex items-center gap-3">
@@ -160,6 +170,15 @@ function Sidebar() {
           <span>{t("navigation.settings")}</span>
         </NavLink>
       </nav>
+
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="mt-8 flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+      >
+        <LogOut size={20} strokeWidth={2.2} aria-hidden="true" />
+        <span>{t("navigation.signOut")}</span>
+      </button>
     </aside>
   );
 }

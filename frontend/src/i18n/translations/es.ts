@@ -2,7 +2,7 @@ const es = {
   navigation: {
     home: "Inicio", sensors: "Sensores", waste: "Residuos", inventory: "Inventario",
     buyers: "Compradores", sales: "Ventas", reports: "Informes", assistant: "Asistente IA",
-    settings: "Configuración", tagline: "Gestión inteligente",
+    settings: "Configuración", tagline: "Gestión inteligente", signOut: "Cerrar sesión",
   },
   common: {
     active: "Activo", inactive: "Inactivo", available: "Disponible", reserved: "Reservado",

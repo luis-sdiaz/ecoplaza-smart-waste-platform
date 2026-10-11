@@ -13,8 +13,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const signOut = (): void => {
+    setIsAuthenticated(false);
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, signIn }}>
+    <AuthContext.Provider value={{ isAuthenticated, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
