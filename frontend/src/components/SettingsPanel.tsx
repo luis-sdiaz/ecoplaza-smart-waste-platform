@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Moon, RotateCcw, Sun } from "lucide-react";
 import i18n, { LANGUAGE_STORAGE_KEY } from "../i18n/config";
 import { useTheme } from "../theme/useTheme";
 import ResetPreferencesDialog from "./ResetPreferencesDialog";
+import SuccessToast from "./SuccessToast";
 
 const WEIGHT_UNIT_STORAGE_KEY = "ecoplaza-weight-unit";
 const DEMO_CATEGORY_STORAGE_KEY = "ecoplaza-demo-category";
@@ -38,11 +39,13 @@ function readDemoCategory(): DemoCategory {
   }
 }
 
-function storePreference(key: string, value: string): void {
+function storePreference(key: string, value: string): boolean {
   try {
     localStorage.setItem(key, value);
+    return true;
   } catch {
     // The current session remains usable when storage is unavailable.
+    return false;
   }
 }
 
@@ -53,6 +56,11 @@ function SettingsPanel() {
   const [demoCategory, setDemoCategory] =
     useState<DemoCategory>(readDemoCategory);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetToastId, setResetToastId] = useState<number | null>(null);
+
+  const closeResetToast = useCallback((): void => {
+    setResetToastId(null);
+  }, []);
 
   const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const language = event.target.value;
@@ -89,17 +97,39 @@ function SettingsPanel() {
   };
 
   const handleResetPreferences = (): void => {
-    void i18n.changeLanguage(DEFAULT_LANGUAGE);
-    storePreference(LANGUAGE_STORAGE_KEY, DEFAULT_LANGUAGE);
+    const resetPreferences = async (): Promise<void> => {
+      try {
+        await i18n.changeLanguage(DEFAULT_LANGUAGE);
 
-    setWeightUnit(DEFAULT_WEIGHT_UNIT);
-    storePreference(WEIGHT_UNIT_STORAGE_KEY, DEFAULT_WEIGHT_UNIT);
+        const languageStored = storePreference(
+          LANGUAGE_STORAGE_KEY,
+          DEFAULT_LANGUAGE,
+        );
 
-    setDemoCategory(DEFAULT_DEMO_CATEGORY);
-    storePreference(DEMO_CATEGORY_STORAGE_KEY, DEFAULT_DEMO_CATEGORY);
+        setWeightUnit(DEFAULT_WEIGHT_UNIT);
+        const weightUnitStored = storePreference(
+          WEIGHT_UNIT_STORAGE_KEY,
+          DEFAULT_WEIGHT_UNIT,
+        );
 
-    setTheme(DEFAULT_THEME);
-    setIsResetDialogOpen(false);
+        setDemoCategory(DEFAULT_DEMO_CATEGORY);
+        const demoCategoryStored = storePreference(
+          DEMO_CATEGORY_STORAGE_KEY,
+          DEFAULT_DEMO_CATEGORY,
+        );
+
+        setTheme(DEFAULT_THEME);
+        setIsResetDialogOpen(false);
+
+        if (languageStored && weightUnitStored && demoCategoryStored) {
+          setResetToastId((currentId) => (currentId ?? 0) + 1);
+        }
+      } catch {
+        return;
+      }
+    };
+
+    void resetPreferences();
   };
 
   return (
@@ -321,6 +351,16 @@ function SettingsPanel() {
         onCancel={() => setIsResetDialogOpen(false)}
         onConfirm={handleResetPreferences}
       />
+
+      {resetToastId !== null && (
+        <SuccessToast
+          key={resetToastId}
+          title={t("settings.resetSuccessTitle")}
+          description={t("settings.resetSuccessDescription")}
+          closeLabel={t("settings.dismissNotification")}
+          onClose={closeResetToast}
+        />
+      )}
     </div>
   );
 }

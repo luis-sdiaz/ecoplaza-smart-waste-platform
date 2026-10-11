@@ -107,6 +107,9 @@ const en = {
     resetDialogTitle: "Reset preferences?",
     resetDialogDescription: "The default language, weight unit, demo container, and appearance preferences will be restored. Your personal data will not be deleted.",
     resetCancel: "Cancel", resetConfirm: "Reset",
+    resetSuccessTitle: "Preferences reset",
+    resetSuccessDescription: "The default settings were restored successfully.",
+    dismissNotification: "Dismiss notification",
   },
   profile: {
     eyebrow: "Account", title: "My profile",
