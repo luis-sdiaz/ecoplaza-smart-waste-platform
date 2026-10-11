@@ -100,6 +100,8 @@ const en = {
     weightUnit: "Weight unit", kilograms: "Kilograms (kg)",
     demoContainer: "Demo container", demoDescription: "Define the category represented by the physical container.",
     assignedCategory: "Assigned category", demoHelp: "This setting allows the same physical container to demonstrate the three categories managed by EcoPlaza.",
+    appearance: "Appearance", appearanceDescription: "Customize EcoPlaza's visual theme.",
+    lightTheme: "Light", darkTheme: "Dark", selectedTheme: "Selected theme",
   },
   profile: {
     eyebrow: "Account", title: "My profile",

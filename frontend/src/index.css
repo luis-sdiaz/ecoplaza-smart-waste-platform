@@ -83,6 +83,15 @@ body {
   color: var(--color-ecoplaza-text);
 }
 
+[data-theme="light"] .ecoplaza-settings-card,
+[data-theme="light"] .ecoplaza-theme-option-inactive:not(:hover) {
+  border-color: color-mix(
+    in srgb,
+    var(--ecoplaza-border) 75%,
+    var(--ecoplaza-text-secondary)
+  );
+}
+
 [data-theme="dark"] .ecoplaza-app-layout,
 [data-theme="dark"] .ecoplaza-app-main {
   background-color: var(--ecoplaza-background);
