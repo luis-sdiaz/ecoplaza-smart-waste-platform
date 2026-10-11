@@ -10,6 +10,7 @@ import {
   Bot,
   Settings,
   LogOut,
+  UserRound,
 } from "lucide-react";
 import { startTransition } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -18,7 +19,7 @@ import { useAuth } from "../auth/AuthContext";
 
 function Sidebar() {
   const { t } = useTranslation();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = () => {
@@ -27,8 +28,8 @@ function Sidebar() {
   };
 
   return (
-    <aside className="min-h-screen w-64 shrink-0 border-r border-ecoplaza-border bg-ecoplaza-surface p-6">
-      <div className="mb-8 flex items-center gap-3">
+    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-ecoplaza-border bg-ecoplaza-surface p-6">
+      <div className="mb-6 flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ecoplaza-primary text-white">
           <Leaf size={24} strokeWidth={2.2} />
         </div>
@@ -44,12 +45,12 @@ function Sidebar() {
         </div>
       </div>
 
-      <nav>
+      <nav className="min-h-0 overflow-y-auto">
         <NavLink
           to="/"
           end
           className={({ isActive }) =>
-            `flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -63,7 +64,7 @@ function Sidebar() {
         <NavLink
           to="/sensors"
           className={({ isActive }) =>
-            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -77,7 +78,7 @@ function Sidebar() {
         <NavLink
           to="/waste"
           className={({ isActive }) =>
-            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -91,7 +92,7 @@ function Sidebar() {
         <NavLink
           to="/inventory"
           className={({ isActive }) =>
-            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -105,7 +106,7 @@ function Sidebar() {
         <NavLink
           to="/buyers"
           className={({ isActive }) =>
-            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -119,7 +120,7 @@ function Sidebar() {
         <NavLink
           to="/sales"
           className={({ isActive }) =>
-            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -133,7 +134,7 @@ function Sidebar() {
         <NavLink
           to="/reports"
           className={({ isActive }) =>
-            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -146,7 +147,7 @@ function Sidebar() {
         <NavLink
           to="/assistant"
           className={({ isActive }) =>
-            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -160,7 +161,7 @@ function Sidebar() {
         <NavLink
           to="/settings"
           className={({ isActive }) =>
-            `mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${
+            `mt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
               isActive
                 ? "bg-ecoplaza-primary text-white"
                 : "text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
@@ -172,10 +173,32 @@ function Sidebar() {
         </NavLink>
       </nav>
 
+      {user && (
+        <section className="mt-6 flex min-w-0 items-center gap-3 border-t border-ecoplaza-border pt-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ecoplaza-primary/10 text-ecoplaza-primary-dark">
+            <UserRound size={21} strokeWidth={1.9} aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p
+              className="truncate text-sm font-semibold text-ecoplaza-text"
+              title={user.name}
+            >
+              {user.name}
+            </p>
+            <p
+              className="mt-1 truncate text-xs text-ecoplaza-text-muted"
+              title={user.email}
+            >
+              {user.email}
+            </p>
+          </div>
+        </section>
+      )}
+
       <button
         type="button"
         onClick={handleSignOut}
-        className="mt-8 flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+        className="mt-3 flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors duration-150 hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary motion-reduce:transition-none"
       >
         <LogOut size={20} strokeWidth={2.2} aria-hidden="true" />
         <span>{t("navigation.signOut")}</span>
