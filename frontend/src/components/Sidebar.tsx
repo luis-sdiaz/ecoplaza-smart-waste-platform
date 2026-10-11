@@ -186,8 +186,16 @@ function Sidebar() {
               }`
             }
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ecoplaza-primary/10 text-ecoplaza-primary-dark">
-              <UserRound size={21} strokeWidth={1.9} aria-hidden="true" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ecoplaza-primary/10 text-ecoplaza-primary-dark">
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <UserRound size={21} strokeWidth={1.9} aria-hidden="true" />
+              )}
             </div>
             <div className="min-w-0 flex-1 text-left">
               <p

@@ -4,6 +4,7 @@ export type AuthUser = {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
 };
 
 type AuthContextValue = {
@@ -12,6 +13,8 @@ type AuthContextValue = {
   signIn: (email: string, password: string, remember: boolean) => boolean;
   signOut: () => void;
   updateUserName: (name: string) => boolean;
+  updateUserAvatar: (avatar: Blob) => Promise<boolean>;
+  removeUserAvatar: () => Promise<boolean>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

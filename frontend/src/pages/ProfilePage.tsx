@@ -1,17 +1,31 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { CircleCheck, IdCard, Info, Leaf, Mail, Pencil, ShieldCheck, UserRound } from "lucide-react";
+import { useRef, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
+import { Camera, CircleCheck, IdCard, Info, Leaf, Mail, Pencil, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { isValidProfileName, normalizeProfileName } from "../auth/profileStorage";
+import { prepareProfileImage, ProfileImageError } from "../auth/profileImage";
 import "./ProfilePage.css";
+
+type AvatarFeedback = {
+  tone: "error" | "success";
+  key:
+    | "profile.avatarUnsupportedFormat"
+    | "profile.avatarTooLarge"
+    | "profile.avatarSaveError"
+    | "profile.avatarUpdated"
+    | "profile.avatarRemoved";
+};
 
 function ProfilePage() {
   const { t } = useTranslation();
-  const { user, updateUserName } = useAuth();
+  const { user, updateUserName, updateUserAvatar, removeUserAvatar } = useAuth();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [nameError, setNameError] = useState<"validation" | "storage" | null>(null);
+  const [isAvatarBusy, setIsAvatarBusy] = useState(false);
+  const [avatarFeedback, setAvatarFeedback] = useState<AvatarFeedback | null>(null);
 
   const startNameEditing = (): void => {
     if (!user) return;
@@ -47,6 +61,52 @@ function ProfilePage() {
     setIsEditingName(false);
   };
 
+  const handleAvatarSelection = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    setAvatarFeedback(null);
+    setIsAvatarBusy(true);
+
+    try {
+      const preparedAvatar = await prepareProfileImage(file);
+
+      if (!(await updateUserAvatar(preparedAvatar))) {
+        setAvatarFeedback({ tone: "error", key: "profile.avatarSaveError" });
+        return;
+      }
+
+      setAvatarFeedback({ tone: "success", key: "profile.avatarUpdated" });
+    } catch (error) {
+      const key =
+        error instanceof ProfileImageError && error.code === "too-large"
+          ? "profile.avatarTooLarge"
+          : "profile.avatarUnsupportedFormat";
+
+      setAvatarFeedback({ tone: "error", key });
+    } finally {
+      setIsAvatarBusy(false);
+    }
+  };
+
+  const handleAvatarRemoval = async (): Promise<void> => {
+    setAvatarFeedback(null);
+    setIsAvatarBusy(true);
+
+    try {
+      if (!(await removeUserAvatar())) {
+        setAvatarFeedback({ tone: "error", key: "profile.avatarSaveError" });
+        return;
+      }
+
+      setAvatarFeedback({ tone: "success", key: "profile.avatarRemoved" });
+    } finally {
+      setIsAvatarBusy(false);
+    }
+  };
+
   return (
     <section className="profile-page" aria-label={t("profile.title")}>
       <h1 className="profile-sr-only">{t("profile.title")}</h1>
@@ -65,8 +125,22 @@ function ProfilePage() {
               <div className="profile-hero-content">
                 <div className="profile-identity-bar">
                   <div className="profile-avatar-group">
-                    <div className="profile-avatar" aria-hidden="true">
-                      <UserRound strokeWidth={1.35} />
+                    <div className="profile-avatar-shell">
+                      <div className="profile-avatar">
+                        {user.avatarUrl ? (
+                          <img className="profile-avatar-image" src={user.avatarUrl} alt="" />
+                        ) : (
+                          <UserRound strokeWidth={1.35} aria-hidden="true" />
+                        )}
+                      </div>
+                      <input
+                        ref={avatarInputRef}
+                        className="profile-avatar-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                        aria-label={t("profile.changePhoto")}
+                        onChange={handleAvatarSelection}
+                      />
                     </div>
                     <span className="profile-demo-badge">{t("profile.demoAccount")}</span>
                   </div>
@@ -135,6 +209,46 @@ function ProfilePage() {
                     <Mail size={17} strokeWidth={1.7} aria-hidden="true" />
                     <span>{user.email}</span>
                   </p>
+
+                  <div className="profile-photo-management">
+                    <div className="profile-photo-copy">
+                      <span className="profile-photo-title">{t("profile.profilePhoto")}</span>
+                      <p
+                        id="profile-avatar-feedback"
+                        className="profile-avatar-feedback"
+                        data-tone={avatarFeedback?.tone ?? "help"}
+                        role={avatarFeedback ? (avatarFeedback.tone === "error" ? "alert" : "status") : undefined}
+                      >
+                        {avatarFeedback ? t(avatarFeedback.key) : t("profile.avatarRequirements")}
+                      </p>
+                    </div>
+                    <div className="profile-photo-action-buttons">
+                      <button
+                        type="button"
+                        className="profile-avatar-change"
+                        aria-label={t("profile.changePhoto")}
+                        aria-busy={isAvatarBusy}
+                        aria-describedby="profile-avatar-feedback"
+                        disabled={isAvatarBusy}
+                        onClick={() => avatarInputRef.current?.click()}
+                      >
+                        <Camera size={14} strokeWidth={1.9} aria-hidden="true" />
+                        {t("profile.changePhoto")}
+                      </button>
+                      <button
+                        type="button"
+                        className="profile-avatar-remove"
+                        aria-label={t("profile.removePhoto")}
+                        aria-busy={isAvatarBusy}
+                        aria-describedby="profile-avatar-feedback"
+                        disabled={isAvatarBusy || !user.avatarUrl}
+                        onClick={handleAvatarRemoval}
+                      >
+                        <Trash2 size={14} strokeWidth={1.8} aria-hidden="true" />
+                        {t("profile.removePhoto")}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <p className="profile-demo-note">{t("profile.demoDescription")}</p>

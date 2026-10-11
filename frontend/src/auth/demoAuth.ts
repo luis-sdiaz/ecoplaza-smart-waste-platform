@@ -5,6 +5,7 @@ export const DEMO_USER: AuthUser = {
   id: "demo-user",
   name: "Usuario Demo",
   email: "demo@ecoplaza.com",
+  avatarUrl: null,
 };
 
 const DEMO_PASSWORD = "EcoPlaza2026!";
