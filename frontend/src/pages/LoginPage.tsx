@@ -210,7 +210,7 @@ function LoginPage() {
 
         <section
           aria-labelledby="login-title"
-          className="relative flex items-center justify-center px-16 py-16"
+          className="ecoplaza-login-form-panel relative flex items-center justify-center px-16 py-16"
         >
           <div className="relative z-20 w-full max-w-[400px] pb-1">
             <header>
@@ -220,7 +220,7 @@ function LoginPage() {
               >
                 Bienvenido de nuevo
               </h1>
-              <p className="mt-2 text-sm leading-6 text-ecoplaza-text-muted">
+              <p className="ecoplaza-login-secondary mt-2 text-sm leading-6 text-ecoplaza-text-muted">
                 Ingresa tus datos para acceder a EcoPlaza.
               </p>
             </header>
@@ -316,13 +316,13 @@ function LoginPage() {
               <div className="mt-5 flex items-center justify-between gap-4 text-xs">
                 <label
                   htmlFor="login-remember"
-                  className="flex cursor-pointer items-center gap-2.5 text-ecoplaza-text-muted"
+                  className="ecoplaza-login-secondary flex cursor-pointer items-center gap-2.5 text-ecoplaza-text-muted"
                 >
                   <input
                     id="login-remember"
                     name="remember"
                     type="checkbox"
-                    className="h-4 w-4 cursor-pointer accent-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                    className="ecoplaza-login-remember-checkbox h-4 w-4 cursor-pointer accent-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
                   />
                   Recordarme
                 </label>
@@ -350,7 +350,7 @@ function LoginPage() {
               )}
             </form>
 
-            <p className="mt-4 text-center text-sm leading-5 text-ecoplaza-text-muted">
+            <p className="ecoplaza-login-secondary mt-4 text-center text-sm leading-5 text-ecoplaza-text-muted">
               ¿Aún no tienes una cuenta?{" "}
               <button
                 type="button"
@@ -362,7 +362,7 @@ function LoginPage() {
             </p>
           </div>
 
-          <footer className="absolute right-8 bottom-7 left-8 z-20 text-center text-xs text-ecoplaza-text-muted">
+          <footer className="ecoplaza-login-secondary absolute right-8 bottom-7 left-8 z-20 text-center text-xs text-ecoplaza-text-muted">
             EcoPlaza · Gestión inteligente de residuos
           </footer>
         </section>
