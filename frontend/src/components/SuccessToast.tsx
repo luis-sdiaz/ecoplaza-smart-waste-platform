@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { CircleCheck, X } from "lucide-react";
+import { AlertTriangle, CircleCheck, X } from "lucide-react";
 
 type SuccessToastProps = {
   title: string;
@@ -7,6 +7,7 @@ type SuccessToastProps = {
   closeLabel: string;
   onClose: () => void;
   duration?: number;
+  variant?: "success" | "error";
 };
 
 function SuccessToast({
@@ -15,6 +16,7 @@ function SuccessToast({
   closeLabel,
   onClose,
   duration = 4000,
+  variant = "success",
 }: SuccessToastProps) {
   useEffect(() => {
     const timeoutId = window.setTimeout(onClose, duration);
@@ -24,13 +26,25 @@ function SuccessToast({
 
   return (
     <aside
-      role="status"
-      aria-live="polite"
+      role={variant === "error" ? "alert" : "status"}
+      aria-live={variant === "error" ? "assertive" : "polite"}
       aria-atomic="true"
-      className="fixed top-6 right-6 z-50 flex w-[360px] max-w-[calc(100vw-3rem)] items-start gap-3 rounded-2xl border border-ecoplaza-primary/35 bg-ecoplaza-surface p-4 text-ecoplaza-text shadow-lg"
+      className={`fixed top-6 right-6 z-50 flex w-[360px] max-w-[calc(100vw-3rem)] items-start gap-3 rounded-2xl border bg-ecoplaza-surface p-4 text-ecoplaza-text shadow-lg ${
+        variant === "error" ? "border-red-500/35" : "border-ecoplaza-primary/35"
+      }`}
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ecoplaza-primary/15 text-ecoplaza-primary">
-        <CircleCheck size={20} strokeWidth={2.2} aria-hidden="true" />
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+          variant === "error"
+            ? "bg-red-500/15 text-red-500"
+            : "bg-ecoplaza-primary/15 text-ecoplaza-primary"
+        }`}
+      >
+        {variant === "error" ? (
+          <AlertTriangle size={20} strokeWidth={2.2} aria-hidden="true" />
+        ) : (
+          <CircleCheck size={20} strokeWidth={2.2} aria-hidden="true" />
+        )}
       </span>
 
       <span className="min-w-0 flex-1">
@@ -44,7 +58,9 @@ function SuccessToast({
         type="button"
         aria-label={closeLabel}
         onClick={onClose}
-        className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+        className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 ${
+          variant === "error" ? "focus-visible:outline-red-500" : "focus-visible:outline-ecoplaza-primary"
+        }`}
       >
         <X size={17} strokeWidth={2} aria-hidden="true" />
       </button>

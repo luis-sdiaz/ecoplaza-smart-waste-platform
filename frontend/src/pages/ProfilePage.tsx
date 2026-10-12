@@ -13,30 +13,54 @@ type AvatarFeedback = {
   key:
     | "profile.avatarUnsupportedFormat"
     | "profile.avatarTooLarge"
-    | "profile.avatarSaveError"
+    | "profile.avatarProcessingError"
     | "profile.avatarUpdated"
     | "profile.avatarRemoved";
 };
 
-type ProfileSuccessOperation = "name" | "avatarUpdated" | "avatarRemoved";
+type ProfileNotificationOperation =
+  | "nameUpdated"
+  | "avatarUpdated"
+  | "avatarRemoved"
+  | "nameSaveError"
+  | "avatarSaveError"
+  | "avatarRemoveError";
 
-type ProfileSuccessToast = {
+type ProfileNotification = {
   id: number;
-  operation: ProfileSuccessOperation;
+  operation: ProfileNotificationOperation;
 };
 
-const profileSuccessCopy = {
-  name: {
+const profileNotificationCopy = {
+  nameUpdated: {
     title: "profile.nameUpdatedToastTitle",
     description: "profile.nameUpdatedToastDescription",
+    variant: "success",
   },
   avatarUpdated: {
     title: "profile.avatarUpdatedToastTitle",
     description: "profile.avatarUpdatedToastDescription",
+    variant: "success",
   },
   avatarRemoved: {
     title: "profile.avatarRemovedToastTitle",
     description: "profile.avatarRemovedToastDescription",
+    variant: "success",
+  },
+  nameSaveError: {
+    title: "profile.nameSaveErrorToastTitle",
+    description: "profile.nameSaveError",
+    variant: "error",
+  },
+  avatarSaveError: {
+    title: "profile.avatarSaveErrorToastTitle",
+    description: "profile.avatarSaveError",
+    variant: "error",
+  },
+  avatarRemoveError: {
+    title: "profile.avatarRemoveErrorToastTitle",
+    description: "profile.avatarRemoveError",
+    variant: "error",
   },
 } as const;
 
@@ -46,61 +70,62 @@ function ProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
-  const [nameError, setNameError] = useState<"validation" | "storage" | null>(null);
+  const [nameError, setNameError] = useState(false);
   const [isAvatarBusy, setIsAvatarBusy] = useState(false);
   const [avatarFeedback, setAvatarFeedback] = useState<AvatarFeedback | null>(null);
-  const [successToast, setSuccessToast] = useState<ProfileSuccessToast | null>(null);
+  const [notification, setNotification] = useState<ProfileNotification | null>(null);
   const toastSequenceRef = useRef(0);
 
-  const showSuccessToast = (operation: ProfileSuccessOperation): void => {
+  const showNotification = (operation: ProfileNotificationOperation): void => {
     toastSequenceRef.current += 1;
-    setSuccessToast({ id: toastSequenceRef.current, operation });
+    setNotification({ id: toastSequenceRef.current, operation });
   };
 
-  const closeSuccessToast = useCallback((): void => {
-    setSuccessToast(null);
+  const closeNotification = useCallback((): void => {
+    setNotification(null);
   }, []);
 
   const startNameEditing = (): void => {
     if (!user) return;
 
     setDraftName(user.name);
-    setNameError(null);
+    setNameError(false);
     setIsEditingName(true);
   };
 
   const cancelNameEditing = (): void => {
     setDraftName(user?.name ?? "");
-    setNameError(null);
+    setNameError(false);
     setIsEditingName(false);
   };
 
   const handleNameSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
+    setNotification(null);
 
     const normalizedName = normalizeProfileName(draftName);
 
     if (!isValidProfileName(normalizedName)) {
-      setNameError("validation");
+      setNameError(true);
       return;
     }
 
     if (normalizedName === user?.name) {
       setDraftName(normalizedName);
-      setNameError(null);
+      setNameError(false);
       setIsEditingName(false);
       return;
     }
 
     if (!updateUserName(normalizedName)) {
-      setNameError("storage");
+      showNotification("nameSaveError");
       return;
     }
 
     setDraftName(normalizedName);
-    setNameError(null);
+    setNameError(false);
     setIsEditingName(false);
-    showSuccessToast("name");
+    showNotification("nameUpdated");
   };
 
   const handleAvatarSelection = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -109,6 +134,7 @@ function ProfilePage() {
 
     if (!file) return;
 
+    setNotification(null);
     setAvatarFeedback(null);
     setIsAvatarBusy(true);
 
@@ -116,16 +142,22 @@ function ProfilePage() {
       const preparedAvatar = await prepareProfileImage(file);
 
       if (!(await updateUserAvatar(preparedAvatar))) {
-        setAvatarFeedback({ tone: "error", key: "profile.avatarSaveError" });
+        showNotification("avatarSaveError");
         return;
       }
 
       setAvatarFeedback({ tone: "success", key: "profile.avatarUpdated" });
-      showSuccessToast("avatarUpdated");
+      showNotification("avatarUpdated");
     } catch (error) {
-      const key =
-        error instanceof ProfileImageError && error.code === "too-large"
-          ? "profile.avatarTooLarge"
+      if (!(error instanceof ProfileImageError)) {
+        showNotification("avatarSaveError");
+        return;
+      }
+
+      const key = error.code === "too-large"
+        ? "profile.avatarTooLarge"
+        : error.code === "processing"
+          ? "profile.avatarProcessingError"
           : "profile.avatarUnsupportedFormat";
 
       setAvatarFeedback({ tone: "error", key });
@@ -137,24 +169,27 @@ function ProfilePage() {
   const handleAvatarRemoval = async (): Promise<void> => {
     if (!user?.avatarUrl) return;
 
+    setNotification(null);
     setAvatarFeedback(null);
     setIsAvatarBusy(true);
 
     try {
       if (!(await removeUserAvatar())) {
-        setAvatarFeedback({ tone: "error", key: "profile.avatarSaveError" });
+        showNotification("avatarRemoveError");
         return;
       }
 
       setAvatarFeedback({ tone: "success", key: "profile.avatarRemoved" });
-      showSuccessToast("avatarRemoved");
+      showNotification("avatarRemoved");
+    } catch {
+      showNotification("avatarRemoveError");
     } finally {
       setIsAvatarBusy(false);
     }
   };
 
-  const successCopy = successToast
-    ? profileSuccessCopy[successToast.operation]
+  const notificationCopy = notification
+    ? profileNotificationCopy[notification.operation]
     : null;
 
   return (
@@ -216,12 +251,12 @@ function ProfilePage() {
                             value={draftName}
                             onChange={(event) => {
                               setDraftName(event.target.value);
-                              if (nameError) setNameError(null);
+                              if (nameError) setNameError(false);
                             }}
                             onKeyDown={(event) => {
                               if (event.key === "Escape") cancelNameEditing();
                             }}
-                            aria-invalid={nameError !== null}
+                            aria-invalid={nameError}
                             aria-describedby={nameError ? "profile-name-error" : undefined}
                             autoComplete="name"
                             autoFocus
@@ -237,7 +272,7 @@ function ProfilePage() {
                         </div>
                         {nameError && (
                           <p id="profile-name-error" className="profile-name-error" role="alert">
-                            {t(nameError === "validation" ? "profile.nameValidation" : "profile.nameSaveError")}
+                            {t("profile.nameValidation")}
                           </p>
                         )}
                       </form>
@@ -367,13 +402,15 @@ function ProfilePage() {
         </div>
       )}
 
-      {successToast && successCopy ? (
+      {notification && notificationCopy ? (
         <SuccessToast
-          key={successToast.id}
-          title={t(successCopy.title)}
-          description={t(successCopy.description)}
+          key={notification.id}
+          title={t(notificationCopy.title)}
+          description={t(notificationCopy.description)}
           closeLabel={t("profile.dismissNotification")}
-          onClose={closeSuccessToast}
+          onClose={closeNotification}
+          duration={notificationCopy.variant === "error" ? 7000 : undefined}
+          variant={notificationCopy.variant}
         />
       ) : null}
     </section>

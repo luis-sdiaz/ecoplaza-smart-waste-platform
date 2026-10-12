@@ -3,7 +3,7 @@ export const PROFILE_IMAGE_MAX_FILE_SIZE = 5 * 1024 * 1024;
 const PROFILE_IMAGE_MAX_DIMENSION = 512;
 const WEBP_QUALITY = 0.84;
 
-export type ProfileImageErrorCode = "too-large" | "unsupported";
+export type ProfileImageErrorCode = "too-large" | "unsupported" | "processing";
 
 export class ProfileImageError extends Error {
   readonly code: ProfileImageErrorCode;
@@ -88,21 +88,32 @@ export async function prepareProfileImage(file: File): Promise<Blob> {
     throw new ProfileImageError("too-large");
   }
 
-  const signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  let signature: Uint8Array;
+
+  try {
+    signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  } catch {
+    throw new ProfileImageError("processing");
+  }
 
   if (!hasSupportedImageSignature(signature)) {
     throw new ProfileImageError("unsupported");
   }
 
-  let decodedImage: DecodedImage | null = null;
+  let decodedImage: DecodedImage;
 
   try {
     decodedImage = await decodeImage(file);
+  } catch {
+    throw new ProfileImageError("unsupported");
+  }
 
-    if (decodedImage.width <= 0 || decodedImage.height <= 0) {
-      throw new ProfileImageError("unsupported");
-    }
+  if (decodedImage.width <= 0 || decodedImage.height <= 0) {
+    decodedImage.release();
+    throw new ProfileImageError("unsupported");
+  }
 
+  try {
     const scale = Math.min(
       1,
       PROFILE_IMAGE_MAX_DIMENSION / decodedImage.width,
@@ -113,7 +124,7 @@ export async function prepareProfileImage(file: File): Promise<Blob> {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
 
-    if (context === null) throw new ProfileImageError("unsupported");
+    if (context === null) throw new ProfileImageError("processing");
 
     canvas.width = width;
     canvas.height = height;
@@ -127,11 +138,11 @@ export async function prepareProfileImage(file: File): Promise<Blob> {
 
     if (pngBlob !== null) return pngBlob;
 
-    throw new ProfileImageError("unsupported");
+    throw new ProfileImageError("processing");
   } catch (error) {
     if (error instanceof ProfileImageError) throw error;
-    throw new ProfileImageError("unsupported");
+    throw new ProfileImageError("processing");
   } finally {
-    decodedImage?.release();
+    decodedImage.release();
   }
 }
