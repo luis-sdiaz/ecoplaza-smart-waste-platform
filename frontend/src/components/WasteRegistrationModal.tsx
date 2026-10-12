@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 export interface WasteRegistrationValues {
@@ -9,8 +10,20 @@ export interface WasteRegistrationValues {
 
 interface WasteRegistrationModalProps {
   onClose: () => void;
-  onSubmit: (values: WasteRegistrationValues) => void;
+  onSubmit: (values: WasteRegistrationValues) => boolean;
 }
+
+type WasteRegistrationErrors = {
+  category: boolean;
+  container: boolean;
+  weight: boolean;
+};
+
+const emptyErrors: WasteRegistrationErrors = {
+  category: false,
+  container: false,
+  weight: false,
+};
 
 function WasteRegistrationModal({
   onClose,
@@ -20,33 +33,52 @@ function WasteRegistrationModal({
   const [category, setCategory] = useState("");
   const [container, setContainer] = useState("");
   const [weight, setWeight] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<WasteRegistrationErrors>(emptyErrors);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!category) {
-      setError(t("waste.selectCategory"));
-      return;
-    }
-
-    if (!container) {
-      setError(t("waste.selectContainer"));
-      return;
-    }
-
     const parsedWeight = Number(weight);
-    if (!weight || !Number.isFinite(parsedWeight) || parsedWeight <= 0) {
-      setError(t("waste.invalidWeight"));
+    const nextErrors: WasteRegistrationErrors = {
+      category: category === "",
+      container: container === "",
+      weight:
+        weight.trim() === "" ||
+        !Number.isFinite(parsedWeight) ||
+        parsedWeight <= 0,
+    };
+
+    setErrors(nextErrors);
+
+    if (nextErrors.category || nextErrors.container || nextErrors.weight) {
       return;
     }
 
-    onSubmit({
+    if (isSubmittingRef.current) return;
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
+    const didRegister = onSubmit({
       category: category as WasteRegistrationValues["category"],
       container: container as WasteRegistrationValues["container"],
       weight: parsedWeight,
     });
+
+    if (!didRegister) {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
+
+  const fieldClassName = (hasError: boolean): string =>
+    `mt-2 w-full rounded-xl border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 ${
+      hasError
+        ? "border-ecoplaza-danger focus-visible:outline-ecoplaza-danger"
+        : "border-ecoplaza-border focus-visible:outline-ecoplaza-accent"
+    }`;
 
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/25 p-8">
@@ -63,7 +95,7 @@ function WasteRegistrationModal({
           {t("waste.modalTitle")}
         </h2>
 
-        <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+        <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
           <div>
             <label
               htmlFor="waste-category"
@@ -76,9 +108,13 @@ function WasteRegistrationModal({
               value={category}
               onChange={(event) => {
                 setCategory(event.target.value);
-                setError("");
+                if (errors.category) {
+                  setErrors((current) => ({ ...current, category: false }));
+                }
               }}
-              className="mt-2 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text outline-none"
+              aria-invalid={errors.category}
+              aria-describedby={errors.category ? "waste-category-error" : undefined}
+              className={fieldClassName(errors.category)}
             >
               <option value="">{t("waste.selectOption")}</option>
               <option value="organic">{t("common.wasteOrganic")}</option>
@@ -87,6 +123,11 @@ function WasteRegistrationModal({
                 {t("common.wasteNonRecoverable")}
               </option>
             </select>
+            {errors.category && (
+              <p id="waste-category-error" role="alert" className="mt-1.5 text-sm text-ecoplaza-danger">
+                {t("waste.selectCategory")}
+              </p>
+            )}
           </div>
 
           <div>
@@ -101,15 +142,24 @@ function WasteRegistrationModal({
               value={container}
               onChange={(event) => {
                 setContainer(event.target.value);
-                setError("");
+                if (errors.container) {
+                  setErrors((current) => ({ ...current, container: false }));
+                }
               }}
-              className="mt-2 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text outline-none"
+              aria-invalid={errors.container}
+              aria-describedby={errors.container ? "waste-container-error" : undefined}
+              className={fieldClassName(errors.container)}
             >
               <option value="">{t("waste.selectOption")}</option>
               <option value="container01">{`${t("waste.container")} 01`}</option>
               <option value="container02">{`${t("waste.container")} 02`}</option>
               <option value="container03">{`${t("waste.container")} 03`}</option>
             </select>
+            {errors.container && (
+              <p id="waste-container-error" role="alert" className="mt-1.5 text-sm text-ecoplaza-danger">
+                {t("waste.selectContainer")}
+              </p>
+            )}
           </div>
 
           <div>
@@ -123,20 +173,24 @@ function WasteRegistrationModal({
               id="waste-weight"
               type="number"
               step="any"
+              inputMode="decimal"
               value={weight}
               onChange={(event) => {
                 setWeight(event.target.value);
-                setError("");
+                if (errors.weight) {
+                  setErrors((current) => ({ ...current, weight: false }));
+                }
               }}
-              className="mt-2 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text outline-none"
+              aria-invalid={errors.weight}
+              aria-describedby={errors.weight ? "waste-weight-error" : undefined}
+              className={fieldClassName(errors.weight)}
             />
+            {errors.weight && (
+              <p id="waste-weight-error" role="alert" className="mt-1.5 text-sm text-ecoplaza-danger">
+                {t("waste.invalidWeight")}
+              </p>
+            )}
           </div>
-
-          {error && (
-            <p role="alert" className="text-sm text-ecoplaza-danger">
-              {error}
-            </p>
-          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -148,7 +202,9 @@ function WasteRegistrationModal({
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-medium text-ecoplaza-on-primary"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+              className="rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t("waste.register")}
             </button>

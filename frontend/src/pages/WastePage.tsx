@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
+import SuccessToast from "../components/SuccessToast";
 import WasteRecordTable, {
   type WasteRecord,
 } from "../components/WasteRecordTable";
@@ -10,6 +11,11 @@ import WasteRegistrationModal, {
 import { useTranslation } from "react-i18next";
 
 const WASTE_RECORDS_STORAGE_KEY = "ecoplaza-waste-records";
+
+type WasteRegistrationNotification = {
+  id: number;
+  variant: "success" | "error";
+};
 
 const baseWasteRecords: WasteRecord[] = [
   {
@@ -47,12 +53,10 @@ const baseWasteRecords: WasteRecord[] = [
 ];
 
 function readSavedWasteRecords(): WasteRecord[] {
-  const storedRecords = localStorage.getItem(WASTE_RECORDS_STORAGE_KEY);
-  if (!storedRecords) {
-    return [];
-  }
-
   try {
+    const storedRecords = localStorage.getItem(WASTE_RECORDS_STORAGE_KEY);
+    if (!storedRecords) return [];
+
     const parsedRecords: unknown = JSON.parse(storedRecords);
     if (!Array.isArray(parsedRecords)) {
       return [];
@@ -89,10 +93,21 @@ function WastePage() {
     readSavedWasteRecords,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [notification, setNotification] =
+    useState<WasteRegistrationNotification | null>(null);
+  const notificationSequenceRef = useRef(0);
   const records = [...baseWasteRecords, ...savedRecords];
 
-  const handleRegisterWaste = (values: WasteRegistrationValues) => {
+  const showNotification = (variant: WasteRegistrationNotification["variant"]): void => {
+    notificationSequenceRef.current += 1;
+    setNotification({ id: notificationSequenceRef.current, variant });
+  };
+
+  const closeNotification = useCallback((): void => {
+    setNotification(null);
+  }, []);
+
+  const handleRegisterWaste = (values: WasteRegistrationValues): boolean => {
     const highestId = records.reduce((highest, record) => {
       const match = /^RES-(\d+)$/.exec(record.id);
       return match ? Math.max(highest, Number(match[1])) : highest;
@@ -106,13 +121,21 @@ function WastePage() {
       status: "available",
     };
     const updatedRecords = [...savedRecords, newRecord];
+
+    try {
+      localStorage.setItem(
+        WASTE_RECORDS_STORAGE_KEY,
+        JSON.stringify(updatedRecords),
+      );
+    } catch {
+      showNotification("error");
+      return false;
+    }
+
     setSavedRecords(updatedRecords);
-    localStorage.setItem(
-      WASTE_RECORDS_STORAGE_KEY,
-      JSON.stringify(updatedRecords),
-    );
     setIsModalOpen(false);
-    setShowSuccess(true);
+    showNotification("success");
+    return true;
   };
 
   return (
@@ -162,7 +185,7 @@ function WastePage() {
           <button
             type="button"
             onClick={() => {
-              setShowSuccess(false);
+              setNotification(null);
               setIsModalOpen(true);
             }}
             className="shrink-0 rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary"
@@ -170,15 +193,6 @@ function WastePage() {
             + {t("waste.registerButton")}
           </button>
         </div>
-
-        {showSuccess && (
-          <p
-            role="status"
-            className="mt-4 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-primary"
-          >
-            {t("waste.registerSuccess")}
-          </p>
-        )}
 
         <div className="mt-4">
           <WasteRecordTable records={records} />
@@ -188,6 +202,25 @@ function WastePage() {
         <WasteRegistrationModal
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleRegisterWaste}
+        />
+      )}
+      {notification && (
+        <SuccessToast
+          key={notification.id}
+          title={t(
+            notification.variant === "success"
+              ? "waste.registerSuccessTitle"
+              : "waste.registerErrorTitle",
+          )}
+          description={t(
+            notification.variant === "success"
+              ? "waste.registerSuccessDescription"
+              : "waste.registerErrorDescription",
+          )}
+          closeLabel={t("waste.dismissNotification")}
+          onClose={closeNotification}
+          duration={notification.variant === "error" ? 7000 : undefined}
+          variant={notification.variant}
         />
       )}
     </section>
