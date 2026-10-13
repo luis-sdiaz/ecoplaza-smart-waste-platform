@@ -1,32 +1,18 @@
-interface Buyer {
-  id: string;
-  name: string;
-  type: string;
-  interest: string;
-  contact: string;
-  status: string;
-}
+import { Pencil } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { Buyer } from "../services/buyerService";
 
 interface BuyerTableProps {
   buyers: Buyer[];
+  onEdit: (buyer: Buyer) => void;
 }
 
-function BuyerTable({ buyers }: BuyerTableProps) {
-  const { t } = useTranslation();
-  const translateType = (value: string) =>
-    value === "Empresa recicladora"
-      ? t("buyers.recyclerCompany")
-      : value === "Productor de compost"
-        ? t("buyers.compostProducer")
-        : value === "Comerciante"
-          ? t("buyers.merchant")
-          : value === "Asociación"
-            ? t("buyers.association")
-            : value;
-  const translateCategory = (value: string) =>
-    value === "Orgánicos" ? t("common.organic") : value === "Reciclables" ? t("common.recyclable") : value;
-  const translateStatus = (value: string) =>
-    value === "Activo" ? t("common.active") : value === "Interesado" ? t("common.interested") : value;
+function BuyerTable({ buyers, onEdit }: BuyerTableProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
+
   return (
     <div className="overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
       <table className="w-full">
@@ -35,25 +21,20 @@ function BuyerTable({ buyers }: BuyerTableProps) {
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
               {t("buyers.code")}
             </th>
-
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
               {t("buyers.buyer")}
             </th>
-
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("buyers.type")}
+              {t("buyers.email")}
             </th>
-
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("buyers.interest")}
+              {t("buyers.phone")}
             </th>
-
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("buyers.contact")}
+              {t("buyers.updatedAt")}
             </th>
-
-            <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("common.status")}
+            <th className="px-5 py-4 text-right text-xs font-semibold text-ecoplaza-text-muted">
+              {t("buyers.actions")}
             </th>
           </tr>
         </thead>
@@ -61,30 +42,31 @@ function BuyerTable({ buyers }: BuyerTableProps) {
         <tbody>
           {buyers.map((buyer) => (
             <tr key={buyer.id} className="border-t border-ecoplaza-border">
-              <td className="px-5 py-4 text-sm font-medium text-ecoplaza-text">
-                {buyer.id}
+              <td className="px-5 py-4 font-mono text-xs font-medium text-ecoplaza-text" title={buyer.id}>
+                {`BUY-${buyer.id.slice(0, 8).toUpperCase()}`}
               </td>
-
-              <td className="px-5 py-4 text-sm text-ecoplaza-text">
+              <td className="px-5 py-4 text-sm font-medium text-ecoplaza-text">
                 {buyer.name}
               </td>
-
               <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
-                {translateType(buyer.type)}
+                {buyer.email ?? t("buyers.notProvided")}
               </td>
-
-              <td className="px-5 py-4 text-sm text-ecoplaza-text">
-                {translateCategory(buyer.interest)}
-              </td>
-
               <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
-                {buyer.contact}
+                {buyer.phone ?? t("buyers.notProvided")}
               </td>
-
-              <td className="px-5 py-4">
-                <span className="rounded-full bg-ecoplaza-background px-3 py-1 text-xs font-medium text-ecoplaza-primary">
-                  {translateStatus(buyer.status)}
-                </span>
+              <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
+                {formatDate(buyer.updatedAt)}
+              </td>
+              <td className="px-5 py-4 text-right">
+                <button
+                  type="button"
+                  onClick={() => onEdit(buyer)}
+                  aria-label={t("buyers.editBuyerLabel", { name: buyer.name })}
+                  className="inline-flex items-center gap-2 rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                >
+                  <Pencil size={14} strokeWidth={1.8} aria-hidden="true" />
+                  {t("buyers.edit")}
+                </button>
               </td>
             </tr>
           ))}
@@ -95,4 +77,3 @@ function BuyerTable({ buyers }: BuyerTableProps) {
 }
 
 export default BuyerTable;
-import { useTranslation } from "react-i18next";
