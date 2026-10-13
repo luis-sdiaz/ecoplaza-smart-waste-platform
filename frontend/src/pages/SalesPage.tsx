@@ -18,6 +18,7 @@ import PageHeader from "../components/PageHeader";
 import SaleRegistrationModal, {
   type SaleRegistrationValues,
 } from "../components/SaleRegistrationModal";
+import SaleDetailsModal from "../components/SaleDetailsModal";
 import SalesTable from "../components/SalesTable";
 import SuccessToast from "../components/SuccessToast";
 import {
@@ -90,6 +91,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<SaleHistoryItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [notification, setNotification] = useState<SalesNotification | null>(null);
@@ -497,7 +499,7 @@ function UserSalesPage({ userId }: { userId: string }) {
               <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(isFiltered ? "sales.emptyFilteredDescription" : "sales.emptyDescription")}</p>
             </div>
           ) : (
-            <SalesTable sales={sales} />
+            <SalesTable sales={sales} onViewDetails={setSelectedSale} />
           )}
         </div>
       </div>
@@ -520,6 +522,10 @@ function UserSalesPage({ userId }: { userId: string }) {
           onClose={() => { if (!isSubmitting) setIsModalOpen(false); }}
           onSubmit={(values) => void handleCreateSale(values)}
         />
+      )}
+
+      {selectedSale && (
+        <SaleDetailsModal sale={selectedSale} onClose={() => setSelectedSale(null)} />
       )}
 
       {notification && (

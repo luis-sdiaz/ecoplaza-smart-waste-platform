@@ -1,7 +1,13 @@
+import { Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SaleHistoryItem } from "../services/salesService";
 
-function SalesTable({ sales }: { sales: SaleHistoryItem[] }) {
+interface SalesTableProps {
+  sales: SaleHistoryItem[];
+  onViewDetails: (sale: SaleHistoryItem) => void;
+}
+
+function SalesTable({ sales, onViewDetails }: SalesTableProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const currencyFormatter = new Intl.NumberFormat(locale, {
@@ -30,6 +36,7 @@ function SalesTable({ sales }: { sales: SaleHistoryItem[] }) {
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("sales.unitPrice")}</th>
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("sales.total")}</th>
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("common.date")}</th>
+            <th className="px-5 py-4 text-right text-xs font-semibold text-ecoplaza-text-muted">{t("sales.actions")}</th>
           </tr>
         </thead>
         <tbody>
@@ -56,6 +63,16 @@ function SalesTable({ sales }: { sales: SaleHistoryItem[] }) {
               </td>
               <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
                 {dateFormatter.format(new Date(sale.soldAt))}
+              </td>
+              <td className="px-5 py-4 text-right">
+                <button
+                  type="button"
+                  onClick={() => onViewDetails(sale)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary"
+                >
+                  <Eye size={15} aria-hidden="true" />
+                  {t("sales.viewDetails")}
+                </button>
               </td>
             </tr>
           ))}
