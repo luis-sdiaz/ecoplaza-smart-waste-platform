@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  authSessionStorage,
+  SUPABASE_AUTH_STORAGE_KEY,
+} from "../auth/authSessionStorage";
 
 const readRequiredEnvironmentVariable = (
   name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_PUBLISHABLE_KEY",
@@ -98,4 +102,12 @@ const supabasePublishableKey = validatePublishableKey(
   ),
 );
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey);
+export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+    storage: authSessionStorage,
+    storageKey: SUPABASE_AUTH_STORAGE_KEY,
+  },
+});
