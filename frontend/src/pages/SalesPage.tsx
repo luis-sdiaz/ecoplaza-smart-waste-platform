@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { AlertTriangle, CalendarRange, Database, Download, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import type { Buyer } from "../services/buyerService";
@@ -24,6 +24,13 @@ import {
   exportSalesHistory,
   type SalesCsvLabels,
 } from "../services/salesCsvService";
+import {
+  isTimestampInRange,
+  isValidReportDateRange,
+  toTimestampRange,
+  type ReportDateRange,
+  type TimestampRange,
+} from "../services/reportDateRange";
 
 const demoSales: DemoSale[] = [
   { id: "SAL-001", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 80, total: 640000, date: "03/10/2026", status: "Completada" },
@@ -57,12 +64,12 @@ function getSalesErrorKey(code: SalesErrorCode): string {
   return "sales.databaseError";
 }
 
-async function fetchSalesPageData(): Promise<{
+async function fetchSalesPageData(dateRange?: TimestampRange): Promise<{
   salesResult: SalesListResult;
   formDataResult: SaleFormDataResult;
 }> {
   const [salesResult, formDataResult] = await Promise.all([
-    listSales(),
+    listSales(dateRange),
     getSaleFormData(),
   ]);
   return { salesResult, formDataResult };
@@ -83,6 +90,10 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [notification, setNotification] = useState<SalesNotification | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
+  const [dateRangeError, setDateRangeError] = useState<string | null>(null);
 
   const applyLoadResults = useCallback((
     salesResult: SalesListResult,
@@ -120,12 +131,12 @@ function UserSalesPage({ userId }: { userId: string }) {
     return true;
   }, []);
 
-  const loadSalesData = useCallback(async (): Promise<void> => {
+  const loadSalesData = useCallback(async (dateRange?: TimestampRange): Promise<void> => {
     const requestRevision = ++requestRevisionRef.current;
     setIsLoading(true);
     setLoadError(null);
 
-    const { salesResult, formDataResult } = await fetchSalesPageData();
+    const { salesResult, formDataResult } = await fetchSalesPageData(dateRange);
     applyLoadResults(salesResult, formDataResult, requestRevision);
   }, [applyLoadResults]);
 
@@ -156,6 +167,10 @@ function UserSalesPage({ userId }: { userId: string }) {
     });
   }, []);
 
+  const activeTimestampRange = activeDateRange === null
+    ? undefined
+    : toTimestampRange(activeDateRange);
+
   const handleCreateSale = async (values: SaleRegistrationValues): Promise<void> => {
     if (isSubmittingRef.current) return;
 
@@ -182,7 +197,12 @@ function UserSalesPage({ userId }: { userId: string }) {
           wasteRecordNumber: selectedWasteRecord.recordNumber,
           category: selectedWasteRecord.category,
         };
-        setSales((current) => [historyItem, ...current.filter((sale) => sale.id !== historyItem.id)]);
+        if (
+          activeTimestampRange === undefined ||
+          isTimestampInRange(historyItem.soldAt, activeTimestampRange)
+        ) {
+          setSales((current) => [historyItem, ...current.filter((sale) => sale.id !== historyItem.id)]);
+        }
         setWasteRecords((current) => current.filter((record) => record.id !== values.wasteRecordId));
         setIsModalOpen(false);
         showNotification("success", "sales.createSuccessTitle", "sales.createSuccessDescription");
@@ -190,7 +210,7 @@ function UserSalesPage({ userId }: { userId: string }) {
       }
 
       if (result.error.code === "confirmation_unknown") {
-        const refreshedData = await fetchSalesPageData();
+        const refreshedData = await fetchSalesPageData(activeTimestampRange);
         if (lifecycleRevision !== requestRevisionRef.current) return;
 
         const refreshed = applyLoadResults(
@@ -204,9 +224,17 @@ function UserSalesPage({ userId }: { userId: string }) {
           return;
         }
 
-        const confirmedSale = refreshedData.salesResult.data.find(
+        let confirmedSale = refreshedData.salesResult.data.find(
           (sale) => sale.wasteRecordId === values.wasteRecordId,
         );
+        if (!confirmedSale && activeTimestampRange !== undefined) {
+          const completeSalesResult = await listSales();
+          if (completeSalesResult.ok) {
+            confirmedSale = completeSalesResult.data.find(
+              (sale) => sale.wasteRecordId === values.wasteRecordId,
+            );
+          }
+        }
         if (confirmedSale) {
           setIsModalOpen(false);
           showNotification("success", "sales.createSuccessTitle", "sales.confirmedAfterRefresh");
@@ -228,7 +256,7 @@ function UserSalesPage({ userId }: { userId: string }) {
       }
 
       if (result.error.code === "waste_not_available") {
-        const refreshedData = await fetchSalesPageData();
+        const refreshedData = await fetchSalesPageData(activeTimestampRange);
         if (lifecycleRevision !== requestRevisionRef.current) return;
 
         applyLoadResults(
@@ -265,6 +293,33 @@ function UserSalesPage({ userId }: { userId: string }) {
   const metricsUnavailable = isLoading || loadError !== null;
   const registrationUnavailable = metricsUnavailable || buyers.length === 0 || wasteRecords.length === 0;
   const exportUnavailable = metricsUnavailable || sales.length === 0 || isExporting;
+  const isFiltered = activeDateRange !== null;
+  const metricBadge = t(isFiltered ? "sales.filteredData" : "sales.realData");
+  const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
+  const formatInputDate = (value: string): string =>
+    dateFormatter.format(new Date(`${value}T00:00:00`));
+
+  const applyDateRange = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const nextRange = { startDate, endDate };
+
+    if (!isValidReportDateRange(nextRange)) {
+      setDateRangeError("sales.invalidDateRange");
+      return;
+    }
+
+    setDateRangeError(null);
+    setActiveDateRange(nextRange);
+    void loadSalesData(toTimestampRange(nextRange));
+  };
+
+  const clearDateRange = (): void => {
+    setStartDate("");
+    setEndDate("");
+    setDateRangeError(null);
+    setActiveDateRange(null);
+    void loadSalesData();
+  };
 
   const handleExportSales = async (): Promise<void> => {
     if (exportUnavailable) return;
@@ -288,7 +343,10 @@ function UserSalesPage({ userId }: { userId: string }) {
     try {
       const result = await exportSalesHistory(
         labels,
-        `ecoplaza-sales-${new Date().toISOString().slice(0, 10)}.csv`,
+        activeDateRange === null
+          ? `ecoplaza-sales-${new Date().toISOString().slice(0, 10)}.csv`
+          : `ecoplaza-sales-${activeDateRange.startDate}-${activeDateRange.endDate}.csv`,
+        activeTimestampRange,
       );
 
       if (result.ok) {
@@ -317,10 +375,10 @@ function UserSalesPage({ userId }: { userId: string }) {
       <PageHeader eyebrow={t("sales.eyebrow")} title={t("sales.title")} description={t("sales.description")} />
 
       <div className="mt-8 grid grid-cols-4 gap-4">
-        <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(sales.length)} description={t("sales.operations")} badge={t("sales.realData")} />
-        <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} badge={t("sales.realData")} />
-        <MetricCard title={t("sales.soldMaterial")} value={metricsUnavailable ? "—" : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`} description={t("sales.quantitySold")} badge={t("sales.realData")} />
-        <MetricCard title={t("sales.servedBuyers")} value={metricsUnavailable ? "—" : String(servedBuyers)} description={t("sales.buyersWithSales")} badge={t("sales.realData")} />
+        <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(sales.length)} description={t("sales.operations")} badge={metricBadge} />
+        <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} badge={metricBadge} />
+        <MetricCard title={t("sales.soldMaterial")} value={metricsUnavailable ? "—" : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`} description={t("sales.quantitySold")} badge={metricBadge} />
+        <MetricCard title={t("sales.servedBuyers")} value={metricsUnavailable ? "—" : String(servedBuyers)} description={t("sales.buyersWithSales")} badge={metricBadge} />
       </div>
 
       <div className="mt-8">
@@ -328,7 +386,7 @@ function UserSalesPage({ userId }: { userId: string }) {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-ecoplaza-text">{t("sales.records")}</h2>
-              <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{t("sales.realData")}</span>
+              <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{metricBadge}</span>
             </div>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("sales.realRecordsDescription")}</p>
           </div>
@@ -353,6 +411,38 @@ function UserSalesPage({ userId }: { userId: string }) {
           </div>
         </div>
 
+        <form onSubmit={applyDateRange} className="mt-5 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+          <div className="flex items-start gap-3">
+            <CalendarRange className="mt-0.5 text-ecoplaza-primary" size={20} aria-hidden="true" />
+            <div>
+              <h3 className="text-sm font-semibold text-ecoplaza-text">{t("sales.dateRange")}</h3>
+              <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.dateRangeDescription")}</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+            <label className="text-xs font-medium text-ecoplaza-text-muted">
+              {t("sales.startDate")}
+              <input type="date" value={startDate} max={endDate || undefined} required disabled={isLoading} onChange={(event) => setStartDate(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
+            </label>
+            <label className="text-xs font-medium text-ecoplaza-text-muted">
+              {t("sales.endDate")}
+              <input type="date" value={endDate} min={startDate || undefined} required disabled={isLoading} onChange={(event) => setEndDate(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
+            </label>
+            <button type="submit" disabled={isLoading} className="rounded-lg bg-ecoplaza-secondary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+              {t("sales.applyDateRange")}
+            </button>
+            <button type="button" disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")} onClick={clearDateRange} className="rounded-lg border border-ecoplaza-border px-4 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50">
+              {t("sales.clearDateRange")}
+            </button>
+          </div>
+          {dateRangeError !== null && <p role="alert" className="mt-3 text-sm text-ecoplaza-danger">{t(dateRangeError)}</p>}
+          {activeDateRange !== null && (
+            <p className="mt-3 text-sm font-medium text-ecoplaza-primary">
+              {t("sales.activeDateRange", { start: formatInputDate(activeDateRange.startDate), end: formatInputDate(activeDateRange.endDate) })}
+            </p>
+          )}
+        </form>
+
         {!isLoading && !loadError && (buyers.length === 0 || wasteRecords.length === 0) && (
           <div className="mt-4 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-text-muted">
             {t(buyers.length === 0 ? "sales.noBuyers" : "sales.noAvailableWaste")}
@@ -371,7 +461,7 @@ function UserSalesPage({ userId }: { userId: string }) {
                 <AlertTriangle size={20} strokeWidth={1.8} aria-hidden="true" />
               </span>
               <p className="mt-3 max-w-md text-sm text-ecoplaza-text-muted">{t(loadError)}</p>
-              <button type="button" onClick={() => void loadSalesData()} className="mt-4 flex items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary">
+              <button type="button" onClick={() => void loadSalesData(activeTimestampRange)} className="mt-4 flex items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary">
                 <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" />
                 {t("sales.retry")}
               </button>
@@ -379,8 +469,8 @@ function UserSalesPage({ userId }: { userId: string }) {
           ) : sales.length === 0 ? (
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
               <Database size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("sales.emptyTitle")}</h3>
-              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t("sales.emptyDescription")}</p>
+              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t(isFiltered ? "sales.emptyFilteredTitle" : "sales.emptyTitle")}</h3>
+              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(isFiltered ? "sales.emptyFilteredDescription" : "sales.emptyDescription")}</p>
             </div>
           ) : (
             <SalesTable sales={sales} />

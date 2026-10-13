@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  isTimestampInRange,
   isValidReportDateRange,
   toTimestampRange,
 } from "../src/services/reportDateRange.ts";
@@ -26,4 +27,12 @@ test("rejects reversed, incomplete, and impossible ranges", () => {
   assert.equal(isValidReportDateRange({ startDate: "", endDate: "2026-10-13" }), false);
   assert.equal(isValidReportDateRange({ startDate: "2026-02-30", endDate: "2026-03-01" }), false);
   assert.throws(() => toTimestampRange({ startDate: "2026-10-14", endDate: "2026-10-13" }));
+});
+
+test("matches the inclusive start and exclusive end boundaries", () => {
+  const range = toTimestampRange({ startDate: "2026-10-13", endDate: "2026-10-13" });
+  assert.equal(isTimestampInRange("2026-10-13T05:00:00.000Z", range), true);
+  assert.equal(isTimestampInRange("2026-10-14T04:59:59.999Z", range), true);
+  assert.equal(isTimestampInRange("2026-10-14T05:00:00.000Z", range), false);
+  assert.equal(isTimestampInRange("invalid", range), false);
 });

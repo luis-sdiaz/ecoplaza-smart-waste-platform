@@ -4,6 +4,7 @@ import {
   type SalesErrorCode,
 } from "./salesService";
 import { createSalesCsv, type SalesCsvLabels } from "./salesCsv";
+import type { TimestampRange } from "./reportDateRange";
 
 export { createSalesCsv, type SalesCsvLabels } from "./salesCsv";
 
@@ -14,8 +15,9 @@ export type SalesCsvExportResult =
 export async function exportSalesHistory(
   labels: SalesCsvLabels,
   defaultFileName: string,
+  dateRange?: TimestampRange,
 ): Promise<SalesCsvExportResult> {
-  const salesResult = await listSales();
+  const salesResult = await listSales(dateRange);
   if (!salesResult.ok) return { ok: false, error: salesResult.error.code };
 
   try {

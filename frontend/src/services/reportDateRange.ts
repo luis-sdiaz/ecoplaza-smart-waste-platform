@@ -51,3 +51,18 @@ export function toTimestampRange(range: ReportDateRange): TimestampRange {
     endExclusive: endExclusive.toISOString(),
   };
 }
+
+export function isTimestampInRange(
+  timestamp: string,
+  range: TimestampRange,
+): boolean {
+  const value = new Date(timestamp).getTime();
+  const start = new Date(range.startInclusive).getTime();
+  const end = new Date(range.endExclusive).getTime();
+
+  return Number.isFinite(value) &&
+    Number.isFinite(start) &&
+    Number.isFinite(end) &&
+    start <= value &&
+    value < end;
+}
