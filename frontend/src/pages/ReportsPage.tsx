@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Download, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import WasteDistributionChart from "../components/WasteDistributionChart";
+import SuccessToast from "../components/SuccessToast";
 import {
   getReportStatistics,
   type ReportErrorCode,
   type ReportStatistics,
 } from "../services/reportService";
+import {
+  saveReportCsv,
+  type ReportCsvLabels,
+} from "../services/reportCsvService";
 
 function getReportErrorKey(code: ReportErrorCode): string {
   if (code === "unauthorized") return "reports.unauthorized";
@@ -24,6 +29,8 @@ function UserReportsPage({ userId }: { userId: string }) {
   const [statistics, setStatistics] = useState<ReportStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
 
   const applyResult = useCallback((
     result: Awaited<ReturnType<typeof getReportStatistics>>,
@@ -93,6 +100,52 @@ function UserReportsPage({ userId }: { userId: string }) {
   const metricValue = (format: (data: ReportStatistics) => string): string =>
     metricsUnavailable || statistics === null ? "—" : format(statistics);
 
+  const exportReport = async (): Promise<void> => {
+    if (statistics === null || isExporting) return;
+
+    setIsExporting(true);
+    setExportNotice(null);
+
+    const labels: ReportCsvLabels = {
+      section: t("reports.csv.section"),
+      metric: t("reports.csv.metric"),
+      value: t("reports.csv.value"),
+      unit: t("reports.csv.unit"),
+      summary: t("reports.csv.summary"),
+      distribution: t("reports.csv.distribution"),
+      category: t("reports.csv.category"),
+      weight: t("reports.csv.weight"),
+      percentage: t("reports.csv.percentage"),
+      records: t("reports.wasteRecords"),
+      historicalWeight: t("reports.historicalWeight"),
+      availableWeight: t("reports.availableWeight"),
+      soldWeight: t("reports.soldWeight"),
+      sales: t("reports.salesCount"),
+      grossRevenue: t("reports.grossSales"),
+      countUnit: t("reports.csv.countUnit"),
+      kilogramsUnit: t("common.kg"),
+      copUnit: t("reports.csv.copUnit"),
+      categories: {
+        organic: t("categories.organic"),
+        recyclable: t("categories.recyclable"),
+        nonRecyclable: t("categories.nonRecyclable"),
+      },
+    };
+
+    try {
+      const result = await saveReportCsv(
+        statistics,
+        labels,
+        `ecoplaza-report-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      if (result === "saved") setExportNotice("success");
+    } catch {
+      setExportNotice("error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <section className="p-4 md:p-8">
       <PageHeader
@@ -100,6 +153,22 @@ function UserReportsPage({ userId }: { userId: string }) {
         title={t("reports.title")}
         description={t("reports.description")}
       />
+
+      <div className="mt-6 flex justify-end">
+        <button
+          type="button"
+          onClick={() => void exportReport()}
+          disabled={metricsUnavailable || isExporting}
+          className="flex items-center gap-2 rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isExporting ? (
+            <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
+          ) : (
+            <Download size={17} aria-hidden="true" />
+          )}
+          {isExporting ? t("reports.exporting") : t("reports.exportCsv")}
+        </button>
+      </div>
 
       {isLoading && (
         <div
@@ -179,6 +248,16 @@ function UserReportsPage({ userId }: { userId: string }) {
         <div className="mt-8">
           <WasteDistributionChart data={statistics.distribution} />
         </div>
+      )}
+
+      {exportNotice !== null && (
+        <SuccessToast
+          title={t(exportNotice === "success" ? "reports.exportSuccessTitle" : "reports.exportErrorTitle")}
+          description={t(exportNotice === "success" ? "reports.exportSuccessDescription" : "reports.exportErrorDescription")}
+          closeLabel={t("reports.dismissNotification")}
+          variant={exportNotice === "error" ? "error" : "success"}
+          onClose={() => setExportNotice(null)}
+        />
       )}
     </section>
   );
