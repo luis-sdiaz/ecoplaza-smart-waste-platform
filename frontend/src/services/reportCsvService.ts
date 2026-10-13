@@ -5,9 +5,9 @@ import {
   createCsvRow,
   createUtf8Csv,
   saveCsvFile,
-} from "./csvService";
+} from "./csvService.ts";
 
-export { escapeCsvValue } from "./csvService";
+export { escapeCsvValue } from "./csvService.ts";
 
 export interface ReportCsvLabels {
   section: string;
