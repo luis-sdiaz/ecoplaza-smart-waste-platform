@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Database, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Database, LoaderCircle, RefreshCw, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import BuyerFormModal from "../components/BuyerFormModal";
@@ -16,6 +16,10 @@ import {
   type BuyerErrorCode,
   type BuyerInput,
 } from "../services/buyerService";
+import {
+  filterAndSortBuyers,
+  type BuyerSortOption,
+} from "../services/buyerFilters";
 
 const demoBuyers: DemoBuyer[] = [
   { id: "BUY-001", name: "Reciclar del Sur", type: "Empresa recicladora", interest: "Reciclables", contact: "contacto@reciclardelsur.co", status: "Activo" },
@@ -44,7 +48,7 @@ function getBuyerErrorKey(code: BuyerErrorCode): string {
 }
 
 function UserBuyersPage({ userId }: { userId: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
   const isSubmittingRef = useRef(false);
   const notificationSequenceRef = useRef(0);
@@ -55,6 +59,8 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<BuyerNotification | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOption, setSortOption] = useState<BuyerSortOption>("updated_desc");
 
   const applyLoadResult = useCallback((
     result: Awaited<ReturnType<typeof listBuyers>>,
@@ -166,6 +172,9 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const withEmail = buyers.filter((buyer) => buyer.email !== null).length;
   const withPhone = buyers.filter((buyer) => buyer.phone !== null).length;
   const metricsUnavailable = isLoading || loadError !== null;
+  const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
+  const visibleBuyers = filterAndSortBuyers(buyers, searchQuery, sortOption, locale);
+  const hasActiveSearch = searchQuery.trim() !== "";
 
   return (
     <section className="p-8">
@@ -217,6 +226,34 @@ function UserBuyersPage({ userId }: { userId: string }) {
           </button>
         </div>
 
+        <div className="mt-5 grid gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4 md:grid-cols-[1fr_auto]">
+          <label className="relative block">
+            <span className="sr-only">{t("buyers.searchLabel")}</span>
+            <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ecoplaza-text-muted" size={17} aria-hidden="true" />
+            <input
+              type="search"
+              value={searchQuery}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder={t("buyers.searchPlaceholder")}
+              className="w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background py-2.5 pr-3 pl-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("buyers.sortBy")}</span>
+            <select
+              value={sortOption}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setSortOption(event.target.value as BuyerSortOption)}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 py-2.5 text-sm text-ecoplaza-text"
+            >
+              <option value="updated_desc">{t("buyers.sortRecentlyUpdated")}</option>
+              <option value="name_asc">{t("buyers.sortNameAsc")}</option>
+              <option value="name_desc">{t("buyers.sortNameDesc")}</option>
+            </select>
+          </label>
+        </div>
+
         <div className="mt-4">
           {isLoading ? (
             <div role="status" className="flex min-h-40 items-center justify-center gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface text-sm text-ecoplaza-text-muted">
@@ -244,8 +281,15 @@ function UserBuyersPage({ userId }: { userId: string }) {
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("buyers.emptyTitle")}</h3>
               <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t("buyers.emptyDescription")}</p>
             </div>
+          ) : visibleBuyers.length === 0 ? (
+            <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
+              <Search size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
+              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("buyers.noSearchResultsTitle")}</h3>
+              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t("buyers.noSearchResultsDescription")}</p>
+              {hasActiveSearch && <button type="button" onClick={() => setSearchQuery("")} className="mt-4 rounded-lg border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text">{t("buyers.clearSearch")}</button>}
+            </div>
           ) : (
-            <BuyerTable buyers={buyers} onEdit={openEditForm} />
+            <BuyerTable buyers={visibleBuyers} onEdit={openEditForm} />
           )}
         </div>
       </div>
