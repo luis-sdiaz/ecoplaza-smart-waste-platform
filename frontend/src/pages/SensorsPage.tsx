@@ -1,10 +1,13 @@
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import SensorDeviceCard from "../components/SensorDeviceCard";
+import ContainerManagementPanel from "../components/ContainerManagementPanel";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../auth/AuthContext";
 
 function SensorsPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   return (
     <section className="p-8">
       <PageHeader
@@ -13,7 +16,23 @@ function SensorsPage() {
         description={t("sensors.description")}
       />
 
-      <div className="mt-8 grid grid-cols-4 gap-4">
+      <div className="mt-8 flex items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-ecoplaza-text">
+              {t("sensors.demoTitle")}
+            </h2>
+            <span className="rounded-full bg-ecoplaza-warning/12 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-warning">
+              {t("sensors.demoBadge")}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-ecoplaza-text-muted">
+            {t("sensors.demoDescription")}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-4 gap-4">
         <MetricCard
           title={t("sensors.registered")}
           value="10"
@@ -41,7 +60,7 @@ function SensorsPage() {
       <div className="mt-8">
         <div>
           <h2 className="text-lg font-semibold text-ecoplaza-text">
-            {t("sensors.devices")}
+            {t("sensors.demoDevices")}
           </h2>
 
           <p className="mt-1 text-sm text-ecoplaza-text-muted">
@@ -81,6 +100,8 @@ function SensorsPage() {
           />
         </div>
       </div>
+
+      {user && <ContainerManagementPanel key={user.id} />}
     </section>
   );
 }
