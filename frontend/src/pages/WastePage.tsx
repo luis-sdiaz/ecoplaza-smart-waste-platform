@@ -20,6 +20,7 @@ import {
   listWasteRecords,
   type RemoteWasteRecord,
   type WasteErrorCode,
+  type WasteStatus,
 } from "../services/wasteService";
 
 const WASTE_RECORDS_STORAGE_PREFIX = "ecoplaza-waste-records:";
@@ -100,6 +101,7 @@ function UserWastePage({ userId }: { userId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<WasteStatus | "all">("all");
   const [notification, setNotification] = useState<WasteRegistrationNotification | null>(null);
   const requestRevisionRef = useRef(0);
   const isSubmittingRef = useRef(false);
@@ -223,7 +225,10 @@ function UserWastePage({ userId }: { userId: string }) {
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
-  const tableRecords: WasteRecord[] = remoteRecords.map((record) => ({
+  const filteredRemoteRecords = statusFilter === "all"
+    ? remoteRecords
+    : remoteRecords.filter((record) => record.status === statusFilter);
+  const tableRecords: WasteRecord[] = filteredRemoteRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
     weight: record.weightKg,
@@ -271,6 +276,23 @@ function UserWastePage({ userId }: { userId: string }) {
           </button>
         </div>
 
+        <div className="mt-4 flex justify-end">
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("waste.statusFilter")}</span>
+            <select
+              value={statusFilter}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setStatusFilter(event.target.value as WasteStatus | "all")}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            >
+              <option value="all">{t("waste.allStatuses")}</option>
+              <option value="registered">{t("common.registered")}</option>
+              <option value="available">{t("common.available")}</option>
+              <option value="sold">{t("common.sold")}</option>
+            </select>
+          </label>
+        </div>
+
         <div className="mt-4">
           {isLoading ? (
             <div role="status" className="flex min-h-40 items-center justify-center gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface text-sm text-ecoplaza-text-muted">
@@ -294,11 +316,15 @@ function UserWastePage({ userId }: { userId: string }) {
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("waste.noContainersTitle")}</h3>
               <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t("waste.noContainersDescription")}</p>
             </div>
-          ) : remoteRecords.length === 0 ? (
+          ) : filteredRemoteRecords.length === 0 ? (
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
               <Database size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("waste.emptyTitle")}</h3>
-              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t("waste.emptyDescription")}</p>
+              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">
+                {t(statusFilter === "all" ? "waste.emptyTitle" : "waste.emptyFilteredTitle")}
+              </h3>
+              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">
+                {t(statusFilter === "all" ? "waste.emptyDescription" : "waste.emptyFilteredDescription")}
+              </p>
             </div>
           ) : (
             <WasteRecordTable records={tableRecords} />
