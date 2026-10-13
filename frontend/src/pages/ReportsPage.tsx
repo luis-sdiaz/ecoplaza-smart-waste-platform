@@ -6,6 +6,7 @@ import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import WasteDistributionChart from "../components/WasteDistributionChart";
 import SuccessToast from "../components/SuccessToast";
+import SalesTrendChart from "../components/SalesTrendChart";
 import {
   getReportStatistics,
   type ReportErrorCode,
@@ -360,8 +361,9 @@ function UserReportsPage({ userId }: { userId: string }) {
       </div>
 
       {!metricsUnavailable && statistics !== null && (
-        <div className="mt-8">
+        <div className="mt-8 space-y-8">
           <WasteDistributionChart data={statistics.distribution} isFiltered={isFiltered} />
+          <SalesTrendChart data={statistics.salesTrend} isFiltered={isFiltered} />
         </div>
       )}
 
