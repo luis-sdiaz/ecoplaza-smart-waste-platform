@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Database, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import type { Buyer } from "../services/buyerService";
@@ -20,6 +20,10 @@ import SaleRegistrationModal, {
 } from "../components/SaleRegistrationModal";
 import SalesTable from "../components/SalesTable";
 import SuccessToast from "../components/SuccessToast";
+import {
+  exportSalesHistory,
+  type SalesCsvLabels,
+} from "../services/salesCsvService";
 
 const demoSales: DemoSale[] = [
   { id: "SAL-001", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 80, total: 640000, date: "03/10/2026", status: "Completada" },
@@ -77,6 +81,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [notification, setNotification] = useState<SalesNotification | null>(null);
 
   const applyLoadResults = useCallback((
@@ -259,6 +264,53 @@ function UserSalesPage({ userId }: { userId: string }) {
   const servedBuyers = new Set(sales.map((sale) => sale.buyerId)).size;
   const metricsUnavailable = isLoading || loadError !== null;
   const registrationUnavailable = metricsUnavailable || buyers.length === 0 || wasteRecords.length === 0;
+  const exportUnavailable = metricsUnavailable || sales.length === 0 || isExporting;
+
+  const handleExportSales = async (): Promise<void> => {
+    if (exportUnavailable) return;
+
+    setIsExporting(true);
+    setNotification(null);
+    const labels: SalesCsvLabels = {
+      reference: t("sales.csv.reference"),
+      completedAt: t("sales.csv.completedAt"),
+      category: t("sales.csv.category"),
+      weightKg: t("sales.csv.weightKg"),
+      unitPriceCop: t("sales.csv.unitPriceCop"),
+      totalValueCop: t("sales.csv.totalValueCop"),
+      categories: {
+        organic: t("categories.organic"),
+        recyclable: t("categories.recyclable"),
+        nonRecyclable: t("categories.nonRecyclable"),
+      },
+    };
+
+    try {
+      const result = await exportSalesHistory(
+        labels,
+        `ecoplaza-sales-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+
+      if (result.ok) {
+        if (result.status === "saved") {
+          showNotification("success", "sales.exportSuccessTitle", "sales.exportSuccessDescription");
+        }
+        return;
+      }
+
+      showNotification(
+        "error",
+        "sales.exportErrorTitle",
+        result.error === "file_error"
+          ? "sales.exportFileError"
+          : getSalesErrorKey(result.error),
+      );
+    } catch {
+      showNotification("error", "sales.exportErrorTitle", "sales.exportFileError");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <section className="p-8">
@@ -280,14 +332,25 @@ function UserSalesPage({ userId }: { userId: string }) {
             </div>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("sales.realRecordsDescription")}</p>
           </div>
-          <button
-            type="button"
-            disabled={registrationUnavailable}
-            onClick={() => { setNotification(null); setIsModalOpen(true); }}
-            className="shrink-0 rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            + {t("sales.registerButton")}
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              disabled={exportUnavailable}
+              onClick={() => void handleExportSales()}
+              className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isExporting ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+              {isExporting ? t("sales.exporting") : t("sales.exportCsv")}
+            </button>
+            <button
+              type="button"
+              disabled={registrationUnavailable}
+              onClick={() => { setNotification(null); setIsModalOpen(true); }}
+              className="rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              + {t("sales.registerButton")}
+            </button>
+          </div>
         </div>
 
         {!isLoading && !loadError && (buyers.length === 0 || wasteRecords.length === 0) && (

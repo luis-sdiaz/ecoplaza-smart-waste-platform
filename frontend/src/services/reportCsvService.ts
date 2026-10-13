@@ -1,11 +1,13 @@
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { ReportStatistics } from "./reportService";
 import type { WasteCategory } from "./wasteService";
 import type { ReportDateRange } from "./reportDateRange";
+import {
+  createCsvRow,
+  createUtf8Csv,
+  saveCsvFile,
+} from "./csvService";
 
-const CSV_SEPARATOR = ";";
-const FORMULA_PREFIX_PATTERN = /^[\t\r ]*[=+\-@]/;
+export { escapeCsvValue } from "./csvService";
 
 export interface ReportCsvLabels {
   section: string;
@@ -35,21 +37,6 @@ export interface ReportCsvLabels {
 
 export type SaveReportCsvResult = "saved" | "cancelled";
 
-function protectCsvFormula(value: string): string {
-  return FORMULA_PREFIX_PATTERN.test(value) ? `'${value}` : value;
-}
-
-export function escapeCsvValue(value: string | number): string {
-  const safeValue = protectCsvFormula(String(value));
-  return /[;"\r\n]/.test(safeValue)
-    ? `"${safeValue.replaceAll('"', '""')}"`
-    : safeValue;
-}
-
-function csvRow(values: ReadonlyArray<string | number>): string {
-  return values.map(escapeCsvValue).join(CSV_SEPARATOR);
-}
-
 function validNumber(value: number): number {
   if (!Number.isFinite(value) || value < 0) {
     throw new Error("Report contains an invalid numeric value.");
@@ -63,23 +50,23 @@ export function createReportCsv(
   dateRange?: ReportDateRange,
 ): string {
   const rows = [
-    csvRow([labels.section, labels.metric, labels.value, labels.unit]),
-    csvRow([
+    createCsvRow([labels.section, labels.metric, labels.value, labels.unit]),
+    createCsvRow([
       labels.period,
       dateRange === undefined ? labels.allTime : labels.from,
       dateRange === undefined ? "" : dateRange.startDate,
       dateRange === undefined ? "" : `${labels.to}: ${dateRange.endDate}`,
     ]),
-    csvRow([labels.summary, labels.records, validNumber(statistics.wasteRecordCount), labels.countUnit]),
-    csvRow([labels.summary, labels.historicalWeight, validNumber(statistics.totalRegisteredWeightKg), labels.kilogramsUnit]),
-    csvRow([labels.summary, labels.availableWeight, validNumber(statistics.availableWeightKg), labels.kilogramsUnit]),
-    csvRow([labels.summary, labels.soldWeight, validNumber(statistics.soldWeightKg), labels.kilogramsUnit]),
-    csvRow([labels.summary, labels.sales, validNumber(statistics.salesCount), labels.countUnit]),
-    csvRow([labels.summary, labels.grossRevenue, validNumber(statistics.grossSalesValue), labels.copUnit]),
+    createCsvRow([labels.summary, labels.records, validNumber(statistics.wasteRecordCount), labels.countUnit]),
+    createCsvRow([labels.summary, labels.historicalWeight, validNumber(statistics.totalRegisteredWeightKg), labels.kilogramsUnit]),
+    createCsvRow([labels.summary, labels.availableWeight, validNumber(statistics.availableWeightKg), labels.kilogramsUnit]),
+    createCsvRow([labels.summary, labels.soldWeight, validNumber(statistics.soldWeightKg), labels.kilogramsUnit]),
+    createCsvRow([labels.summary, labels.sales, validNumber(statistics.salesCount), labels.countUnit]),
+    createCsvRow([labels.summary, labels.grossRevenue, validNumber(statistics.grossSalesValue), labels.copUnit]),
     "",
-    csvRow([labels.distribution, labels.category, labels.weight, labels.percentage]),
+    createCsvRow([labels.distribution, labels.category, labels.weight, labels.percentage]),
     ...statistics.distribution.map((item) =>
-      csvRow([
+      createCsvRow([
         labels.distribution,
         labels.categories[item.category],
         validNumber(item.weightKg),
@@ -88,7 +75,7 @@ export function createReportCsv(
     ),
   ];
 
-  return `\uFEFF${rows.join("\r\n")}\r\n`;
+  return createUtf8Csv(rows);
 }
 
 export async function saveReportCsv(
@@ -97,13 +84,8 @@ export async function saveReportCsv(
   defaultFileName: string,
   dateRange?: ReportDateRange,
 ): Promise<SaveReportCsvResult> {
-  const filePath = await save({
-    defaultPath: defaultFileName,
-    filters: [{ name: "CSV", extensions: ["csv"] }],
-  });
-
-  if (filePath === null) return "cancelled";
-
-  await writeTextFile(filePath, createReportCsv(statistics, labels, dateRange));
-  return "saved";
+  return saveCsvFile(
+    createReportCsv(statistics, labels, dateRange),
+    defaultFileName,
+  );
 }
