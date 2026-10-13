@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+import type { ClassifiedAuthError } from "./authErrors";
 
 export type AuthUser = {
   id: string;
@@ -7,12 +8,22 @@ export type AuthUser = {
   avatarUrl: string | null;
 };
 
+export type AuthActionResult =
+  | { ok: true }
+  | { ok: false; error: ClassifiedAuthError };
+
 type AuthContextValue = {
+  isLoading: boolean;
   isAuthenticated: boolean;
   user: AuthUser | null;
-  signIn: (email: string, password: string, remember: boolean) => boolean;
-  signOut: () => void;
-  updateUserName: (name: string) => boolean;
+  profileError: boolean;
+  signIn: (
+    email: string,
+    password: string,
+    remember: boolean,
+  ) => Promise<AuthActionResult>;
+  signOut: () => Promise<AuthActionResult>;
+  updateUserName: (name: string) => Promise<boolean>;
   updateUserAvatar: (avatar: Blob) => Promise<boolean>;
   removeUserAvatar: () => Promise<boolean>;
 };

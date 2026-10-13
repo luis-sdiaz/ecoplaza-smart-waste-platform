@@ -12,7 +12,7 @@ import {
   LogOut,
   UserRound,
 } from "lucide-react";
-import { startTransition } from "react";
+import { useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
@@ -21,10 +21,38 @@ function Sidebar() {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const isSigningOutRef = useRef(false);
 
-  const handleSignOut = () => {
-    navigate("/login", { replace: true, state: null });
-    startTransition(signOut);
+  const handleSignOut = async () => {
+    if (isSigningOutRef.current) return;
+
+    isSigningOutRef.current = true;
+    setIsSigningOut(true);
+    setSignOutError(null);
+
+    try {
+      const result = await signOut();
+
+      if (!result.ok) {
+        setSignOutError(
+          result.error.code === "network_error"
+            ? "auth.signOutNetworkError"
+            : result.error.code === "rate_limited"
+              ? "auth.signOutRateLimited"
+              : "auth.signOutError",
+        );
+        return;
+      }
+
+      navigate("/login", { replace: true, state: null });
+    } catch {
+      setSignOutError("auth.signOutError");
+    } finally {
+      isSigningOutRef.current = false;
+      setIsSigningOut(false);
+    }
   };
 
   return (
@@ -218,11 +246,18 @@ function Sidebar() {
       <button
         type="button"
         onClick={handleSignOut}
+        disabled={isSigningOut}
+        aria-busy={isSigningOut}
         className="ecoplaza-sidebar-sign-out mt-3 flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-medium text-ecoplaza-text-muted transition-colors duration-150 hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary motion-reduce:transition-none"
       >
         <LogOut size={20} strokeWidth={2.2} aria-hidden="true" />
-        <span>{t("navigation.signOut")}</span>
+        <span>{isSigningOut ? t("auth.signingOut") : t("navigation.signOut")}</span>
       </button>
+      {signOutError && (
+        <p role="alert" className="mt-2 text-xs leading-4 text-ecoplaza-danger">
+          {t(signOutError)}
+        </p>
+      )}
     </aside>
   );
 }

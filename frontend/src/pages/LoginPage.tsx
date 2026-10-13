@@ -1,17 +1,19 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, Leaf, Lock, Mail } from "lucide-react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
+import type { AuthErrorCode } from "../auth/authErrors";
 import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
 
 const EcoContainer3D = lazy(() => import("../components/auth/EcoContainer3D"));
 
 const loginMetrics = [
-  { value: "1.248", unit: "kg", label: "Residuos gestionados" },
-  { value: "8", unit: "", label: "Sensores activos" },
-  { value: "386", unit: "kg", label: "Material disponible" },
+  { value: "1.248", unit: "kg", label: "login.managedWaste" },
+  { value: "8", unit: "", label: "login.activeSensors" },
+  { value: "386", unit: "kg", label: "login.availableMaterial" },
 ];
 
 type LoginValues = {
@@ -19,7 +21,12 @@ type LoginValues = {
   password: string;
 };
 
-type LoginErrors = Partial<Record<keyof LoginValues, string>>;
+type LoginErrorKey =
+  | "login.emailRequired"
+  | "login.emailInvalid"
+  | "login.passwordRequired";
+
+type LoginErrors = Partial<Record<keyof LoginValues, LoginErrorKey>>;
 
 type InternalDestination = {
   pathname: string;
@@ -55,37 +62,54 @@ function validateLogin(values: LoginValues): LoginErrors {
   const email = values.email.trim();
 
   if (!email) {
-    errors.email = "Ingresa tu correo electrónico.";
+    errors.email = "login.emailRequired";
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.email = "Ingresa un correo electrónico válido.";
+    errors.email = "login.emailInvalid";
   }
 
-  if (!values.password) errors.password = "Ingresa tu contraseña.";
+  if (!values.password) errors.password = "login.passwordRequired";
 
   return errors;
 }
 
 function LoginPage() {
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, signIn } = useAuth();
+  const { isAuthenticated, isLoading, signIn } = useAuth();
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState<LoginValues>({ email: "", password: "" });
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [hasCredentialError, setHasCredentialError] = useState(false);
-  const [isCompletingSignIn, setIsCompletingSignIn] = useState(false);
+  const [authErrorCode, setAuthErrorCode] = useState<AuthErrorCode | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const errors = hasSubmitted ? validateLogin(values) : {};
+  const isBusy = isLoading || isSubmitting;
+
+  const authErrorKey = authErrorCode === "invalid_credentials"
+    ? "login.invalidCredentials"
+    : authErrorCode === "email_not_confirmed"
+      ? "login.emailNotConfirmed"
+      : authErrorCode === "network_error"
+        ? "login.networkError"
+        : authErrorCode === "rate_limited"
+          ? "login.rateLimited"
+          : authErrorCode === "session_already_active"
+            ? "login.sessionAlreadyActive"
+            : "login.sessionError";
 
   const handleChange = (name: keyof LoginValues, value: string) => {
     setValues((current) => ({ ...current, [name]: value }));
-    setHasCredentialError(false);
+    setAuthErrorCode(null);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isLoading || isSubmittingRef.current) return;
+
     setHasSubmitted(true);
-    setHasCredentialError(false);
+    setAuthErrorCode(null);
 
     const validationErrors = validateLogin(values);
     const firstInvalidField = (["email", "password"] as const).find((name) => validationErrors[name]);
@@ -103,26 +127,42 @@ function LoginPage() {
     const rememberInput = event.currentTarget.elements.namedItem("remember");
     const remember = rememberInput instanceof HTMLInputElement && rememberInput.checked;
 
-    setIsCompletingSignIn(true);
-    if (!signIn(values.email, values.password, remember)) {
-      setIsCompletingSignIn(false);
-      setHasCredentialError(true);
-      return;
-    }
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
 
-    navigate(getPostSignInDestination(location.state), {
-      replace: true,
-      state: null,
-    });
+    try {
+      const result = await signIn(values.email, values.password, remember);
+
+      if (!result.ok) {
+        setAuthErrorCode(result.error.code);
+        return;
+      }
+
+      navigate(getPostSignInDestination(location.state), {
+        replace: true,
+        state: null,
+      });
+    } catch {
+      setAuthErrorCode("unexpected_error");
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
-  if (isAuthenticated && !isCompletingSignIn) {
-    return <Navigate to="/" replace state={null} />;
+  if (!isLoading && isAuthenticated) {
+    return (
+      <Navigate
+        to={getPostSignInDestination(location.state)}
+        replace
+        state={null}
+      />
+    );
   }
 
   return (
     <main
-      lang="es"
+      lang={i18n.resolvedLanguage === "en" ? "en" : "es"}
       className="ecoplaza-login flex h-screen items-center justify-center bg-ecoplaza-background p-6"
     >
       <div className="ecoplaza-login-card relative isolate grid h-full max-h-[760px] min-h-0 w-full max-w-[1220px] grid-cols-[44%_56%] overflow-hidden rounded-[32px] border border-ecoplaza-border/80 bg-ecoplaza-surface">
@@ -158,7 +198,7 @@ function LoginPage() {
             <div>
               <p className="text-2xl font-semibold tracking-tight">EcoPlaza</p>
               <p className="mt-1 text-xs text-white/75">
-                Tecnología + sostenibilidad
+                {t("login.brandTagline")}
               </p>
             </div>
           </div>
@@ -168,13 +208,12 @@ function LoginPage() {
               id="login-brand-title"
               className="text-[36px] leading-[1.2] font-semibold tracking-[-0.035em]"
             >
-              Gestión inteligente
+              {t("login.brandTitleFirst")}
               <br />
-              de residuos
+              {t("login.brandTitleSecond")}
             </h2>
             <p className="mt-3 max-w-[365px] text-[15px] leading-6 text-white/75">
-              Tecnología para una gestión de residuos más inteligente y
-              sostenible.
+              {t("login.brandDescription")}
             </p>
           </div>
 
@@ -193,7 +232,7 @@ function LoginPage() {
                 className="flex flex-col rounded-xl border border-white/10 bg-white/5 px-2.5 py-3"
               >
                 <dt className="order-2 mt-1 text-[11px] leading-4 text-white/70">
-                  {label}
+                  {t(label)}
                 </dt>
                 <dd className="text-[22px] leading-7 font-semibold tracking-tight tabular-nums">
                   {value}
@@ -218,10 +257,10 @@ function LoginPage() {
                 id="login-title"
                 className="text-[30px] font-semibold tracking-tight text-ecoplaza-text"
               >
-                Bienvenido de nuevo
+                {t("login.title")}
               </h1>
               <p className="ecoplaza-login-secondary mt-2 text-sm leading-6 text-ecoplaza-text-muted">
-                Ingresa tus datos para acceder a EcoPlaza.
+                {t("login.description")}
               </p>
             </header>
 
@@ -235,7 +274,7 @@ function LoginPage() {
                   htmlFor="login-email"
                   className="mb-2 block text-sm font-medium text-ecoplaza-text"
                 >
-                  Correo electrónico
+                  {t("login.email")}
                 </label>
                 <div className="relative">
                   <Mail
@@ -249,8 +288,9 @@ function LoginPage() {
                     name="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="usuario@correo.com"
+                    placeholder={t("login.emailPlaceholder")}
                     required
+                    disabled={isBusy}
                     value={values.email}
                     onChange={(event) => handleChange("email", event.target.value)}
                     aria-invalid={Boolean(errors.email)}
@@ -260,7 +300,7 @@ function LoginPage() {
                 </div>
                 {errors.email && (
                   <p id="login-email-error" className="mt-1 text-xs leading-4 text-ecoplaza-danger">
-                    {errors.email}
+                    {t(errors.email)}
                   </p>
                 )}
               </div>
@@ -270,7 +310,7 @@ function LoginPage() {
                   htmlFor="login-password"
                   className="mb-2 block text-sm font-medium text-ecoplaza-text"
                 >
-                  Contraseña
+                  {t("login.password")}
                 </label>
                 <div className="relative">
                   <Lock
@@ -286,6 +326,7 @@ function LoginPage() {
                     autoComplete="current-password"
                     placeholder="•••••••••••"
                     required
+                    disabled={isBusy}
                     value={values.password}
                     onChange={(event) => handleChange("password", event.target.value)}
                     aria-invalid={Boolean(errors.password)}
@@ -294,7 +335,7 @@ function LoginPage() {
                   />
                   <button
                     type="button"
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
                     aria-controls="login-password"
                     onClick={() => setShowPassword((visible) => !visible)}
                     className="absolute top-1/2 right-2.5 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-ecoplaza-text-muted transition-colors hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
@@ -308,7 +349,7 @@ function LoginPage() {
                 </div>
                 {errors.password && (
                   <p id="login-password-error" className="mt-1 text-xs leading-4 text-ecoplaza-danger">
-                    {errors.password}
+                    {t(errors.password)}
                   </p>
                 )}
               </div>
@@ -322,9 +363,10 @@ function LoginPage() {
                     id="login-remember"
                     name="remember"
                     type="checkbox"
+                    disabled={isBusy}
                     className="ecoplaza-login-remember-checkbox h-4 w-4 cursor-pointer accent-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
                   />
-                  Recordarme
+                  {t("login.rememberMe")}
                 </label>
                 <a
                   href="#"
@@ -332,38 +374,44 @@ function LoginPage() {
                   onClick={(event) => event.preventDefault()}
                   className="rounded font-medium text-ecoplaza-primary transition-colors hover:text-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary"
                 >
-                  ¿Olvidaste tu contraseña?
+                  {t("login.forgotPassword")}
                 </a>
               </div>
 
               <button
                 type="submit"
+                disabled={isBusy}
+                aria-busy={isSubmitting}
                 className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-ecoplaza-primary text-sm font-semibold text-ecoplaza-on-primary transition-colors hover:bg-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary"
               >
-                Iniciar sesión
+                {isLoading
+                  ? t("login.restoringSession")
+                  : isSubmitting
+                    ? t("login.signingIn")
+                    : t("login.submit")}
                 <ArrowRight size={18} strokeWidth={1.8} aria-hidden="true" />
               </button>
-              {hasCredentialError && (
+              {authErrorCode && (
                 <p role="alert" className="mt-3 text-center text-xs leading-4 text-ecoplaza-danger">
-                  El correo o la contraseña son incorrectos.
+                  {t(authErrorKey)}
                 </p>
               )}
             </form>
 
             <p className="ecoplaza-login-secondary mt-4 text-center text-sm leading-5 text-ecoplaza-text-muted">
-              ¿Aún no tienes una cuenta?{" "}
+              {t("login.noAccount")} {" "}
               <button
                 type="button"
                 onClick={() => setIsRegisterOpen(true)}
                 className="cursor-pointer rounded font-semibold text-ecoplaza-primary transition-colors duration-150 hover:text-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary"
               >
-                Crear cuenta
+                {t("login.createAccount")}
               </button>
             </p>
           </div>
 
           <footer className="ecoplaza-login-secondary absolute right-8 bottom-7 left-8 z-20 text-center text-xs text-ecoplaza-text-muted">
-            EcoPlaza · Gestión inteligente de residuos
+            {t("login.footer")}
           </footer>
         </section>
       </div>

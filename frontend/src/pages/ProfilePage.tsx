@@ -62,18 +62,31 @@ const profileNotificationCopy = {
     description: "profile.avatarRemoveError",
     variant: "error",
   },
+  profileLoadError: {
+    title: "profile.loadErrorTitle",
+    description: "profile.loadErrorDescription",
+    variant: "error",
+  },
 } as const;
 
 function ProfilePage() {
   const { t } = useTranslation();
-  const { user, updateUserName, updateUserAvatar, removeUserAvatar } = useAuth();
+  const {
+    user,
+    profileError,
+    updateUserName,
+    updateUserAvatar,
+    removeUserAvatar,
+  } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [nameError, setNameError] = useState(false);
+  const [isNameBusy, setIsNameBusy] = useState(false);
   const [isAvatarBusy, setIsAvatarBusy] = useState(false);
   const [avatarFeedback, setAvatarFeedback] = useState<AvatarFeedback | null>(null);
   const [notification, setNotification] = useState<ProfileNotification | null>(null);
+  const [isProfileErrorDismissed, setIsProfileErrorDismissed] = useState(false);
   const toastSequenceRef = useRef(0);
 
   const showNotification = (operation: ProfileNotificationOperation): void => {
@@ -99,8 +112,10 @@ function ProfilePage() {
     setIsEditingName(false);
   };
 
-  const handleNameSubmit = (event: FormEvent<HTMLFormElement>): void => {
+  const handleNameSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    if (isNameBusy) return;
+
     setNotification(null);
 
     const normalizedName = normalizeProfileName(draftName);
@@ -117,15 +132,21 @@ function ProfilePage() {
       return;
     }
 
-    if (!updateUserName(normalizedName)) {
-      showNotification("nameSaveError");
-      return;
-    }
+    setIsNameBusy(true);
 
-    setDraftName(normalizedName);
-    setNameError(false);
-    setIsEditingName(false);
-    showNotification("nameUpdated");
+    try {
+      if (!(await updateUserName(normalizedName))) {
+        showNotification("nameSaveError");
+        return;
+      }
+
+      setDraftName(normalizedName);
+      setNameError(false);
+      setIsEditingName(false);
+      showNotification("nameUpdated");
+    } finally {
+      setIsNameBusy(false);
+    }
   };
 
   const handleAvatarSelection = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -190,7 +211,9 @@ function ProfilePage() {
 
   const notificationCopy = notification
     ? profileNotificationCopy[notification.operation]
-    : null;
+    : profileError && !isProfileErrorDismissed
+      ? profileNotificationCopy.profileLoadError
+      : null;
 
   return (
     <section className="profile-page" aria-label={t("profile.title")}>
@@ -227,7 +250,7 @@ function ProfilePage() {
                         onChange={handleAvatarSelection}
                       />
                     </div>
-                    <span className="profile-demo-badge">{t("profile.demoAccount")}</span>
+                    <span className="profile-demo-badge">{t("profile.userAccount")}</span>
                   </div>
 
                   <span className="profile-active-badge">
@@ -260,12 +283,13 @@ function ProfilePage() {
                             aria-describedby={nameError ? "profile-name-error" : undefined}
                             autoComplete="name"
                             autoFocus
+                            disabled={isNameBusy}
                           />
                           <div className="profile-name-actions">
-                            <button type="submit" className="profile-name-save">
+                            <button type="submit" className="profile-name-save" disabled={isNameBusy}>
                               {t("profile.save")}
                             </button>
-                            <button type="button" className="profile-name-cancel" onClick={cancelNameEditing}>
+                            <button type="button" className="profile-name-cancel" onClick={cancelNameEditing} disabled={isNameBusy}>
                               {t("profile.cancel")}
                             </button>
                           </div>
@@ -288,7 +312,7 @@ function ProfilePage() {
                   )}
                   <p className="profile-account-type">
                     <span>{t("profile.accountType")}</span>
-                    <strong>{t("profile.demo")}</strong>
+                    <strong>{t("profile.user")}</strong>
                   </p>
                   <p className="profile-email" title={user.email}>
                     <Mail size={17} strokeWidth={1.7} aria-hidden="true" />
@@ -336,7 +360,7 @@ function ProfilePage() {
                   </div>
                 </div>
 
-                <p className="profile-demo-note">{t("profile.demoDescription")}</p>
+                <p className="profile-demo-note">{t("profile.userDescription")}</p>
               </div>
             </article>
 
@@ -352,7 +376,7 @@ function ProfilePage() {
                 <dl className="profile-account-grid">
                   <div className="profile-account-item">
                     <dt>{t("profile.accountType")}</dt>
-                    <dd>{t("profile.demo")}</dd>
+                    <dd>{t("profile.user")}</dd>
                   </div>
                   <div className="profile-account-item">
                     <dt>{t("profile.status")}</dt>
@@ -402,13 +426,15 @@ function ProfilePage() {
         </div>
       )}
 
-      {notification && notificationCopy ? (
+      {notificationCopy ? (
         <SuccessToast
-          key={notification.id}
+          key={notification?.id ?? "profile-load-error"}
           title={t(notificationCopy.title)}
           description={t(notificationCopy.description)}
           closeLabel={t("profile.dismissNotification")}
-          onClose={closeNotification}
+          onClose={notification
+            ? closeNotification
+            : () => setIsProfileErrorDismissed(true)}
           duration={notificationCopy.variant === "error" ? 7000 : undefined}
           variant={notificationCopy.variant}
         />

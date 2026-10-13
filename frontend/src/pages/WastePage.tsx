@@ -9,8 +9,9 @@ import WasteRegistrationModal, {
   type WasteRegistrationValues,
 } from "../components/WasteRegistrationModal";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../auth/AuthContext";
 
-const WASTE_RECORDS_STORAGE_KEY = "ecoplaza-waste-records";
+const WASTE_RECORDS_STORAGE_PREFIX = "ecoplaza-waste-records:";
 
 type WasteRegistrationNotification = {
   id: number;
@@ -52,9 +53,13 @@ const baseWasteRecords: WasteRecord[] = [
   },
 ];
 
-function readSavedWasteRecords(): WasteRecord[] {
+function getWasteRecordsStorageKey(userId: string): string {
+  return `${WASTE_RECORDS_STORAGE_PREFIX}${userId}`;
+}
+
+function readSavedWasteRecords(userId: string): WasteRecord[] {
   try {
-    const storedRecords = localStorage.getItem(WASTE_RECORDS_STORAGE_KEY);
+    const storedRecords = localStorage.getItem(getWasteRecordsStorageKey(userId));
     if (!storedRecords) return [];
 
     const parsedRecords: unknown = JSON.parse(storedRecords);
@@ -87,10 +92,10 @@ function getCurrentDate() {
   ).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
-function WastePage() {
+function UserWastePage({ userId }: { userId: string }) {
   const { t } = useTranslation();
-  const [savedRecords, setSavedRecords] = useState<WasteRecord[]>(
-    readSavedWasteRecords,
+  const [savedRecords, setSavedRecords] = useState<WasteRecord[]>(() =>
+    readSavedWasteRecords(userId),
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [notification, setNotification] =
@@ -124,7 +129,7 @@ function WastePage() {
 
     try {
       localStorage.setItem(
-        WASTE_RECORDS_STORAGE_KEY,
+        getWasteRecordsStorageKey(userId),
         JSON.stringify(updatedRecords),
       );
     } catch {
@@ -225,6 +230,12 @@ function WastePage() {
       )}
     </section>
   );
+}
+
+function WastePage() {
+  const { user } = useAuth();
+
+  return user ? <UserWastePage key={user.id} userId={user.id} /> : null;
 }
 
 export default WastePage;
