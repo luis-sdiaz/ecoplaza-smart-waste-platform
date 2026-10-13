@@ -78,6 +78,7 @@ const UNIQUE_VIOLATION_CODE = "23505";
 const NUMERIC_OUT_OF_RANGE_CODE = "22003";
 const PERMISSION_DENIED_CODE = "42501";
 const STATISTICS_PAGE_SIZE = 1000;
+const WASTE_RECORDS_PAGE_SIZE = 1000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isWasteCategory(value: string): value is WasteCategory {
@@ -189,6 +190,53 @@ function toRemoteWasteRecord(
     registeredAt: registeredAt.toISOString(),
     status: row.status,
   };
+}
+
+async function listWasteRows(
+  ownerId: string,
+  status?: WasteStatus,
+): Promise<WasteServiceResult<WasteRow[]>> {
+  const rows: WasteRow[] = [];
+
+  for (let page = 0; ; page += 1) {
+    const from = page * WASTE_RECORDS_PAGE_SIZE;
+    let query = supabase
+      .from("waste_records")
+      .select(
+        "id, record_number, owner_id, container_id, category, weight_kg, registered_at, status",
+      )
+      .eq("owner_id", ownerId)
+      .order("registered_at", { ascending: false })
+      .order("record_number", { ascending: false })
+      .range(from, from + WASTE_RECORDS_PAGE_SIZE - 1);
+
+    if (status !== undefined) query = query.eq("status", status);
+
+    const { data, error } = await query.returns<WasteRow[]>();
+
+    if (error) return failure(error);
+    if (!Array.isArray(data)) {
+      return { ok: false, error: { code: "database_error", retryable: true } };
+    }
+
+    rows.push(...data);
+    if (data.length < WASTE_RECORDS_PAGE_SIZE) break;
+  }
+
+  return { ok: true, data: rows };
+}
+
+function toRemoteWasteRecords(
+  rows: WasteRow[],
+  ownerId: string,
+): WasteServiceResult<RemoteWasteRecord[]> {
+  const records = rows.map((row) => toRemoteWasteRecord(row, ownerId));
+
+  if (records.some((record) => record === null)) {
+    return { ok: false, error: { code: "database_error", retryable: true } };
+  }
+
+  return { ok: true, data: records as RemoteWasteRecord[] };
 }
 
 export function calculateWasteStatistics(
@@ -303,26 +351,26 @@ export async function listWasteRecords(): Promise<
   if (!userResult.ok) return userResult;
 
   try {
-    const { data, error } = await supabase
-      .from("waste_records")
-      .select(
-        "id, record_number, owner_id, container_id, category, weight_kg, registered_at, status",
-      )
-      .eq("owner_id", userResult.data)
-      .order("registered_at", { ascending: false })
-      .returns<WasteRow[]>();
+    const rowsResult = await listWasteRows(userResult.data);
+    if (!rowsResult.ok) return rowsResult;
 
-    if (error) return failure(error);
-    if (!Array.isArray(data)) {
-      return { ok: false, error: { code: "database_error", retryable: true } };
-    }
+    return toRemoteWasteRecords(rowsResult.data, userResult.data);
+  } catch (error) {
+    return failure(error);
+  }
+}
 
-    const records = data.map((row) => toRemoteWasteRecord(row, userResult.data));
-    if (records.some((record) => record === null)) {
-      return { ok: false, error: { code: "database_error", retryable: true } };
-    }
+export async function listAvailableWasteRecords(): Promise<
+  WasteServiceResult<RemoteWasteRecord[]>
+> {
+  const userResult = await getAuthenticatedUserId();
+  if (!userResult.ok) return userResult;
 
-    return { ok: true, data: records as RemoteWasteRecord[] };
+  try {
+    const rowsResult = await listWasteRows(userResult.data, "available");
+    if (!rowsResult.ok) return rowsResult;
+
+    return toRemoteWasteRecords(rowsResult.data, userResult.data);
   } catch (error) {
     return failure(error);
   }

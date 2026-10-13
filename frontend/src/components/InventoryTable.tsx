@@ -1,9 +1,11 @@
-interface InventoryItem {
+import { useTranslation } from "react-i18next";
+
+export interface InventoryItem {
   id: string;
-  category: string;
-  quantity: number;
-  unitPrice: number;
-  status: string;
+  category: "organic" | "recyclable" | "nonRecyclable";
+  weightKg: number;
+  container: string;
+  registeredAt: string;
 }
 
 interface InventoryTableProps {
@@ -11,16 +13,18 @@ interface InventoryTableProps {
 }
 
 function InventoryTable({ items }: InventoryTableProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const translateCategory = (value: string) =>
-    value === "Orgánicos" ? t("common.organic") : value === "Reciclables" ? t("common.recyclable") : value;
-  const translateStatus = (value: string) =>
-    value === "Disponible" ? t("common.available") : value === "Reservado" ? t("common.reserved") : value;
-  const currencyFormatter = new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  });
+    value === "organic"
+      ? t("common.organic")
+      : value === "recyclable"
+        ? t("common.recyclable")
+        : t("common.nonRecyclable");
+  const formatWeight = (weightKg: number) =>
+    `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(weightKg)} ${t("common.kg")}`;
+  const formatDate = (registeredAt: string) =>
+    new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(registeredAt));
 
   return (
     <div className="overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
@@ -36,19 +40,15 @@ function InventoryTable({ items }: InventoryTableProps) {
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("common.quantity")}
+              {t("inventory.weight")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("inventory.pricePerKg")}
+              {t("inventory.container")}
             </th>
 
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("inventory.estimatedValue")}
-            </th>
-
-            <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("common.status")}
+              {t("common.date")}
             </th>
           </tr>
         </thead>
@@ -65,21 +65,15 @@ function InventoryTable({ items }: InventoryTableProps) {
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text">
-                {item.quantity} kg
+                {formatWeight(item.weightKg)}
               </td>
 
               <td className="px-5 py-4 text-sm text-ecoplaza-text">
-                {currencyFormatter.format(item.unitPrice)}
+                {item.container}
               </td>
 
-              <td className="px-5 py-4 text-sm font-medium text-ecoplaza-text">
-                {currencyFormatter.format(item.quantity * item.unitPrice)}
-              </td>
-
-              <td className="px-5 py-4">
-                <span className="rounded-full bg-ecoplaza-background px-3 py-1 text-xs font-medium text-ecoplaza-primary">
-                  {translateStatus(item.status)}
-                </span>
+              <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
+                {formatDate(item.registeredAt)}
               </td>
             </tr>
           ))}
@@ -90,4 +84,3 @@ function InventoryTable({ items }: InventoryTableProps) {
 }
 
 export default InventoryTable;
-import { useTranslation } from "react-i18next";
