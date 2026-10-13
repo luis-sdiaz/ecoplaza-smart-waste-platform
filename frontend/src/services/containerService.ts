@@ -30,6 +30,7 @@ const CHECK_VIOLATION_CODE = "23514";
 const PERMISSION_DENIED_CODE = "42501";
 const MIN_CODE_LENGTH = 2;
 const MAX_CODE_LENGTH = 40;
+const CONTAINERS_PAGE_SIZE = 1000;
 const CONTAINER_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]*$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -137,20 +138,29 @@ export async function listContainers(): Promise<ContainerServiceResult<Container
   if (!userResult.ok) return userResult;
 
   try {
-    const { data, error } = await supabase
-      .from("containers")
-      .select("id, owner_id, code, created_at")
-      .eq("owner_id", userResult.data)
-      .order("created_at", { ascending: true })
-      .returns<ContainerRow[]>();
+    const rows: ContainerRow[] = [];
 
-    if (error) return failure(error);
+    for (let page = 0; ; page += 1) {
+      const from = page * CONTAINERS_PAGE_SIZE;
+      const { data, error } = await supabase
+        .from("containers")
+        .select("id, owner_id, code, created_at")
+        .eq("owner_id", userResult.data)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, from + CONTAINERS_PAGE_SIZE - 1)
+        .returns<ContainerRow[]>();
 
-    if (!Array.isArray(data)) {
-      return { ok: false, error: { code: "database_error", retryable: true } };
+      if (error) return failure(error);
+      if (!Array.isArray(data)) {
+        return { ok: false, error: { code: "database_error", retryable: true } };
+      }
+
+      rows.push(...data);
+      if (data.length < CONTAINERS_PAGE_SIZE) break;
     }
 
-    const containers = data.map((row) => toContainer(row, userResult.data));
+    const containers = rows.map((row) => toContainer(row, userResult.data));
     if (containers.some((container) => container === null)) {
       return { ok: false, error: { code: "database_error", retryable: true } };
     }

@@ -8,6 +8,8 @@ import {
   LoaderCircle,
   Plus,
   RefreshCw,
+  Search,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -37,6 +39,7 @@ function ContainerManagementPanel() {
   const isCreatingRef = useRef(false);
   const [containers, setContainers] = useState<Container[]>([]);
   const [code, setCode] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -116,6 +119,13 @@ function ContainerManagementPanel() {
   };
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase(locale);
+  const visibleContainers = normalizedSearch === ""
+    ? containers
+    : containers.filter((container) =>
+        container.code.toLocaleLowerCase(locale).includes(normalizedSearch)
+      );
+  const hasActiveSearch = normalizedSearch !== "";
   const feedbackClass = feedback?.tone === "success"
     ? "border-ecoplaza-primary/30 bg-ecoplaza-primary/10 text-ecoplaza-primary"
     : "border-ecoplaza-danger/30 bg-ecoplaza-danger/10 text-ecoplaza-danger";
@@ -138,13 +148,37 @@ function ContainerManagementPanel() {
         </div>
         {!isLoading && !loadError && (
           <span className="shrink-0 text-sm font-medium text-ecoplaza-text-muted">
-            {t("containers.count", { count: containers.length })}
+            {t("containers.count", { count: visibleContainers.length })}
           </span>
         )}
       </div>
 
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-4">
         <div className="min-h-48 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+          {!isLoading && !loadError && containers.length > 0 && (
+            <div className="relative mb-4">
+              <label htmlFor="container-search" className="sr-only">{t("containers.searchLabel")}</label>
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted" size={17} strokeWidth={1.8} aria-hidden="true" />
+              <input
+                id="container-search"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={t("containers.searchPlaceholder")}
+                className="h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 pl-10 pr-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted/75 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+              />
+              {hasActiveSearch && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label={t("containers.clearSearch")}
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                >
+                  <X size={16} strokeWidth={1.8} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          )}
           {isLoading ? (
             <div role="status" className="flex min-h-38 items-center justify-center gap-3 text-sm text-ecoplaza-text-muted">
               <LoaderCircle className="animate-spin text-ecoplaza-primary" size={20} strokeWidth={1.8} aria-hidden="true" />
@@ -173,9 +207,15 @@ function ContainerManagementPanel() {
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("containers.emptyTitle")}</h3>
               <p className="mt-1 max-w-md text-xs leading-5 text-ecoplaza-text-muted">{t("containers.emptyDescription")}</p>
             </div>
+          ) : visibleContainers.length === 0 ? (
+            <div className="flex min-h-38 flex-col items-center justify-center text-center">
+              <Search size={22} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
+              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("containers.noSearchResultsTitle")}</h3>
+              <p className="mt-1 max-w-md text-xs leading-5 text-ecoplaza-text-muted">{t("containers.noSearchResultsDescription")}</p>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {containers.map((container) => (
+              {visibleContainers.map((container) => (
                 <article key={container.id} className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background/55 p-4">
                   <div className="flex items-start gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ecoplaza-primary/10 text-ecoplaza-primary">
