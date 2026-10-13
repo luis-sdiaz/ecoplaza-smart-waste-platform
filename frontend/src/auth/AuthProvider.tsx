@@ -5,6 +5,7 @@ import { AuthContext, type AuthActionResult, type AuthUser } from "./AuthContext
 import {
   signInWithPassword,
   signOut as signOutFromSupabase,
+  verifySignUpOtp as verifySignUpOtpWithSupabase,
 } from "./supabaseAuth";
 import { supabase } from "../lib/supabase";
 import { isValidProfileName, normalizeProfileName } from "./profileStorage";
@@ -261,6 +262,42 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, [clearAuthenticatedUser]);
 
+  const verifySignUpOtp = useCallback(
+    async (email: string, token: string): Promise<AuthActionResult> => {
+      const result = await verifySignUpOtpWithSupabase({
+        email,
+        token,
+        persistence: "temporary",
+      });
+
+      if (!result.ok) return result;
+
+      const verifiedUserId = result.data.user?.id;
+      if (!result.data.authenticated || verifiedUserId === undefined) {
+        return {
+          ok: false,
+          error: { code: "unexpected_error", retryable: false },
+        };
+      }
+
+      const { data, error } = await supabase.auth.getSession();
+      if (
+        error ||
+        data.session === null ||
+        data.session.user.id !== verifiedUserId
+      ) {
+        return {
+          ok: false,
+          error: { code: "unexpected_error", retryable: false },
+        };
+      }
+
+      synchronizeSession(data.session, true);
+      return { ok: true };
+    },
+    [synchronizeSession],
+  );
+
   const updateUserName = useCallback(async (name: string): Promise<boolean> => {
     const normalizedName = normalizeProfileName(name);
     const userId = activeUserIdRef.current;
@@ -344,6 +381,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         user,
         profileError,
         signIn,
+        verifySignUpOtp,
         signOut,
         updateUserName,
         updateUserAvatar,

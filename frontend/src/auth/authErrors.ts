@@ -14,7 +14,8 @@ export type AuthErrorCode =
   | "invalid_credentials"
   | "email_not_confirmed"
   | "user_already_registered"
-  | "otp_invalid_or_expired"
+  | "otp_invalid"
+  | "otp_expired"
   | "rate_limited"
   | "network_error"
   | "session_already_active"
@@ -53,7 +54,7 @@ export function classifyAuthError(
 
   if (error.code === "invalid_credentials") {
     return operation === "verify-signup-otp"
-      ? { code: "otp_invalid_or_expired", retryable: true }
+      ? { code: "otp_invalid", retryable: true }
       : { code: "invalid_credentials", retryable: false };
   }
 
@@ -65,11 +66,12 @@ export function classifyAuthError(
     return { code: "user_already_registered", retryable: false };
   }
 
-  if (
-    error.code === "otp_expired" ||
-    (operation === "verify-signup-otp" && error.code === "validation_failed")
-  ) {
-    return { code: "otp_invalid_or_expired", retryable: true };
+  if (error.code === "otp_expired") {
+    return { code: "otp_expired", retryable: true };
+  }
+
+  if (operation === "verify-signup-otp" && error.code === "validation_failed") {
+    return { code: "otp_invalid", retryable: true };
   }
 
   if (

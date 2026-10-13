@@ -22,6 +22,10 @@ type AuthContextValue = {
     password: string,
     remember: boolean,
   ) => Promise<AuthActionResult>;
+  verifySignUpOtp: (
+    email: string,
+    token: string,
+  ) => Promise<AuthActionResult>;
   signOut: () => Promise<AuthActionResult>;
   updateUserName: (name: string) => Promise<boolean>;
   updateUserAvatar: (avatar: Blob) => Promise<boolean>;

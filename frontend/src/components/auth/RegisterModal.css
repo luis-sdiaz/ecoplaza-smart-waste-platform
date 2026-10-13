@@ -3,9 +3,10 @@
   inset: 0;
   width: 520px;
   max-width: calc(100vw - 48px);
-  max-height: none;
+  max-height: calc(100vh - 48px);
   margin: auto;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--color-ecoplaza-border);
   border-radius: 24px;
   background: var(--color-ecoplaza-surface);
@@ -19,4 +20,10 @@
 
 .ecoplaza-register-modal input[aria-invalid="true"] {
   border-color: var(--color-ecoplaza-danger);
+}
+
+@media (max-width: 560px) {
+  .ecoplaza-register-modal {
+    max-width: calc(100vw - 24px);
+  }
 }
