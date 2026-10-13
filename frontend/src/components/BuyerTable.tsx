@@ -1,13 +1,14 @@
-import { Pencil } from "lucide-react";
+import { History, Pencil } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Buyer } from "../services/buyerService";
 
 interface BuyerTableProps {
   buyers: Buyer[];
   onEdit: (buyer: Buyer) => void;
+  onViewHistory: (buyer: Buyer) => void;
 }
 
-function BuyerTable({ buyers, onEdit }: BuyerTableProps) {
+function BuyerTable({ buyers, onEdit, onViewHistory }: BuyerTableProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const formatDate = (value: string) =>
@@ -58,6 +59,15 @@ function BuyerTable({ buyers, onEdit }: BuyerTableProps) {
                 {formatDate(buyer.updatedAt)}
               </td>
               <td className="px-5 py-4 text-right">
+                <button
+                  type="button"
+                  onClick={() => onViewHistory(buyer)}
+                  aria-label={t("buyers.viewPurchaseHistoryLabel", { name: buyer.name })}
+                  className="mr-2 inline-flex items-center gap-2 rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary"
+                >
+                  <History size={14} strokeWidth={1.8} aria-hidden="true" />
+                  {t("buyers.history")}
+                </button>
                 <button
                   type="button"
                   onClick={() => onEdit(buyer)}

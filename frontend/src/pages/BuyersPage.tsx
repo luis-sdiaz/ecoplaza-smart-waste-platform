@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import BuyerFormModal from "../components/BuyerFormModal";
 import BuyerTable from "../components/BuyerTable";
+import BuyerPurchaseHistoryModal from "../components/BuyerPurchaseHistoryModal";
 import DemoBuyerTable, { type DemoBuyer } from "../components/DemoBuyerTable";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
@@ -20,6 +21,11 @@ import {
   filterAndSortBuyers,
   type BuyerSortOption,
 } from "../services/buyerFilters";
+import {
+  listSales,
+  type SaleHistoryItem,
+  type SalesErrorCode,
+} from "../services/salesService";
 
 const demoBuyers: DemoBuyer[] = [
   { id: "BUY-001", name: "Reciclar del Sur", type: "Empresa recicladora", interest: "Reciclables", contact: "contacto@reciclardelsur.co", status: "Activo" },
@@ -47,9 +53,17 @@ function getBuyerErrorKey(code: BuyerErrorCode): string {
   return "buyers.databaseError";
 }
 
+function getPurchaseHistoryErrorKey(code: SalesErrorCode): string {
+  if (code === "unauthorized") return "buyers.purchaseHistoryUnauthorized";
+  if (code === "network_error") return "buyers.purchaseHistoryNetworkError";
+  if (code === "permission_denied") return "buyers.purchaseHistoryPermissionError";
+  return "buyers.purchaseHistoryError";
+}
+
 function UserBuyersPage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
+  const historyRevisionRef = useRef(0);
   const isSubmittingRef = useRef(false);
   const notificationSequenceRef = useRef(0);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
@@ -61,6 +75,10 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const [notification, setNotification] = useState<BuyerNotification | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<BuyerSortOption>("updated_desc");
+  const [historyBuyer, setHistoryBuyer] = useState<Buyer | null>(null);
+  const [purchaseHistory, setPurchaseHistory] = useState<SaleHistoryItem[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   const applyLoadResult = useCallback((
     result: Awaited<ReturnType<typeof listBuyers>>,
@@ -97,6 +115,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
 
     return () => {
       requestRevisionRef.current += 1;
+      historyRevisionRef.current += 1;
     };
   }, [applyLoadResult, userId]);
 
@@ -125,6 +144,45 @@ function UserBuyersPage({ userId }: { userId: string }) {
     setEditingBuyer(buyer);
     setNotification(null);
     setIsFormOpen(true);
+  };
+
+  const loadPurchaseHistory = async (buyer: Buyer): Promise<void> => {
+    const revision = ++historyRevisionRef.current;
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+
+    try {
+      const result = await listSales(undefined, buyer.id);
+      if (revision !== historyRevisionRef.current) return;
+
+      if (!result.ok) {
+        setPurchaseHistory([]);
+        setHistoryError(getPurchaseHistoryErrorKey(result.error.code));
+      } else {
+        setPurchaseHistory(result.data);
+        setHistoryError(null);
+      }
+    } catch {
+      if (revision !== historyRevisionRef.current) return;
+      setPurchaseHistory([]);
+      setHistoryError("buyers.purchaseHistoryError");
+    } finally {
+      if (revision === historyRevisionRef.current) setIsHistoryLoading(false);
+    }
+  };
+
+  const openPurchaseHistory = (buyer: Buyer): void => {
+    setHistoryBuyer(buyer);
+    setPurchaseHistory([]);
+    void loadPurchaseHistory(buyer);
+  };
+
+  const closePurchaseHistory = (): void => {
+    historyRevisionRef.current += 1;
+    setHistoryBuyer(null);
+    setPurchaseHistory([]);
+    setHistoryError(null);
+    setIsHistoryLoading(false);
   };
 
   const handleSubmit = async (values: BuyerInput): Promise<void> => {
@@ -289,7 +347,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
               {hasActiveSearch && <button type="button" onClick={() => setSearchQuery("")} className="mt-4 rounded-lg border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text">{t("buyers.clearSearch")}</button>}
             </div>
           ) : (
-            <BuyerTable buyers={visibleBuyers} onEdit={openEditForm} />
+            <BuyerTable buyers={visibleBuyers} onEdit={openEditForm} onViewHistory={openPurchaseHistory} />
           )}
         </div>
       </div>
@@ -319,6 +377,17 @@ function UserBuyersPage({ userId }: { userId: string }) {
             }
           }}
           onSubmit={(values) => void handleSubmit(values)}
+        />
+      )}
+
+      {historyBuyer !== null && (
+        <BuyerPurchaseHistoryModal
+          buyer={historyBuyer}
+          sales={purchaseHistory}
+          isLoading={isHistoryLoading}
+          error={historyError}
+          onRetry={() => void loadPurchaseHistory(historyBuyer)}
+          onClose={closePurchaseHistory}
         />
       )}
 
