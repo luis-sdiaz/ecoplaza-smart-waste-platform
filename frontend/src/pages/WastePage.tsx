@@ -19,6 +19,7 @@ import {
   createWasteRecord,
   listWasteRecords,
   type RemoteWasteRecord,
+  type WasteCategory,
   type WasteErrorCode,
   type WasteStatus,
 } from "../services/wasteService";
@@ -102,6 +103,7 @@ function UserWastePage({ userId }: { userId: string }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<WasteStatus | "all">("all");
+  const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
   const [notification, setNotification] = useState<WasteRegistrationNotification | null>(null);
   const requestRevisionRef = useRef(0);
   const isSubmittingRef = useRef(false);
@@ -225,9 +227,11 @@ function UserWastePage({ userId }: { userId: string }) {
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
-  const filteredRemoteRecords = statusFilter === "all"
-    ? remoteRecords
-    : remoteRecords.filter((record) => record.status === statusFilter);
+  const filteredRemoteRecords = remoteRecords.filter((record) =>
+    (statusFilter === "all" || record.status === statusFilter) &&
+    (categoryFilter === "all" || record.category === categoryFilter),
+  );
+  const hasActiveFilters = statusFilter !== "all" || categoryFilter !== "all";
   const tableRecords: WasteRecord[] = filteredRemoteRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
@@ -276,7 +280,7 @@ function UserWastePage({ userId }: { userId: string }) {
           </button>
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap justify-end gap-3">
           <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("waste.statusFilter")}</span>
             <select
@@ -291,6 +295,28 @@ function UserWastePage({ userId }: { userId: string }) {
               <option value="sold">{t("common.sold")}</option>
             </select>
           </label>
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("waste.categoryFilter")}</span>
+            <select
+              value={categoryFilter}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setCategoryFilter(event.target.value as WasteCategory | "all")}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            >
+              <option value="all">{t("waste.allCategories")}</option>
+              <option value="organic">{t("common.organic")}</option>
+              <option value="recyclable">{t("common.recyclable")}</option>
+              <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={!hasActiveFilters || isLoading}
+            onClick={() => { setStatusFilter("all"); setCategoryFilter("all"); }}
+            className="rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t("waste.clearFilters")}
+          </button>
         </div>
 
         <div className="mt-4">
@@ -320,10 +346,10 @@ function UserWastePage({ userId }: { userId: string }) {
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
               <Database size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">
-                {t(statusFilter === "all" ? "waste.emptyTitle" : "waste.emptyFilteredTitle")}
+                {t(hasActiveFilters ? "waste.emptyFilteredTitle" : "waste.emptyTitle")}
               </h3>
               <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">
-                {t(statusFilter === "all" ? "waste.emptyDescription" : "waste.emptyFilteredDescription")}
+                {t(hasActiveFilters ? "waste.emptyFilteredDescription" : "waste.emptyDescription")}
               </p>
             </div>
           ) : (
