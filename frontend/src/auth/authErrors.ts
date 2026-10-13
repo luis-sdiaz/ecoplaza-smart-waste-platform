@@ -8,6 +8,9 @@ export type AuthOperation =
   | "sign-up"
   | "verify-signup-otp"
   | "resend-signup-otp"
+  | "request-password-recovery"
+  | "verify-recovery-otp"
+  | "update-password"
   | "sign-out";
 
 export type AuthErrorCode =
@@ -16,6 +19,9 @@ export type AuthErrorCode =
   | "user_already_registered"
   | "otp_invalid"
   | "otp_expired"
+  | "weak_password"
+  | "password_reused"
+  | "recovery_cleanup_failed"
   | "rate_limited"
   | "network_error"
   | "session_already_active"
@@ -52,8 +58,11 @@ export function classifyAuthError(
     return { code: "unexpected_error", retryable: false };
   }
 
+  const isOtpVerification =
+    operation === "verify-signup-otp" || operation === "verify-recovery-otp";
+
   if (error.code === "invalid_credentials") {
-    return operation === "verify-signup-otp"
+    return isOtpVerification
       ? { code: "otp_invalid", retryable: true }
       : { code: "invalid_credentials", retryable: false };
   }
@@ -70,8 +79,16 @@ export function classifyAuthError(
     return { code: "otp_expired", retryable: true };
   }
 
-  if (operation === "verify-signup-otp" && error.code === "validation_failed") {
+  if (isOtpVerification && error.code === "validation_failed") {
     return { code: "otp_invalid", retryable: true };
+  }
+
+  if (error.code === "weak_password") {
+    return { code: "weak_password", retryable: true };
+  }
+
+  if (error.code === "same_password") {
+    return { code: "password_reused", retryable: true };
   }
 
   if (

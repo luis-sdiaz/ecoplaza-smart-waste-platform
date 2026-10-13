@@ -3,10 +3,18 @@ import type { ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { AuthContext, type AuthActionResult, type AuthUser } from "./AuthContext";
 import {
+  requestPasswordRecoveryOtp,
   signInWithPassword,
   signOut as signOutFromSupabase,
+  updatePassword,
+  verifyPasswordRecoveryOtp as verifyPasswordRecoveryOtpWithSupabase,
   verifySignUpOtp as verifySignUpOtpWithSupabase,
 } from "./supabaseAuth";
+import {
+  clearPasswordRecoverySessionMarker,
+  hasPasswordRecoverySession,
+  markPasswordRecoverySession,
+} from "./authSessionStorage";
 import { supabase } from "../lib/supabase";
 import { isValidProfileName, normalizeProfileName } from "./profileStorage";
 import {
@@ -41,6 +49,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const userLoadRef = useRef<{ userId: string; promise: Promise<void> } | null>(null);
   const avatarUrlRef = useRef<string | null>(null);
   const avatarRevisionRef = useRef(0);
+  const passwordRecoveryActiveRef = useRef(false);
+  const recoveryCleanupRef = useRef<Promise<AuthActionResult> | null>(null);
 
   const revokeCurrentAvatarUrl = useCallback((): void => {
     if (avatarUrlRef.current === null) return;
@@ -178,6 +188,55 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     [clearAuthenticatedUser, loadUserResources, revokeCurrentAvatarUrl],
   );
 
+  const discardPasswordRecoverySession = useCallback(async (): Promise<AuthActionResult> => {
+    if (recoveryCleanupRef.current !== null) return recoveryCleanupRef.current;
+
+    passwordRecoveryActiveRef.current = false;
+    const cleanupPromise = (async (): Promise<AuthActionResult> => {
+      const result = await signOutFromSupabase();
+
+      if (!result.ok && result.error.storageCleanupFailed) {
+        passwordRecoveryActiveRef.current = true;
+        try {
+          markPasswordRecoverySession();
+        } catch {
+          // Keeping the in-memory guard active still prevents this recovery
+          // session from being treated as an authenticated application user.
+        }
+        clearAuthenticatedUser();
+        return result;
+      }
+
+      try {
+        clearPasswordRecoverySessionMarker();
+      } catch {
+        clearAuthenticatedUser();
+        return {
+          ok: false,
+          error: {
+            code: "unexpected_error",
+            retryable: false,
+            storageCleanupFailed: true,
+          },
+        };
+      }
+
+      clearAuthenticatedUser();
+
+      return { ok: true };
+    })();
+
+    recoveryCleanupRef.current = cleanupPromise;
+
+    try {
+      return await cleanupPromise;
+    } finally {
+      if (recoveryCleanupRef.current === cleanupPromise) {
+        recoveryCleanupRef.current = null;
+      }
+    }
+  }, [clearAuthenticatedUser]);
+
   useEffect(() => {
     let disposed = false;
     let hasReceivedInitialState = false;
@@ -185,6 +244,26 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      if (passwordRecoveryActiveRef.current || hasPasswordRecoverySession()) {
+        hasReceivedInitialState = true;
+        if (!passwordRecoveryActiveRef.current) {
+          void discardPasswordRecoverySession();
+        }
+        return;
+      }
+
+      if (event === "PASSWORD_RECOVERY") {
+        hasReceivedInitialState = true;
+        try {
+          markPasswordRecoverySession();
+        } catch {
+          // The recovery session is still discarded below even if the marker
+          // cannot be persisted.
+        }
+        void discardPasswordRecoverySession();
+        return;
+      }
+
       if (
         event !== "INITIAL_SESSION" &&
         event !== "SIGNED_IN" &&
@@ -206,6 +285,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     void supabase.auth.getSession().then(
       ({ data, error }) => {
         if (disposed || hasReceivedInitialState) return;
+        if (hasPasswordRecoverySession()) {
+          void discardPasswordRecoverySession();
+          return;
+        }
         synchronizeSession(error ? null : data.session, true);
       },
       () => {
@@ -222,7 +305,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       pendingSynchronizationTasks.clear();
       subscription.unsubscribe();
     };
-  }, [synchronizeSession]);
+  }, [discardPasswordRecoverySession, synchronizeSession]);
 
   const signIn = useCallback(
     async (
@@ -297,6 +380,115 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     },
     [synchronizeSession],
   );
+
+  const requestPasswordRecovery = useCallback(
+    async (email: string): Promise<AuthActionResult> => {
+      const result = await requestPasswordRecoveryOtp({ email });
+      return result.ok ? { ok: true } : result;
+    },
+    [],
+  );
+
+  const verifyPasswordRecoveryOtp = useCallback(
+    async (email: string, token: string): Promise<AuthActionResult> => {
+      try {
+        markPasswordRecoverySession();
+      } catch {
+        return {
+          ok: false,
+          error: { code: "unexpected_error", retryable: false },
+        };
+      }
+
+      passwordRecoveryActiveRef.current = true;
+      const result = await verifyPasswordRecoveryOtpWithSupabase({
+        email,
+        token,
+        persistence: "temporary",
+      });
+
+      if (!result.ok) {
+        passwordRecoveryActiveRef.current = false;
+        try {
+          clearPasswordRecoverySessionMarker();
+        } catch {
+          return {
+            ok: false,
+            error: {
+              code: "unexpected_error",
+              retryable: false,
+              storageCleanupFailed: true,
+            },
+          };
+        }
+        return result;
+      }
+
+      const verifiedUserId = result.data.user?.id;
+      const { data, error } = await supabase.auth.getSession();
+      if (
+        !result.data.authenticated ||
+        verifiedUserId === undefined ||
+        error ||
+        data.session === null ||
+        data.session.user.id !== verifiedUserId
+      ) {
+        await discardPasswordRecoverySession();
+        return {
+          ok: false,
+          error: { code: "unexpected_error", retryable: false },
+        };
+      }
+
+      clearAuthenticatedUser();
+      return { ok: true };
+    },
+    [clearAuthenticatedUser, discardPasswordRecoverySession],
+  );
+
+  const updateRecoveredPassword = useCallback(
+    async (password: string): Promise<AuthActionResult> => {
+      if (
+        !passwordRecoveryActiveRef.current ||
+        !hasPasswordRecoverySession()
+      ) {
+        return {
+          ok: false,
+          error: { code: "unexpected_error", retryable: false },
+        };
+      }
+
+      const result = await updatePassword({ password });
+      if (!result.ok) return result;
+
+      const cleanupResult = await discardPasswordRecoverySession();
+      if (cleanupResult.ok) return cleanupResult;
+
+      const retryResult = await discardPasswordRecoverySession();
+      if (retryResult.ok) return retryResult;
+
+      return {
+        ok: false,
+        error: {
+          code: "recovery_cleanup_failed",
+          retryable: true,
+          storageCleanupFailed: true,
+        },
+      };
+    },
+    [discardPasswordRecoverySession],
+  );
+
+  const cancelPasswordRecovery = useCallback(async (): Promise<AuthActionResult> => {
+    if (
+      !passwordRecoveryActiveRef.current &&
+      !hasPasswordRecoverySession()
+    ) {
+      return { ok: true };
+    }
+
+    return discardPasswordRecoverySession();
+  }, [discardPasswordRecoverySession]);
 
   const updateUserName = useCallback(async (name: string): Promise<boolean> => {
     const normalizedName = normalizeProfileName(name);
@@ -382,6 +574,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         profileError,
         signIn,
         verifySignUpOtp,
+        requestPasswordRecovery,
+        verifyPasswordRecoveryOtp,
+        updateRecoveredPassword,
+        cancelPasswordRecovery,
         signOut,
         updateUserName,
         updateUserAvatar,

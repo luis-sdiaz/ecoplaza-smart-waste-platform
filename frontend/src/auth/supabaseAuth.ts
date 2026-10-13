@@ -39,6 +39,20 @@ export type ResendSignUpOtpInput = {
   email: string;
 };
 
+export type RequestPasswordRecoveryInput = {
+  email: string;
+};
+
+export type VerifyPasswordRecoveryOtpInput = {
+  email: string;
+  token: string;
+  persistence: AuthSessionPersistence;
+};
+
+export type UpdatePasswordInput = {
+  password: string;
+};
+
 export type AuthenticatedUserReference = {
   id: string;
   email: string | null;
@@ -52,6 +66,8 @@ export type VerifySignUpOtpResult = {
   authenticated: boolean;
   user: AuthenticatedUserReference | null;
 };
+
+export type VerifyPasswordRecoveryOtpResult = VerifySignUpOtpResult;
 
 const LOCAL_SIGN_OUT_SCOPE = "local" as const;
 const MIN_FULL_NAME_LENGTH = 2;
@@ -242,6 +258,98 @@ export function resendSignUpOtp(
       return { ok: true, data: null };
     } catch (error) {
       return failure(error, "resend-signup-otp");
+    }
+  });
+}
+
+export function requestPasswordRecoveryOtp(
+  input: RequestPasswordRecoveryInput,
+): Promise<AuthServiceResult<null>> {
+  return runAuthOperation(async () => {
+    try {
+      const activeSessionResult = await rejectActiveSession<null>(
+        "request-password-recovery",
+      );
+
+      if (activeSessionResult) return activeSessionResult;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        normalizeEmail(input.email),
+      );
+
+      if (error) return failure(error, "request-password-recovery");
+      return { ok: true, data: null };
+    } catch (error) {
+      return failure(error, "request-password-recovery");
+    }
+  });
+}
+
+export function verifyPasswordRecoveryOtp(
+  input: VerifyPasswordRecoveryOtpInput,
+): Promise<AuthServiceResult<VerifyPasswordRecoveryOtpResult>> {
+  return runAuthOperation(async () => {
+    try {
+      const activeSessionResult = await rejectActiveSession<VerifyPasswordRecoveryOtpResult>(
+        "verify-recovery-otp",
+      );
+
+      if (activeSessionResult) return activeSessionResult;
+
+      selectAuthSessionPersistence(input.persistence);
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: normalizeEmail(input.email),
+        token: input.token.trim(),
+        type: "recovery",
+      });
+
+      if (error) return failure(error, "verify-recovery-otp");
+
+      return {
+        ok: true,
+        data: {
+          authenticated: data.session !== null,
+          user: data.user
+            ? { id: data.user.id, email: data.user.email ?? null }
+            : null,
+        },
+      };
+    } catch (error) {
+      return failure(error, "verify-recovery-otp");
+    }
+  });
+}
+
+export function updatePassword(
+  input: UpdatePasswordInput,
+): Promise<AuthServiceResult<null>> {
+  return runAuthOperation(async () => {
+    if (input.password.length < 8) {
+      return {
+        ok: false,
+        error: { code: "weak_password", retryable: true },
+      };
+    }
+
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) return failure(sessionError, "update-password");
+      if (sessionData.session === null) {
+        return {
+          ok: false,
+          error: { code: "unexpected_error", retryable: false },
+        };
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: input.password,
+      });
+
+      if (error) return failure(error, "update-password");
+      return { ok: true, data: null };
+    } catch (error) {
+      return failure(error, "update-password");
     }
   });
 }

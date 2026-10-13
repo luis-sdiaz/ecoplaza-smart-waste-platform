@@ -26,6 +26,13 @@ type AuthContextValue = {
     email: string,
     token: string,
   ) => Promise<AuthActionResult>;
+  requestPasswordRecovery: (email: string) => Promise<AuthActionResult>;
+  verifyPasswordRecoveryOtp: (
+    email: string,
+    token: string,
+  ) => Promise<AuthActionResult>;
+  updateRecoveredPassword: (password: string) => Promise<AuthActionResult>;
+  cancelPasswordRecovery: () => Promise<AuthActionResult>;
   signOut: () => Promise<AuthActionResult>;
   updateUserName: (name: string) => Promise<boolean>;
   updateUserAvatar: (avatar: Blob) => Promise<boolean>;

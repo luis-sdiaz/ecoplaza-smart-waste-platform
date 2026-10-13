@@ -5,6 +5,7 @@ export type AuthSessionPersistence = "persistent" | "temporary";
 export const SUPABASE_AUTH_STORAGE_KEY = "ecoplaza-supabase-auth";
 
 const AUTH_PERSISTENCE_STORAGE_KEY = "ecoplaza-auth-persistence";
+const PASSWORD_RECOVERY_STORAGE_KEY = "ecoplaza-password-recovery";
 const AUTH_STORAGE_KEYS = [
   SUPABASE_AUTH_STORAGE_KEY,
   `${SUPABASE_AUTH_STORAGE_KEY}-code-verifier`,
@@ -132,6 +133,25 @@ export function selectAuthSessionPersistence(
   activePersistence = persistence;
 }
 
+export function markPasswordRecoverySession(): void {
+  requireStorage(getSessionStorage()).setItem(
+    PASSWORD_RECOVERY_STORAGE_KEY,
+    "active",
+  );
+}
+
+export function hasPasswordRecoverySession(): boolean {
+  try {
+    return getSessionStorage()?.getItem(PASSWORD_RECOVERY_STORAGE_KEY) === "active";
+  } catch {
+    return false;
+  }
+}
+
+export function clearPasswordRecoverySessionMarker(): void {
+  getSessionStorage()?.removeItem(PASSWORD_RECOVERY_STORAGE_KEY);
+}
+
 export function clearAuthSessionStorage(): void {
   let firstError: unknown;
 
@@ -144,6 +164,12 @@ export function clearAuthSessionStorage(): void {
 
     try {
       getLocalStorage()?.removeItem(AUTH_PERSISTENCE_STORAGE_KEY);
+    } catch (error) {
+      firstError ??= error;
+    }
+
+    try {
+      clearPasswordRecoverySessionMarker();
     } catch (error) {
       firstError ??= error;
     }

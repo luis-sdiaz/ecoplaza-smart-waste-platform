@@ -5,6 +5,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import type { AuthErrorCode } from "../auth/authErrors";
+import ForgotPasswordModal from "../components/auth/ForgotPasswordModal";
 import RegisterModal from "../components/auth/RegisterModal";
 import "./LoginPage.css";
 
@@ -78,6 +79,8 @@ function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, signIn } = useAuth();
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
+  const [recoverySuccess, setRecoverySuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState<LoginValues>({ email: "", password: "" });
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -102,6 +105,7 @@ function LoginPage() {
   const handleChange = (name: keyof LoginValues, value: string) => {
     setValues((current) => ({ ...current, [name]: value }));
     setAuthErrorCode(null);
+    setRecoverySuccess(false);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -110,6 +114,7 @@ function LoginPage() {
 
     setHasSubmitted(true);
     setAuthErrorCode(null);
+    setRecoverySuccess(false);
 
     const validationErrors = validateLogin(values);
     const firstInvalidField = (["email", "password"] as const).find((name) => validationErrors[name]);
@@ -368,14 +373,18 @@ function LoginPage() {
                   />
                   {t("login.rememberMe")}
                 </label>
-                <a
-                  href="#"
-                  aria-disabled="true"
-                  onClick={(event) => event.preventDefault()}
-                  className="rounded font-medium text-ecoplaza-primary transition-colors hover:text-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary"
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => {
+                    setAuthErrorCode(null);
+                    setRecoverySuccess(false);
+                    setIsRecoveryOpen(true);
+                  }}
+                  className="cursor-pointer rounded font-medium text-ecoplaza-primary transition-colors hover:text-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {t("login.forgotPassword")}
-                </a>
+                </button>
               </div>
 
               <button
@@ -394,6 +403,11 @@ function LoginPage() {
               {authErrorCode && (
                 <p role="alert" className="mt-3 text-center text-xs leading-4 text-ecoplaza-danger">
                   {t(authErrorKey)}
+                </p>
+              )}
+              {recoverySuccess && (
+                <p role="status" className="mt-3 rounded-xl border border-ecoplaza-primary/30 bg-ecoplaza-primary/10 px-3 py-2 text-center text-xs leading-5 text-ecoplaza-primary">
+                  {t("recovery.success")}
                 </p>
               )}
             </form>
@@ -416,6 +430,16 @@ function LoginPage() {
         </section>
       </div>
       <RegisterModal isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} />
+      <ForgotPasswordModal
+        isOpen={isRecoveryOpen}
+        initialEmail={values.email}
+        onClose={() => setIsRecoveryOpen(false)}
+        onSuccess={() => {
+          setValues((current) => ({ ...current, password: "" }));
+          setIsRecoveryOpen(false);
+          setRecoverySuccess(true);
+        }}
+      />
     </main>
   );
 }
