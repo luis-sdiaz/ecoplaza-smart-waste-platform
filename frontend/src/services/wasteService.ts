@@ -28,6 +28,17 @@ export type CreateWasteRecordInput = {
   weightKg: number;
 };
 
+export type WasteStatistics = {
+  recordCount: number;
+  totalWeightKg: number;
+  organicWeightKg: number;
+  recyclableWeightKg: number;
+  nonRecyclableWeightKg: number;
+  organicPercentage: number;
+  recyclablePercentage: number;
+  nonRecyclablePercentage: number;
+};
+
 export type WasteErrorCode =
   | "unauthorized"
   | "invalid_container"
@@ -54,12 +65,19 @@ type WasteRow = {
   status: string;
 };
 
+type WasteStatisticsRow = {
+  owner_id: string;
+  category: string;
+  weight_kg: number | string;
+};
+
 const FOREIGN_KEY_VIOLATION_CODE = "23503";
 const CHECK_VIOLATION_CODE = "23514";
 const NOT_NULL_VIOLATION_CODE = "23502";
 const UNIQUE_VIOLATION_CODE = "23505";
 const NUMERIC_OUT_OF_RANGE_CODE = "22003";
 const PERMISSION_DENIED_CODE = "42501";
+const STATISTICS_PAGE_SIZE = 1000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isWasteCategory(value: string): value is WasteCategory {
@@ -171,6 +189,111 @@ function toRemoteWasteRecord(
     registeredAt: registeredAt.toISOString(),
     status: row.status,
   };
+}
+
+export function calculateWasteStatistics(
+  records: ReadonlyArray<Pick<RemoteWasteRecord, "category" | "weightKg">>,
+): WasteStatistics {
+  let organicWeightKg = 0;
+  let recyclableWeightKg = 0;
+  let nonRecyclableWeightKg = 0;
+
+  for (const record of records) {
+    if (record.category === "organic") organicWeightKg += record.weightKg;
+    if (record.category === "recyclable") recyclableWeightKg += record.weightKg;
+    if (record.category === "nonRecyclable") nonRecyclableWeightKg += record.weightKg;
+  }
+
+  const totalWeightKg = organicWeightKg + recyclableWeightKg + nonRecyclableWeightKg;
+  const toPercentage = (weightKg: number): number =>
+    totalWeightKg > 0 ? (weightKg / totalWeightKg) * 100 : 0;
+
+  return {
+    recordCount: records.length,
+    totalWeightKg,
+    organicWeightKg,
+    recyclableWeightKg,
+    nonRecyclableWeightKg,
+    organicPercentage: toPercentage(organicWeightKg),
+    recyclablePercentage: toPercentage(recyclableWeightKg),
+    nonRecyclablePercentage: toPercentage(nonRecyclableWeightKg),
+  };
+}
+
+function toStatisticsRecord(
+  row: WasteStatisticsRow,
+  ownerId: string,
+): Pick<RemoteWasteRecord, "category" | "weightKg"> | null {
+  const weightKg = typeof row.weight_kg === "number"
+    ? row.weight_kg
+    : Number(row.weight_kg);
+
+  if (
+    row.owner_id !== ownerId ||
+    !isWasteCategory(row.category) ||
+    !Number.isFinite(weightKg) ||
+    weightKg <= 0
+  ) {
+    return null;
+  }
+
+  return { category: row.category, weightKg };
+}
+
+export async function getWasteStatistics(): Promise<
+  WasteServiceResult<WasteStatistics>
+> {
+  const userResult = await getAuthenticatedUserId();
+  if (!userResult.ok) return userResult;
+
+  try {
+    const firstPageResult = await supabase
+      .from("waste_records")
+      .select("owner_id, category, weight_kg", { count: "exact" })
+      .eq("owner_id", userResult.data)
+      .order("record_number", { ascending: true })
+      .range(0, STATISTICS_PAGE_SIZE - 1)
+      .returns<WasteStatisticsRow[]>();
+
+    if (firstPageResult.error) return failure(firstPageResult.error);
+    if (!Array.isArray(firstPageResult.data) || firstPageResult.count === null) {
+      return { ok: false, error: { code: "database_error", retryable: true } };
+    }
+
+    const rows = [...firstPageResult.data];
+    const totalPages = Math.ceil(firstPageResult.count / STATISTICS_PAGE_SIZE);
+
+    for (let page = 1; page < totalPages; page += 1) {
+      const from = page * STATISTICS_PAGE_SIZE;
+      const { data, error } = await supabase
+        .from("waste_records")
+        .select("owner_id, category, weight_kg")
+        .eq("owner_id", userResult.data)
+        .order("record_number", { ascending: true })
+        .range(from, from + STATISTICS_PAGE_SIZE - 1)
+        .returns<WasteStatisticsRow[]>();
+
+      if (error) return failure(error);
+      if (!Array.isArray(data)) {
+        return { ok: false, error: { code: "database_error", retryable: true } };
+      }
+      rows.push(...data);
+    }
+
+    const records = rows.map((row) => toStatisticsRecord(row, userResult.data));
+    if (records.some((record) => record === null)) {
+      return { ok: false, error: { code: "database_error", retryable: true } };
+    }
+
+    return {
+      ok: true,
+      data: calculateWasteStatistics(
+        records as Array<Pick<RemoteWasteRecord, "category" | "weightKg">>,
+      ),
+    };
+  } catch (error) {
+    return failure(error);
+  }
 }
 
 export async function listWasteRecords(): Promise<

@@ -15,6 +15,7 @@ import {
   type ContainerErrorCode,
 } from "../services/containerService";
 import {
+  calculateWasteStatistics,
   createWasteRecord,
   listWasteRecords,
   type RemoteWasteRecord,
@@ -230,18 +231,9 @@ function UserWastePage({ userId }: { userId: string }) {
     date: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(record.registeredAt)),
     status: record.status,
   }));
-  const totalWeight = remoteRecords.reduce((total, record) => total + record.weightKg, 0);
-  const categoryWeight = (category: RemoteWasteRecord["category"]): number =>
-    remoteRecords.reduce(
-      (total, record) => record.category === category ? total + record.weightKg : total,
-      0,
-    );
+  const statistics = calculateWasteStatistics(remoteRecords);
   const formatWeight = (value: number): string =>
     `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value)} ${t("common.kg")}`;
-  const percentage = (value: number): number => totalWeight > 0 ? Math.round((value / totalWeight) * 100) : 0;
-  const organicWeight = categoryWeight("organic");
-  const recyclableWeight = categoryWeight("recyclable");
-  const nonRecyclableWeight = categoryWeight("nonRecyclable");
   const registrationUnavailable = isLoading || loadError !== null || containers.length === 0;
   const metricsUnavailable = isLoading || loadError !== null;
 
@@ -257,10 +249,10 @@ function UserWastePage({ userId }: { userId: string }) {
       </div>
 
       <div className="mt-4 grid grid-cols-4 gap-4">
-        <MetricCard title={t("waste.totalRegistered")} value={metricsUnavailable ? "—" : formatWeight(totalWeight)} description={t("waste.remoteAccumulatedWaste")} />
-        <MetricCard title={t("common.organic")} value={metricsUnavailable ? "—" : formatWeight(organicWeight)} description={t("waste.percentageOfTotal", { percentage: percentage(organicWeight) })} />
-        <MetricCard title={t("common.recyclable")} value={metricsUnavailable ? "—" : formatWeight(recyclableWeight)} description={t("waste.percentageOfTotal", { percentage: percentage(recyclableWeight) })} />
-        <MetricCard title={t("common.nonRecyclable")} value={metricsUnavailable ? "—" : formatWeight(nonRecyclableWeight)} description={t("waste.percentageOfTotal", { percentage: percentage(nonRecyclableWeight) })} />
+        <MetricCard title={t("waste.totalRegistered")} value={metricsUnavailable ? "—" : formatWeight(statistics.totalWeightKg)} description={t("waste.remoteAccumulatedWaste")} />
+        <MetricCard title={t("common.organic")} value={metricsUnavailable ? "—" : formatWeight(statistics.organicWeightKg)} description={t("waste.percentageOfTotal", { percentage: Math.round(statistics.organicPercentage) })} />
+        <MetricCard title={t("common.recyclable")} value={metricsUnavailable ? "—" : formatWeight(statistics.recyclableWeightKg)} description={t("waste.percentageOfTotal", { percentage: Math.round(statistics.recyclablePercentage) })} />
+        <MetricCard title={t("common.nonRecyclable")} value={metricsUnavailable ? "—" : formatWeight(statistics.nonRecyclableWeightKg)} description={t("waste.percentageOfTotal", { percentage: Math.round(statistics.nonRecyclablePercentage) })} />
       </div>
 
       <div className="mt-8">

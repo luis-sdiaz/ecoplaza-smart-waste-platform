@@ -2,12 +2,14 @@ interface WasteSummaryCardProps {
   title: string;
   amount: string;
   percentage: number;
+  percentageLabel?: string;
 }
 
 function WasteSummaryCard({
   title,
   amount,
   percentage,
+  percentageLabel,
 }: WasteSummaryCardProps) {
   return (
     <article className="rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
@@ -15,7 +17,7 @@ function WasteSummaryCard({
         <p className="text-sm font-medium text-ecoplaza-text">{title}</p>
 
         <span className="text-xs font-medium text-ecoplaza-primary">
-          {percentage}%
+          {percentageLabel ?? `${percentage}%`}
         </span>
       </div>
 
@@ -24,7 +26,7 @@ function WasteSummaryCard({
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-ecoplaza-background">
         <div
           className="h-full rounded-full bg-ecoplaza-secondary"
-          style={{ width: `${percentage}%` }}
+          style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
         />
       </div>
     </article>
