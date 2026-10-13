@@ -8,6 +8,7 @@ import {
   type WasteCategory,
 } from "./wasteService";
 import type { TimestampRange } from "./reportDateRange";
+import { collectPaginatedData, filterSalesHistory } from "./coreWorkflow";
 
 export type Sale = {
   id: string;
@@ -325,17 +326,17 @@ export async function listSales(
   if (!userResult.ok) return userResult;
 
   try {
-    const rows: SaleHistoryRow[] = [];
-
-    for (let page = 0; ; page += 1) {
-      const from = page * SALES_PAGE_SIZE;
+    const rowsResult = await collectPaginatedData<
+      SaleHistoryRow,
+      Extract<SalesServiceResult<never>, { ok: false }>["error"]
+    >(SALES_PAGE_SIZE, async (from, to) => {
       let query = supabase
         .from("sales")
         .select(SALE_HISTORY_FIELDS)
         .eq("owner_id", userResult.data)
         .order("sold_at", { ascending: false })
         .order("id", { ascending: true })
-        .range(from, from + SALES_PAGE_SIZE - 1);
+        .range(from, to);
 
       if (dateRange !== undefined) {
         query = query
@@ -351,16 +352,23 @@ export async function listSales(
         return { ok: false, error: { code: "database_error", retryable: true } };
       }
 
-      rows.push(...data);
-      if (data.length < SALES_PAGE_SIZE) break;
-    }
+      return { ok: true, data };
+    });
+    if (!rowsResult.ok) return rowsResult;
 
-    const sales = rows.map((row) => toSaleHistoryItem(row, userResult.data));
+    const sales = rowsResult.data.map((row) => toSaleHistoryItem(row, userResult.data));
     if (sales.some((sale) => sale === null)) {
       return { ok: false, error: { code: "database_error", retryable: true } };
     }
 
-    return { ok: true, data: sales as SaleHistoryItem[] };
+    return {
+      ok: true,
+      data: filterSalesHistory(
+        sales as SaleHistoryItem[],
+        dateRange,
+        buyerId,
+      ),
+    };
   } catch (error) {
     return failure(error, "read");
   }

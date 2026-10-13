@@ -23,6 +23,7 @@ import {
   type WasteErrorCode,
   type WasteStatus,
 } from "../services/wasteService";
+import { filterWasteHistory } from "../services/coreWorkflow";
 
 const WASTE_RECORDS_STORAGE_PREFIX = "ecoplaza-waste-records:";
 
@@ -227,10 +228,7 @@ function UserWastePage({ userId }: { userId: string }) {
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
-  const filteredRemoteRecords = remoteRecords.filter((record) =>
-    (statusFilter === "all" || record.status === statusFilter) &&
-    (categoryFilter === "all" || record.category === categoryFilter),
-  );
+  const filteredRemoteRecords = filterWasteHistory(remoteRecords, statusFilter, categoryFilter);
   const hasActiveFilters = statusFilter !== "all" || categoryFilter !== "all";
   const tableRecords: WasteRecord[] = filteredRemoteRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,

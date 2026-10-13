@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { listContainers } from "./containerService";
 import type { TimestampRange } from "./reportDateRange";
+import { collectPaginatedData } from "./coreWorkflow";
 
 export const WASTE_CATEGORIES = [
   "organic",
@@ -198,10 +199,10 @@ async function listWasteRows(
   status?: WasteStatus,
   dateRange?: TimestampRange,
 ): Promise<WasteServiceResult<WasteRow[]>> {
-  const rows: WasteRow[] = [];
-
-  for (let page = 0; ; page += 1) {
-    const from = page * WASTE_RECORDS_PAGE_SIZE;
+  return collectPaginatedData<
+    WasteRow,
+    Extract<WasteServiceResult<never>, { ok: false }>["error"]
+  >(WASTE_RECORDS_PAGE_SIZE, async (from, to) => {
     let query = supabase
       .from("waste_records")
       .select(
@@ -210,7 +211,7 @@ async function listWasteRows(
       .eq("owner_id", ownerId)
       .order("registered_at", { ascending: false })
       .order("record_number", { ascending: false })
-      .range(from, from + WASTE_RECORDS_PAGE_SIZE - 1);
+      .range(from, to);
 
     if (status !== undefined) query = query.eq("status", status);
     if (dateRange !== undefined) {
@@ -226,11 +227,8 @@ async function listWasteRows(
       return { ok: false, error: { code: "database_error", retryable: true } };
     }
 
-    rows.push(...data);
-    if (data.length < WASTE_RECORDS_PAGE_SIZE) break;
-  }
-
-  return { ok: true, data: rows };
+    return { ok: true, data };
+  });
 }
 
 function toRemoteWasteRecords(

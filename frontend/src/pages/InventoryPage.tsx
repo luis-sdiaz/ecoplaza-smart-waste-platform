@@ -17,6 +17,7 @@ import {
   type WasteCategory,
   type WasteErrorCode,
 } from "../services/wasteService";
+import { filterAvailableInventory } from "../services/coreWorkflow";
 
 type InventoryResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
 type ContainersResult = Awaited<ReturnType<typeof listContainers>>;
@@ -102,10 +103,7 @@ function InventoryPage() {
   const metricValue = (weightKg: number): string =>
     realValueUnavailable ? "—" : formatWeight(weightKg);
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
-  const filteredRecords = records.filter((record) =>
-    (categoryFilter === "all" || record.category === categoryFilter) &&
-    (containerFilter === "all" || record.containerId === containerFilter),
-  );
+  const filteredRecords = filterAvailableInventory(records, categoryFilter, containerFilter);
   const hasActiveFilters = categoryFilter !== "all" || containerFilter !== "all";
   const tableItems: InventoryItem[] = filteredRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,

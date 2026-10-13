@@ -26,12 +26,12 @@ import {
   type SalesCsvLabels,
 } from "../services/salesCsvService";
 import {
-  isTimestampInRange,
   isValidReportDateRange,
   toTimestampRange,
   type ReportDateRange,
   type TimestampRange,
 } from "../services/reportDateRange";
+import { filterSalesHistory, RequestRevisionTracker } from "../services/coreWorkflow";
 
 const demoSales: DemoSale[] = [
   { id: "SAL-001", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 80, total: 640000, date: "03/10/2026", status: "Completada" },
@@ -81,7 +81,7 @@ async function fetchSalesPageData(
 
 function UserSalesPage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
-  const requestRevisionRef = useRef(0);
+  const requestRevisionRef = useRef(new RequestRevisionTracker());
   const isSubmittingRef = useRef(false);
   const notificationSequenceRef = useRef(0);
   const [sales, setSales] = useState<SaleHistoryItem[]>([]);
@@ -106,7 +106,7 @@ function UserSalesPage({ userId }: { userId: string }) {
     formDataResult: SaleFormDataResult,
     requestRevision: number,
   ): boolean => {
-    if (requestRevision !== requestRevisionRef.current) return false;
+    if (!requestRevisionRef.current.isCurrent(requestRevision)) return false;
 
     if (!salesResult.ok) {
       setSales([]);
@@ -141,7 +141,7 @@ function UserSalesPage({ userId }: { userId: string }) {
     dateRange?: TimestampRange,
     buyerId?: string,
   ): Promise<void> => {
-    const requestRevision = ++requestRevisionRef.current;
+    const requestRevision = requestRevisionRef.current.issue();
     setIsLoading(true);
     setLoadError(null);
 
@@ -150,14 +150,15 @@ function UserSalesPage({ userId }: { userId: string }) {
   }, [applyLoadResults]);
 
   useEffect(() => {
-    const requestRevision = ++requestRevisionRef.current;
+    const requestTracker = requestRevisionRef.current;
+    const requestRevision = requestTracker.issue();
 
     void fetchSalesPageData().then(({ salesResult, formDataResult }) => {
       applyLoadResults(salesResult, formDataResult, requestRevision);
     });
 
     return () => {
-      requestRevisionRef.current += 1;
+      requestTracker.invalidate();
     };
   }, [applyLoadResults, userId]);
 
@@ -193,11 +194,11 @@ function UserSalesPage({ userId }: { userId: string }) {
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     setNotification(null);
-    const lifecycleRevision = requestRevisionRef.current;
+    const lifecycleRevision = requestRevisionRef.current.issue();
 
     try {
       const result = await createSale(values);
-      if (lifecycleRevision !== requestRevisionRef.current) return;
+      if (!requestRevisionRef.current.isCurrent(lifecycleRevision)) return;
 
       if (result.ok) {
         const historyItem: SaleHistoryItem = {
@@ -206,13 +207,11 @@ function UserSalesPage({ userId }: { userId: string }) {
           wasteRecordNumber: selectedWasteRecord.recordNumber,
           category: selectedWasteRecord.category,
         };
-        if (
-          (
-            activeTimestampRange === undefined ||
-            isTimestampInRange(historyItem.soldAt, activeTimestampRange)
-          ) &&
-          (buyerFilter === "" || historyItem.buyerId === buyerFilter)
-        ) {
+        if (filterSalesHistory(
+          [historyItem],
+          activeTimestampRange,
+          buyerFilter || undefined,
+        ).length === 1) {
           setSales((current) => [historyItem, ...current.filter((sale) => sale.id !== historyItem.id)]);
         }
         setWasteRecords((current) => current.filter((record) => record.id !== values.wasteRecordId));
@@ -223,7 +222,7 @@ function UserSalesPage({ userId }: { userId: string }) {
 
       if (result.error.code === "confirmation_unknown") {
         const refreshedData = await fetchSalesPageData(activeTimestampRange, buyerFilter || undefined);
-        if (lifecycleRevision !== requestRevisionRef.current) return;
+        if (!requestRevisionRef.current.isCurrent(lifecycleRevision)) return;
 
         const refreshed = applyLoadResults(
           refreshedData.salesResult,
@@ -269,7 +268,7 @@ function UserSalesPage({ userId }: { userId: string }) {
 
       if (result.error.code === "waste_not_available") {
         const refreshedData = await fetchSalesPageData(activeTimestampRange, buyerFilter || undefined);
-        if (lifecycleRevision !== requestRevisionRef.current) return;
+        if (!requestRevisionRef.current.isCurrent(lifecycleRevision)) return;
 
         applyLoadResults(
           refreshedData.salesResult,
@@ -281,14 +280,14 @@ function UserSalesPage({ userId }: { userId: string }) {
 
       showNotification("error", "sales.createErrorTitle", getSalesErrorKey(result.error.code));
     } catch {
-      if (lifecycleRevision === requestRevisionRef.current) {
+      if (requestRevisionRef.current.isCurrent(lifecycleRevision)) {
         setLoadError("sales.confirmationUnknown");
         setIsModalOpen(false);
         showNotification("error", "sales.confirmationPendingTitle", "sales.confirmationUnknown");
       }
     } finally {
       isSubmittingRef.current = false;
-      if (lifecycleRevision === requestRevisionRef.current) setIsSubmitting(false);
+      if (requestRevisionRef.current.isCurrent(lifecycleRevision)) setIsSubmitting(false);
     }
   };
 
