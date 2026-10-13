@@ -64,12 +64,15 @@ function getSalesErrorKey(code: SalesErrorCode): string {
   return "sales.databaseError";
 }
 
-async function fetchSalesPageData(dateRange?: TimestampRange): Promise<{
+async function fetchSalesPageData(
+  dateRange?: TimestampRange,
+  buyerId?: string,
+): Promise<{
   salesResult: SalesListResult;
   formDataResult: SaleFormDataResult;
 }> {
   const [salesResult, formDataResult] = await Promise.all([
-    listSales(dateRange),
+    listSales(dateRange, buyerId),
     getSaleFormData(),
   ]);
   return { salesResult, formDataResult };
@@ -94,6 +97,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [endDate, setEndDate] = useState("");
   const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
   const [dateRangeError, setDateRangeError] = useState<string | null>(null);
+  const [buyerFilter, setBuyerFilter] = useState("");
 
   const applyLoadResults = useCallback((
     salesResult: SalesListResult,
@@ -131,12 +135,15 @@ function UserSalesPage({ userId }: { userId: string }) {
     return true;
   }, []);
 
-  const loadSalesData = useCallback(async (dateRange?: TimestampRange): Promise<void> => {
+  const loadSalesData = useCallback(async (
+    dateRange?: TimestampRange,
+    buyerId?: string,
+  ): Promise<void> => {
     const requestRevision = ++requestRevisionRef.current;
     setIsLoading(true);
     setLoadError(null);
 
-    const { salesResult, formDataResult } = await fetchSalesPageData(dateRange);
+    const { salesResult, formDataResult } = await fetchSalesPageData(dateRange, buyerId);
     applyLoadResults(salesResult, formDataResult, requestRevision);
   }, [applyLoadResults]);
 
@@ -198,8 +205,11 @@ function UserSalesPage({ userId }: { userId: string }) {
           category: selectedWasteRecord.category,
         };
         if (
-          activeTimestampRange === undefined ||
-          isTimestampInRange(historyItem.soldAt, activeTimestampRange)
+          (
+            activeTimestampRange === undefined ||
+            isTimestampInRange(historyItem.soldAt, activeTimestampRange)
+          ) &&
+          (buyerFilter === "" || historyItem.buyerId === buyerFilter)
         ) {
           setSales((current) => [historyItem, ...current.filter((sale) => sale.id !== historyItem.id)]);
         }
@@ -210,7 +220,7 @@ function UserSalesPage({ userId }: { userId: string }) {
       }
 
       if (result.error.code === "confirmation_unknown") {
-        const refreshedData = await fetchSalesPageData(activeTimestampRange);
+        const refreshedData = await fetchSalesPageData(activeTimestampRange, buyerFilter || undefined);
         if (lifecycleRevision !== requestRevisionRef.current) return;
 
         const refreshed = applyLoadResults(
@@ -227,7 +237,7 @@ function UserSalesPage({ userId }: { userId: string }) {
         let confirmedSale = refreshedData.salesResult.data.find(
           (sale) => sale.wasteRecordId === values.wasteRecordId,
         );
-        if (!confirmedSale && activeTimestampRange !== undefined) {
+        if (!confirmedSale && (activeTimestampRange !== undefined || buyerFilter !== "")) {
           const completeSalesResult = await listSales();
           if (completeSalesResult.ok) {
             confirmedSale = completeSalesResult.data.find(
@@ -256,7 +266,7 @@ function UserSalesPage({ userId }: { userId: string }) {
       }
 
       if (result.error.code === "waste_not_available") {
-        const refreshedData = await fetchSalesPageData(activeTimestampRange);
+        const refreshedData = await fetchSalesPageData(activeTimestampRange, buyerFilter || undefined);
         if (lifecycleRevision !== requestRevisionRef.current) return;
 
         applyLoadResults(
@@ -293,7 +303,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const metricsUnavailable = isLoading || loadError !== null;
   const registrationUnavailable = metricsUnavailable || buyers.length === 0 || wasteRecords.length === 0;
   const exportUnavailable = metricsUnavailable || sales.length === 0 || isExporting;
-  const isFiltered = activeDateRange !== null;
+  const isFiltered = activeDateRange !== null || buyerFilter !== "";
   const metricBadge = t(isFiltered ? "sales.filteredData" : "sales.realData");
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
   const formatInputDate = (value: string): string =>
@@ -310,15 +320,21 @@ function UserSalesPage({ userId }: { userId: string }) {
 
     setDateRangeError(null);
     setActiveDateRange(nextRange);
-    void loadSalesData(toTimestampRange(nextRange));
+    void loadSalesData(toTimestampRange(nextRange), buyerFilter || undefined);
   };
 
-  const clearDateRange = (): void => {
+  const clearFilters = (): void => {
     setStartDate("");
     setEndDate("");
     setDateRangeError(null);
     setActiveDateRange(null);
+    setBuyerFilter("");
     void loadSalesData();
+  };
+
+  const applyBuyerFilter = (buyerId: string): void => {
+    setBuyerFilter(buyerId);
+    void loadSalesData(activeTimestampRange, buyerId || undefined);
   };
 
   const handleExportSales = async (): Promise<void> => {
@@ -347,6 +363,7 @@ function UserSalesPage({ userId }: { userId: string }) {
           ? `ecoplaza-sales-${new Date().toISOString().slice(0, 10)}.csv`
           : `ecoplaza-sales-${activeDateRange.startDate}-${activeDateRange.endDate}.csv`,
         activeTimestampRange,
+        buyerFilter || undefined,
       );
 
       if (result.ok) {
@@ -419,7 +436,14 @@ function UserSalesPage({ userId }: { userId: string }) {
               <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.dateRangeDescription")}</p>
             </div>
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_auto_auto] xl:items-end">
+            <label className="text-xs font-medium text-ecoplaza-text-muted">
+              {t("sales.buyerFilter")}
+              <select value={buyerFilter} disabled={isLoading} onChange={(event) => applyBuyerFilter(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text">
+                <option value="">{t("sales.allBuyers")}</option>
+                {buyers.map((buyer) => <option key={buyer.id} value={buyer.id}>{buyer.name}</option>)}
+              </select>
+            </label>
             <label className="text-xs font-medium text-ecoplaza-text-muted">
               {t("sales.startDate")}
               <input type="date" value={startDate} max={endDate || undefined} required disabled={isLoading} onChange={(event) => setStartDate(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
@@ -431,8 +455,8 @@ function UserSalesPage({ userId }: { userId: string }) {
             <button type="submit" disabled={isLoading} className="rounded-lg bg-ecoplaza-secondary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
               {t("sales.applyDateRange")}
             </button>
-            <button type="button" disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")} onClick={clearDateRange} className="rounded-lg border border-ecoplaza-border px-4 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50">
-              {t("sales.clearDateRange")}
+            <button type="button" disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")} onClick={clearFilters} className="rounded-lg border border-ecoplaza-border px-4 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50">
+              {t("sales.clearFilters")}
             </button>
           </div>
           {dateRangeError !== null && <p role="alert" className="mt-3 text-sm text-ecoplaza-danger">{t(dateRangeError)}</p>}
@@ -461,7 +485,7 @@ function UserSalesPage({ userId }: { userId: string }) {
                 <AlertTriangle size={20} strokeWidth={1.8} aria-hidden="true" />
               </span>
               <p className="mt-3 max-w-md text-sm text-ecoplaza-text-muted">{t(loadError)}</p>
-              <button type="button" onClick={() => void loadSalesData(activeTimestampRange)} className="mt-4 flex items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary">
+              <button type="button" onClick={() => void loadSalesData(activeTimestampRange, buyerFilter || undefined)} className="mt-4 flex items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary">
                 <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" />
                 {t("sales.retry")}
               </button>

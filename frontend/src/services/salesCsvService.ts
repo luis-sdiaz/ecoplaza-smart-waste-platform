@@ -16,8 +16,9 @@ export async function exportSalesHistory(
   labels: SalesCsvLabels,
   defaultFileName: string,
   dateRange?: TimestampRange,
+  buyerId?: string,
 ): Promise<SalesCsvExportResult> {
-  const salesResult = await listSales(dateRange);
+  const salesResult = await listSales(dateRange, buyerId);
   if (!salesResult.ok) return { ok: false, error: salesResult.error.code };
 
   try {

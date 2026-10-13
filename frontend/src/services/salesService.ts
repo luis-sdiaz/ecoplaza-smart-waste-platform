@@ -313,7 +313,14 @@ export async function getSaleFormData(): Promise<SalesServiceResult<SaleFormData
   };
 }
 
-export async function listSales(dateRange?: TimestampRange): Promise<SalesServiceResult<SaleHistoryItem[]>> {
+export async function listSales(
+  dateRange?: TimestampRange,
+  buyerId?: string,
+): Promise<SalesServiceResult<SaleHistoryItem[]>> {
+  if (buyerId !== undefined && !UUID_PATTERN.test(buyerId)) {
+    return { ok: false, error: { code: "invalid_buyer", retryable: false } };
+  }
+
   const userResult = await getAuthenticatedUserId();
   if (!userResult.ok) return userResult;
 
@@ -335,6 +342,7 @@ export async function listSales(dateRange?: TimestampRange): Promise<SalesServic
           .gte("sold_at", dateRange.startInclusive)
           .lt("sold_at", dateRange.endExclusive);
       }
+      if (buyerId !== undefined) query = query.eq("buyer_id", buyerId);
 
       const { data, error } = await query.returns<SaleHistoryRow[]>();
 
