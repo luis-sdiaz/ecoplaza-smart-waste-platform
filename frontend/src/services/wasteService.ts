@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { listContainers } from "./containerService";
+import type { TimestampRange } from "./reportDateRange";
 
 export const WASTE_CATEGORIES = [
   "organic",
@@ -195,6 +196,7 @@ function toRemoteWasteRecord(
 async function listWasteRows(
   ownerId: string,
   status?: WasteStatus,
+  dateRange?: TimestampRange,
 ): Promise<WasteServiceResult<WasteRow[]>> {
   const rows: WasteRow[] = [];
 
@@ -211,6 +213,11 @@ async function listWasteRows(
       .range(from, from + WASTE_RECORDS_PAGE_SIZE - 1);
 
     if (status !== undefined) query = query.eq("status", status);
+    if (dateRange !== undefined) {
+      query = query
+        .gte("registered_at", dateRange.startInclusive)
+        .lt("registered_at", dateRange.endExclusive);
+    }
 
     const { data, error } = await query.returns<WasteRow[]>();
 
@@ -344,14 +351,14 @@ export async function getWasteStatistics(): Promise<
   }
 }
 
-export async function listWasteRecords(): Promise<
+export async function listWasteRecords(dateRange?: TimestampRange): Promise<
   WasteServiceResult<RemoteWasteRecord[]>
 > {
   const userResult = await getAuthenticatedUserId();
   if (!userResult.ok) return userResult;
 
   try {
-    const rowsResult = await listWasteRows(userResult.data);
+    const rowsResult = await listWasteRows(userResult.data, undefined, dateRange);
     if (!rowsResult.ok) return rowsResult;
 
     return toRemoteWasteRecords(rowsResult.data, userResult.data);

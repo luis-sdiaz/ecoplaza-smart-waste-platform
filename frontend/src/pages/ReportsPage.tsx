@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Download, LoaderCircle, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { AlertTriangle, CalendarRange, Download, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
@@ -15,6 +15,10 @@ import {
   saveReportCsv,
   type ReportCsvLabels,
 } from "../services/reportCsvService";
+import {
+  isValidReportDateRange,
+  type ReportDateRange,
+} from "../services/reportDateRange";
 
 function getReportErrorKey(code: ReportErrorCode): string {
   if (code === "unauthorized") return "reports.unauthorized";
@@ -31,6 +35,10 @@ function UserReportsPage({ userId }: { userId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
+  const [dateRangeError, setDateRangeError] = useState<string | null>(null);
 
   const applyResult = useCallback((
     result: Awaited<ReturnType<typeof getReportStatistics>>,
@@ -50,13 +58,13 @@ function UserReportsPage({ userId }: { userId: string }) {
     setIsLoading(false);
   }, []);
 
-  const loadReport = useCallback(async (): Promise<void> => {
+  const loadReport = useCallback(async (dateRange?: ReportDateRange): Promise<void> => {
     const requestRevision = ++requestRevisionRef.current;
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const result = await getReportStatistics();
+      const result = await getReportStatistics(dateRange);
       applyResult(result, requestRevision);
     } catch {
       if (requestRevision !== requestRevisionRef.current) return;
@@ -99,6 +107,35 @@ function UserReportsPage({ userId }: { userId: string }) {
     `${numberFormatter.format(weightKg)} ${t("common.kg")}`;
   const metricValue = (format: (data: ReportStatistics) => string): string =>
     metricsUnavailable || statistics === null ? "—" : format(statistics);
+  const isFiltered = activeDateRange !== null;
+  const metricBadge = t(isFiltered ? "reports.filteredData" : "reports.realData");
+  const isEmptyPeriod = isFiltered && statistics !== null &&
+    statistics.wasteRecordCount === 0 && statistics.salesCount === 0;
+  const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
+  const formatInputDate = (value: string): string =>
+    dateFormatter.format(new Date(`${value}T00:00:00`));
+
+  const applyDateRange = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const nextRange = { startDate, endDate };
+
+    if (!isValidReportDateRange(nextRange)) {
+      setDateRangeError("reports.invalidDateRange");
+      return;
+    }
+
+    setDateRangeError(null);
+    setActiveDateRange(nextRange);
+    void loadReport(nextRange);
+  };
+
+  const clearDateRange = (): void => {
+    setStartDate("");
+    setEndDate("");
+    setDateRangeError(null);
+    setActiveDateRange(null);
+    void loadReport();
+  };
 
   const exportReport = async (): Promise<void> => {
     if (statistics === null || isExporting) return;
@@ -125,6 +162,10 @@ function UserReportsPage({ userId }: { userId: string }) {
       countUnit: t("reports.csv.countUnit"),
       kilogramsUnit: t("common.kg"),
       copUnit: t("reports.csv.copUnit"),
+      period: t("reports.csv.period"),
+      from: t("reports.csv.from"),
+      to: t("reports.csv.to"),
+      allTime: t("reports.csv.allTime"),
       categories: {
         organic: t("categories.organic"),
         recyclable: t("categories.recyclable"),
@@ -136,7 +177,10 @@ function UserReportsPage({ userId }: { userId: string }) {
       const result = await saveReportCsv(
         statistics,
         labels,
-        `ecoplaza-report-${new Date().toISOString().slice(0, 10)}.csv`,
+        activeDateRange === null
+          ? `ecoplaza-report-${new Date().toISOString().slice(0, 10)}.csv`
+          : `ecoplaza-report-${activeDateRange.startDate}-${activeDateRange.endDate}.csv`,
+        activeDateRange ?? undefined,
       );
       if (result === "saved") setExportNotice("success");
     } catch {
@@ -170,6 +214,71 @@ function UserReportsPage({ userId }: { userId: string }) {
         </button>
       </div>
 
+      <form
+        onSubmit={applyDateRange}
+        className="mt-6 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5"
+      >
+        <div className="flex items-start gap-3">
+          <CalendarRange className="mt-0.5 text-ecoplaza-primary" size={20} aria-hidden="true" />
+          <div>
+            <h2 className="text-sm font-semibold text-ecoplaza-text">{t("reports.dateRange")}</h2>
+            <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("reports.dateRangeDescription")}</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+          <label className="text-xs font-medium text-ecoplaza-text-muted">
+            {t("reports.startDate")}
+            <input
+              type="date"
+              value={startDate}
+              max={endDate || undefined}
+              required
+              disabled={isLoading}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text"
+            />
+          </label>
+          <label className="text-xs font-medium text-ecoplaza-text-muted">
+            {t("reports.endDate")}
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              required
+              disabled={isLoading}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="rounded-lg bg-ecoplaza-secondary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t("reports.applyDateRange")}
+          </button>
+          <button
+            type="button"
+            disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")}
+            onClick={clearDateRange}
+            className="rounded-lg border border-ecoplaza-border px-4 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t("reports.clearDateRange")}
+          </button>
+        </div>
+        {dateRangeError !== null && (
+          <p role="alert" className="mt-3 text-sm text-ecoplaza-danger">{t(dateRangeError)}</p>
+        )}
+        {activeDateRange !== null && (
+          <p className="mt-3 text-sm font-medium text-ecoplaza-primary">
+            {t("reports.activeDateRange", {
+              start: formatInputDate(activeDateRange.startDate),
+              end: formatInputDate(activeDateRange.endDate),
+            })}
+          </p>
+        )}
+      </form>
+
       {isLoading && (
         <div
           role="status"
@@ -196,7 +305,7 @@ function UserReportsPage({ userId }: { userId: string }) {
           </div>
           <button
             type="button"
-            onClick={() => void loadReport()}
+            onClick={() => void loadReport(activeDateRange ?? undefined)}
             className="flex shrink-0 items-center gap-2 rounded-lg border border-ecoplaza-danger/30 px-3 py-2 text-sm font-medium text-ecoplaza-danger"
           >
             <RefreshCw size={15} strokeWidth={1.8} aria-hidden="true" />
@@ -205,48 +314,54 @@ function UserReportsPage({ userId }: { userId: string }) {
         </div>
       )}
 
+      {!isLoading && loadError === null && isEmptyPeriod && (
+        <div role="status" className="mt-6 rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text-muted">
+          {t("reports.emptyPeriod")}
+        </div>
+      )}
+
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard
           title={t("reports.wasteRecords")}
           value={metricValue((data) => numberFormatter.format(data.wasteRecordCount))}
           description={t("reports.wasteRecordsDescription")}
-          badge={t("reports.realData")}
+          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.historicalWeight")}
           value={metricValue((data) => formatWeight(data.totalRegisteredWeightKg))}
           description={t("reports.historicalWeightDescription")}
-          badge={t("reports.realData")}
+          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.availableWeight")}
           value={metricValue((data) => formatWeight(data.availableWeightKg))}
           description={t("reports.availableWeightDescription")}
-          badge={t("reports.realData")}
+          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.soldWeight")}
           value={metricValue((data) => formatWeight(data.soldWeightKg))}
           description={t("reports.soldWeightDescription")}
-          badge={t("reports.realData")}
+          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.salesCount")}
           value={metricValue((data) => numberFormatter.format(data.salesCount))}
           description={t("reports.salesCountDescription")}
-          badge={t("reports.realData")}
+          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.grossSales")}
           value={metricValue((data) => currencyFormatter.format(data.grossSalesValue))}
           description={t("reports.grossSalesDescription")}
-          badge={t("reports.realData")}
+          badge={metricBadge}
         />
       </div>
 
       {!metricsUnavailable && statistics !== null && (
         <div className="mt-8">
-          <WasteDistributionChart data={statistics.distribution} />
+          <WasteDistributionChart data={statistics.distribution} isFiltered={isFiltered} />
         </div>
       )}
 

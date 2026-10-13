@@ -5,6 +5,10 @@ import {
   type WasteErrorCode,
 } from './wasteService'
 import { listSales, type SalesErrorCode } from './salesService'
+import {
+  toTimestampRange,
+  type ReportDateRange,
+} from './reportDateRange'
 
 export interface ReportCategoryDistributionItem {
   category: WasteCategory
@@ -69,12 +73,15 @@ function hasDuplicateValues(values: string[]) {
   return new Set(values).size !== values.length
 }
 
-export async function getReportStatistics(): Promise<
+export async function getReportStatistics(dateRange?: ReportDateRange): Promise<
   ReportResult<ReportStatistics>
 > {
+  const timestampRange = dateRange === undefined
+    ? undefined
+    : toTimestampRange(dateRange)
   const [wasteResult, salesResult] = await Promise.all([
-    listWasteRecords(),
-    listSales(),
+    listWasteRecords(timestampRange),
+    listSales(timestampRange),
   ])
 
   if (!wasteResult.ok) {

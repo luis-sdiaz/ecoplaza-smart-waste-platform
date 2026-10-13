@@ -7,6 +7,7 @@ import {
   type RemoteWasteRecord,
   type WasteCategory,
 } from "./wasteService";
+import type { TimestampRange } from "./reportDateRange";
 
 export type Sale = {
   id: string;
@@ -312,7 +313,7 @@ export async function getSaleFormData(): Promise<SalesServiceResult<SaleFormData
   };
 }
 
-export async function listSales(): Promise<SalesServiceResult<SaleHistoryItem[]>> {
+export async function listSales(dateRange?: TimestampRange): Promise<SalesServiceResult<SaleHistoryItem[]>> {
   const userResult = await getAuthenticatedUserId();
   if (!userResult.ok) return userResult;
 
@@ -321,14 +322,21 @@ export async function listSales(): Promise<SalesServiceResult<SaleHistoryItem[]>
 
     for (let page = 0; ; page += 1) {
       const from = page * SALES_PAGE_SIZE;
-      const { data, error } = await supabase
+      let query = supabase
         .from("sales")
         .select(SALE_HISTORY_FIELDS)
         .eq("owner_id", userResult.data)
         .order("sold_at", { ascending: false })
         .order("id", { ascending: true })
-        .range(from, from + SALES_PAGE_SIZE - 1)
-        .returns<SaleHistoryRow[]>();
+        .range(from, from + SALES_PAGE_SIZE - 1);
+
+      if (dateRange !== undefined) {
+        query = query
+          .gte("sold_at", dateRange.startInclusive)
+          .lt("sold_at", dateRange.endExclusive);
+      }
+
+      const { data, error } = await query.returns<SaleHistoryRow[]>();
 
       if (error) return failure(error, "read");
       if (!Array.isArray(data)) {

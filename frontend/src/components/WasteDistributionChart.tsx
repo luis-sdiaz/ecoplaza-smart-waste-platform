@@ -4,9 +4,10 @@ import type { ReportCategoryDistributionItem } from "../services/reportService";
 
 interface WasteDistributionChartProps {
   data: ReportCategoryDistributionItem[];
+  isFiltered?: boolean;
 }
 
-function WasteDistributionChart({ data }: WasteDistributionChartProps) {
+function WasteDistributionChart({ data, isFiltered = false }: WasteDistributionChartProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const weightFormatter = new Intl.NumberFormat(locale, {
@@ -29,7 +30,7 @@ function WasteDistributionChart({ data }: WasteDistributionChartProps) {
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-          {t("reports.realData")}
+          {t(isFiltered ? "reports.filteredData" : "reports.realData")}
         </span>
       </div>
 
@@ -69,10 +70,10 @@ function WasteDistributionChart({ data }: WasteDistributionChartProps) {
             aria-hidden="true"
           />
           <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">
-            {t("reports.emptyDistributionTitle")}
+            {t(isFiltered ? "reports.emptyPeriodDistributionTitle" : "reports.emptyDistributionTitle")}
           </h3>
           <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">
-            {t("reports.emptyDistributionDescription")}
+            {t(isFiltered ? "reports.emptyPeriodDistributionDescription" : "reports.emptyDistributionDescription")}
           </p>
         </div>
       )}

@@ -2,6 +2,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { ReportStatistics } from "./reportService";
 import type { WasteCategory } from "./wasteService";
+import type { ReportDateRange } from "./reportDateRange";
 
 const CSV_SEPARATOR = ";";
 const FORMULA_PREFIX_PATTERN = /^[\t\r ]*[=+\-@]/;
@@ -25,6 +26,10 @@ export interface ReportCsvLabels {
   countUnit: string;
   kilogramsUnit: string;
   copUnit: string;
+  period: string;
+  from: string;
+  to: string;
+  allTime: string;
   categories: Record<WasteCategory, string>;
 }
 
@@ -55,9 +60,16 @@ function validNumber(value: number): number {
 export function createReportCsv(
   statistics: ReportStatistics,
   labels: ReportCsvLabels,
+  dateRange?: ReportDateRange,
 ): string {
   const rows = [
     csvRow([labels.section, labels.metric, labels.value, labels.unit]),
+    csvRow([
+      labels.period,
+      dateRange === undefined ? labels.allTime : labels.from,
+      dateRange === undefined ? "" : dateRange.startDate,
+      dateRange === undefined ? "" : `${labels.to}: ${dateRange.endDate}`,
+    ]),
     csvRow([labels.summary, labels.records, validNumber(statistics.wasteRecordCount), labels.countUnit]),
     csvRow([labels.summary, labels.historicalWeight, validNumber(statistics.totalRegisteredWeightKg), labels.kilogramsUnit]),
     csvRow([labels.summary, labels.availableWeight, validNumber(statistics.availableWeightKg), labels.kilogramsUnit]),
@@ -83,6 +95,7 @@ export async function saveReportCsv(
   statistics: ReportStatistics,
   labels: ReportCsvLabels,
   defaultFileName: string,
+  dateRange?: ReportDateRange,
 ): Promise<SaveReportCsvResult> {
   const filePath = await save({
     defaultPath: defaultFileName,
@@ -91,6 +104,6 @@ export async function saveReportCsv(
 
   if (filePath === null) return "cancelled";
 
-  await writeTextFile(filePath, createReportCsv(statistics, labels));
+  await writeTextFile(filePath, createReportCsv(statistics, labels, dateRange));
   return "saved";
 }
