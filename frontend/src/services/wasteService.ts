@@ -7,7 +7,7 @@ export const WASTE_CATEGORIES = [
   "nonRecyclable",
 ] as const;
 
-export const WASTE_STATUSES = ["available", "registered"] as const;
+export const WASTE_STATUSES = ["available", "registered", "sold"] as const;
 
 export type WasteCategory = (typeof WASTE_CATEGORIES)[number];
 export type WasteStatus = (typeof WASTE_STATUSES)[number];

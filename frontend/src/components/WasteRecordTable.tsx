@@ -30,6 +30,8 @@ function WasteRecordTable({ records }: WasteRecordTableProps) {
       ? t("common.available")
       : value === "registered" || value === "Registrado"
         ? t("common.registered")
+        : value === "sold"
+          ? t("common.sold")
         : value;
   const translateContainer = (value: string) =>
     value === "container01"
