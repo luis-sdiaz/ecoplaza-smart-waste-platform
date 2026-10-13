@@ -37,6 +37,7 @@ function InventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
+  const [containerFilter, setContainerFilter] = useState("all");
 
   const applyResults = useCallback((
     inventoryResult: InventoryResult,
@@ -101,9 +102,11 @@ function InventoryPage() {
   const metricValue = (weightKg: number): string =>
     realValueUnavailable ? "—" : formatWeight(weightKg);
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
-  const filteredRecords = categoryFilter === "all"
-    ? records
-    : records.filter((record) => record.category === categoryFilter);
+  const filteredRecords = records.filter((record) =>
+    (categoryFilter === "all" || record.category === categoryFilter) &&
+    (containerFilter === "all" || record.containerId === containerFilter),
+  );
+  const hasActiveFilters = categoryFilter !== "all" || containerFilter !== "all";
   const tableItems: InventoryItem[] = filteredRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
@@ -193,7 +196,7 @@ function InventoryPage() {
           </span>
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap justify-end gap-3">
           <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("inventory.categoryFilter")}</span>
             <select
@@ -208,6 +211,26 @@ function InventoryPage() {
               <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
             </select>
           </label>
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("inventory.containerFilter")}</span>
+            <select
+              value={containerFilter}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setContainerFilter(event.target.value)}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            >
+              <option value="all">{t("inventory.allContainers")}</option>
+              {containers.map((container) => <option key={container.id} value={container.id}>{container.code}</option>)}
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={!hasActiveFilters || isLoading}
+            onClick={() => { setCategoryFilter("all"); setContainerFilter("all"); }}
+            className="rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t("inventory.clearFilters")}
+          </button>
         </div>
 
         <div className="mt-4">
@@ -215,10 +238,10 @@ function InventoryPage() {
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
               <Database size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">
-                {t(categoryFilter === "all" ? "inventory.emptyTitle" : "inventory.emptyFilteredTitle")}
+                {t(hasActiveFilters ? "inventory.emptyFilteredTitle" : "inventory.emptyTitle")}
               </h3>
               <p className="mt-1 max-w-md text-sm text-ecoplaza-text-muted">
-                {t(categoryFilter === "all" ? "inventory.emptyDescription" : "inventory.emptyFilteredDescription")}
+                {t(hasActiveFilters ? "inventory.emptyFilteredDescription" : "inventory.emptyDescription")}
               </p>
             </div>
           ) : !isLoading && !loadError ? (
