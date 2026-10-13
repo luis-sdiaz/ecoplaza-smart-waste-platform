@@ -8,6 +8,8 @@ export interface TimestampRange {
   endExclusive: string;
 }
 
+export type ReportDateRangePreset = "last7Days" | "last30Days" | "currentMonth";
+
 const DATE_INPUT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function parseLocalDate(value: string): Date | null {
@@ -24,6 +26,32 @@ function parseLocalDate(value: string): Date | null {
     date.getDate() === day
     ? date
     : null;
+}
+
+function toDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function getReportDateRangePreset(
+  preset: ReportDateRangePreset,
+  now: Date = new Date(),
+): ReportDateRange {
+  if (Number.isNaN(now.getTime())) throw new Error("Invalid current date.");
+
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const start = new Date(end);
+
+  if (preset === "last7Days") start.setDate(start.getDate() - 6);
+  if (preset === "last30Days") start.setDate(start.getDate() - 29);
+  if (preset === "currentMonth") start.setDate(1);
+
+  return {
+    startDate: toDateInputValue(start),
+    endDate: toDateInputValue(end),
+  };
 }
 
 export function isValidReportDateRange(range: ReportDateRange): boolean {

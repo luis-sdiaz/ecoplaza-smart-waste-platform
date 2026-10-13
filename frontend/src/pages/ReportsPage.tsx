@@ -17,8 +17,10 @@ import {
   type ReportCsvLabels,
 } from "../services/reportCsvService";
 import {
+  getReportDateRangePreset,
   isValidReportDateRange,
   type ReportDateRange,
+  type ReportDateRangePreset,
 } from "../services/reportDateRange";
 
 function getReportErrorKey(code: ReportErrorCode): string {
@@ -138,6 +140,15 @@ function UserReportsPage({ userId }: { userId: string }) {
     void loadReport();
   };
 
+  const applyDateRangePreset = (preset: ReportDateRangePreset): void => {
+    const nextRange = getReportDateRangePreset(preset);
+    setStartDate(nextRange.startDate);
+    setEndDate(nextRange.endDate);
+    setDateRangeError(null);
+    setActiveDateRange(nextRange);
+    void loadReport(nextRange);
+  };
+
   const exportReport = async (): Promise<void> => {
     if (statistics === null || isExporting) return;
 
@@ -225,6 +236,27 @@ function UserReportsPage({ userId }: { userId: string }) {
             <h2 className="text-sm font-semibold text-ecoplaza-text">{t("reports.dateRange")}</h2>
             <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("reports.dateRangeDescription")}</p>
           </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2" aria-label={t("reports.quickRanges")}>
+          {(["last7Days", "last30Days", "currentMonth"] as const).map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              disabled={isLoading}
+              onClick={() => applyDateRangePreset(preset)}
+              className="rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t(`reports.${preset}`)}
+            </button>
+          ))}
+          <button
+            type="button"
+            disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")}
+            onClick={clearDateRange}
+            className="rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t("reports.allHistory")}
+          </button>
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
           <label className="text-xs font-medium text-ecoplaza-text-muted">

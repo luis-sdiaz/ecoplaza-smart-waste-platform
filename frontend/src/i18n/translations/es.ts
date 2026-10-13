@@ -385,6 +385,8 @@ const es = {
     filteredData: "Período filtrado",
     dateRange: "Período del informe",
     dateRangeDescription: "Los residuos se filtran por fecha de registro y las ventas por fecha de realización.",
+    quickRanges: "Períodos rápidos", last7Days: "Últimos 7 días", last30Days: "Últimos 30 días",
+    currentMonth: "Mes actual", allHistory: "Todo el historial",
     startDate: "Fecha inicial",
     endDate: "Fecha final",
     applyDateRange: "Aplicar filtro",

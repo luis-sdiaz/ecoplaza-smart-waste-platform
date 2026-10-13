@@ -385,6 +385,8 @@ const en = {
     filteredData: "Filtered period",
     dateRange: "Report period",
     dateRangeDescription: "Waste is filtered by registration date and sales by completion date.",
+    quickRanges: "Quick periods", last7Days: "Last 7 days", last30Days: "Last 30 days",
+    currentMonth: "Current month", allHistory: "All history",
     startDate: "Start date",
     endDate: "End date",
     applyDateRange: "Apply filter",
