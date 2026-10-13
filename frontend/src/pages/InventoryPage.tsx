@@ -14,6 +14,7 @@ import {
   calculateWasteStatistics,
   listAvailableWasteRecords,
   type RemoteWasteRecord,
+  type WasteCategory,
   type WasteErrorCode,
 } from "../services/wasteService";
 
@@ -35,6 +36,7 @@ function InventoryPage() {
   const [containers, setContainers] = useState<Container[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
 
   const applyResults = useCallback((
     inventoryResult: InventoryResult,
@@ -99,7 +101,10 @@ function InventoryPage() {
   const metricValue = (weightKg: number): string =>
     realValueUnavailable ? "—" : formatWeight(weightKg);
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
-  const tableItems: InventoryItem[] = records.map((record) => ({
+  const filteredRecords = categoryFilter === "all"
+    ? records
+    : records.filter((record) => record.category === categoryFilter);
+  const tableItems: InventoryItem[] = filteredRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
     weightKg: record.weightKg,
@@ -175,7 +180,7 @@ function InventoryPage() {
               </h2>
               {!realValueUnavailable && (
                 <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-                  {t("inventory.recordCount", { count: statistics.recordCount })}
+                  {t("inventory.recordCount", { count: filteredRecords.length })}
                 </span>
               )}
             </div>
@@ -188,15 +193,32 @@ function InventoryPage() {
           </span>
         </div>
 
+        <div className="mt-4 flex justify-end">
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("inventory.categoryFilter")}</span>
+            <select
+              value={categoryFilter}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setCategoryFilter(event.target.value as WasteCategory | "all")}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            >
+              <option value="all">{t("inventory.allCategories")}</option>
+              <option value="organic">{t("common.organic")}</option>
+              <option value="recyclable">{t("common.recyclable")}</option>
+              <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
+            </select>
+          </label>
+        </div>
+
         <div className="mt-4">
           {!isLoading && !loadError && tableItems.length === 0 ? (
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
               <Database size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">
-                {t("inventory.emptyTitle")}
+                {t(categoryFilter === "all" ? "inventory.emptyTitle" : "inventory.emptyFilteredTitle")}
               </h3>
               <p className="mt-1 max-w-md text-sm text-ecoplaza-text-muted">
-                {t("inventory.emptyDescription")}
+                {t(categoryFilter === "all" ? "inventory.emptyDescription" : "inventory.emptyFilteredDescription")}
               </p>
             </div>
           ) : !isLoading && !loadError ? (
