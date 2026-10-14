@@ -29,9 +29,8 @@ function getInventoryErrorKey(code: WasteErrorCode | ContainerErrorCode): string
   return "inventory.databaseError";
 }
 
-function InventoryPage() {
+function InventoryPageContent() {
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
   const requestRevisionRef = useRef(0);
   const [records, setRecords] = useState<RemoteWasteRecord[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
@@ -93,7 +92,7 @@ function InventoryPage() {
     return () => {
       requestRevisionRef.current += 1;
     };
-  }, [applyResults, user?.id]);
+  }, [applyResults]);
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const statistics = calculateWasteStatistics(records);
@@ -249,6 +248,14 @@ function InventoryPage() {
       </div>
     </section>
   );
+}
+
+function InventoryPage() {
+  const { user } = useAuth();
+
+  if (!user) return null;
+
+  return <InventoryPageContent key={user.id} />;
 }
 
 export default InventoryPage;

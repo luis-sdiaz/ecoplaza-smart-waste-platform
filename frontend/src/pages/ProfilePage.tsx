@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Camera, CircleCheck, IdCard, Info, Leaf, Mail, Pencil, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -69,7 +69,7 @@ const profileNotificationCopy = {
   },
 } as const;
 
-function ProfilePage() {
+function ProfilePageContent() {
   const { t } = useTranslation();
   const {
     user,
@@ -88,6 +88,15 @@ function ProfilePage() {
   const [notification, setNotification] = useState<ProfileNotification | null>(null);
   const [isProfileErrorDismissed, setIsProfileErrorDismissed] = useState(false);
   const toastSequenceRef = useRef(0);
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const showNotification = (operation: ProfileNotificationOperation): void => {
     toastSequenceRef.current += 1;
@@ -161,6 +170,8 @@ function ProfilePage() {
 
     try {
       const preparedAvatar = await prepareProfileImage(file);
+
+      if (!isMountedRef.current) return;
 
       if (!(await updateUserAvatar(preparedAvatar))) {
         showNotification("avatarSaveError");
@@ -441,6 +452,14 @@ function ProfilePage() {
       ) : null}
     </section>
   );
+}
+
+function ProfilePage() {
+  const { user } = useAuth();
+
+  if (!user) return null;
+
+  return <ProfilePageContent key={user.id} />;
 }
 
 export default ProfilePage;
