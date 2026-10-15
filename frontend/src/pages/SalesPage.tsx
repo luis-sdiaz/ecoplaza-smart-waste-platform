@@ -37,6 +37,7 @@ import {
   MAX_MONETARY_FRACTION_DIGITS,
   sumSafeMonetaryValues,
 } from "../services/monetarySafety";
+import { getSalesEmptyState } from "../services/salesEmptyState";
 
 const demoSales: DemoSale[] = [
   { id: "SAL-001", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 80, total: 640000, date: "03/10/2026", status: "Completada" },
@@ -310,6 +311,10 @@ function UserSalesPage({ userId }: { userId: string }) {
   const registrationUnavailable = metricsUnavailable || buyers.length === 0 || wasteRecords.length === 0;
   const exportUnavailable = metricsUnavailable || sales.length === 0 || isExporting;
   const isFiltered = activeDateRange !== null || buyerFilter !== "";
+  const emptyState = getSalesEmptyState(
+    buyerFilter !== "",
+    activeDateRange !== null,
+  );
   const metricBadge = t(isFiltered ? "sales.filteredData" : "sales.realData");
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
   const formatInputDate = (value: string): string =>
@@ -495,8 +500,8 @@ function UserSalesPage({ userId }: { userId: string }) {
           ) : sales.length === 0 ? (
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
               <Database size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t(isFiltered ? "sales.emptyFilteredTitle" : "sales.emptyTitle")}</h3>
-              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(isFiltered ? "sales.emptyFilteredDescription" : "sales.emptyDescription")}</p>
+              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t(emptyState.titleKey)}</h3>
+              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(emptyState.descriptionKey)}</p>
             </div>
           ) : (
             <SalesTable sales={sales} onViewDetails={setSelectedSale} />
