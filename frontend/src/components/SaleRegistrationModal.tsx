@@ -9,6 +9,7 @@ import {
   MAX_MONETARY_FRACTION_DIGITS,
 } from "../services/monetarySafety";
 import type { RemoteWasteRecord } from "../services/wasteService";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 export type SaleRegistrationValues = {
   buyerId: string;
@@ -51,6 +52,7 @@ function SaleRegistrationModal({
   const [wasteRecordId, setWasteRecordId] = useState("");
   const [unitPriceInput, setUnitPriceInput] = useState("");
   const [errors, setErrors] = useState<SaleFormErrors>(emptyErrors);
+  const dialogRef = useDialogFocus(onClose, !isSubmitting);
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const selectedWasteRecord = wasteRecords.find((record) => record.id === wasteRecordId) ?? null;
   const unitPrice = parseUnitPrice(unitPriceInput);
@@ -116,6 +118,8 @@ function SaleRegistrationModal({
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/25 p-8">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="sale-registration-title"

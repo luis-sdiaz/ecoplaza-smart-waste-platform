@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import type { Buyer } from "../services/buyerService";
 import type { SaleHistoryItem } from "../services/salesService";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 interface BuyerPurchaseHistoryModalProps {
   buyer: Buyer;
@@ -22,6 +23,7 @@ function BuyerPurchaseHistoryModal({
   onClose,
 }: BuyerPurchaseHistoryModalProps) {
   const { t, i18n } = useTranslation();
+  const dialogRef = useDialogFocus(onClose);
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
   const numberFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
@@ -32,7 +34,7 @@ function BuyerPurchaseHistoryModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="buyer-history-title">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="buyer-history-title">
       <section className="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-ecoplaza-border p-5">
           <div>

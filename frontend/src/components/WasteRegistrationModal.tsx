@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { Container } from "../services/containerService";
 import type { WasteCategory } from "../services/wasteService";
 import { parseWasteWeightKg } from "../services/wasteWeight";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 export interface WasteRegistrationValues {
   category: WasteCategory;
@@ -41,6 +42,7 @@ function WasteRegistrationModal({
   const [containerId, setContainerId] = useState("");
   const [weight, setWeight] = useState("");
   const [errors, setErrors] = useState<WasteRegistrationErrors>(emptyErrors);
+  const dialogRef = useDialogFocus(onClose, !isSubmitting);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,6 +84,8 @@ function WasteRegistrationModal({
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/25 p-8">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="waste-registration-title"

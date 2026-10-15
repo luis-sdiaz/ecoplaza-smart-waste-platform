@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import type { SaleHistoryItem } from "../services/salesService";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 interface SaleDetailsModalProps {
   sale: SaleHistoryItem;
@@ -10,6 +11,7 @@ interface SaleDetailsModalProps {
 
 function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
   const { t, i18n } = useTranslation();
+  const dialogRef = useDialogFocus(onClose);
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const dateFormatter = new Intl.DateTimeFormat(locale, {
     dateStyle: "long",
@@ -39,7 +41,7 @@ function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="sale-details-title">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="sale-details-title">
       <section className="w-full max-w-2xl rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-ecoplaza-border p-5">
           <div>

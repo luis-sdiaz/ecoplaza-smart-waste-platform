@@ -8,6 +8,7 @@ import {
   type Buyer,
   type BuyerInput,
 } from "../services/buyerService";
+import { useDialogFocus } from "../hooks/useDialogFocus";
 
 interface BuyerFormModalProps {
   buyer: Buyer | null;
@@ -39,6 +40,7 @@ function BuyerFormModal({
   const [email, setEmail] = useState(buyer?.email ?? "");
   const [phone, setPhone] = useState(buyer?.phone ?? "");
   const [errors, setErrors] = useState<BuyerFormErrors>(emptyErrors);
+  const dialogRef = useDialogFocus(onClose, !isSubmitting);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -64,6 +66,8 @@ function BuyerFormModal({
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/25 p-8">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="buyer-form-title"
