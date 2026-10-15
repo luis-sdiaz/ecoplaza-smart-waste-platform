@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Database, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
+import ContainerStockSummaryTable from "../components/ContainerStockSummaryTable";
 import InventoryTable, { type InventoryItem } from "../components/InventoryTable";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
@@ -17,7 +18,10 @@ import {
   type WasteCategory,
   type WasteErrorCode,
 } from "../services/wasteService";
-import { filterAvailableInventory } from "../services/coreWorkflow";
+import {
+  filterAvailableInventory,
+  summarizeAvailableStockByContainer,
+} from "../services/coreWorkflow";
 
 type InventoryResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
 type ContainersResult = Awaited<ReturnType<typeof listContainers>>;
@@ -103,6 +107,7 @@ function InventoryPageContent() {
     realValueUnavailable ? "—" : formatWeight(weightKg);
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
   const filteredRecords = filterAvailableInventory(records, categoryFilter, containerFilter);
+  const containerSummaries = summarizeAvailableStockByContainer(containers, records);
   const hasActiveFilters = categoryFilter !== "all" || containerFilter !== "all";
   const tableItems: InventoryItem[] = filteredRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
@@ -170,6 +175,23 @@ function InventoryPageContent() {
           badge={t("inventory.realData")}
         />
       </div>
+
+      {!isLoading && !loadError && (
+        <div className="mt-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("inventory.stockByContainer")}</h2>
+              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("inventory.stockByContainerDescription")}</p>
+            </div>
+            <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
+              {t("inventory.realData")}
+            </span>
+          </div>
+          <div className="mt-4">
+            <ContainerStockSummaryTable summaries={containerSummaries} />
+          </div>
+        </div>
+      )}
 
       <div className="mt-8">
         <div className="flex items-start justify-between gap-4">

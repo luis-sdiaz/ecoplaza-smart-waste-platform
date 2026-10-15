@@ -6,6 +6,7 @@ import {
   filterSalesHistory,
   filterWasteHistory,
   RequestRevisionTracker,
+  summarizeAvailableStockByContainer,
 } from "../src/services/coreWorkflow.ts";
 
 process.env.TZ = "America/Bogota";
@@ -43,6 +44,41 @@ test("keeps only available inventory and combines category and container filters
   assert.deepEqual(filterAvailableInventory(wasteRecords).map(({ id }) => id), ["waste-1", "waste-3"]);
   assert.deepEqual(filterAvailableInventory(wasteRecords, "organic", "container-a").map(({ id }) => id), ["waste-1"]);
   assert.deepEqual(filterAvailableInventory(wasteRecords, "organic", "container-b"), []);
+});
+
+test("summarizes available stock for every real container without double counting", () => {
+  const containers = [
+    { id: "container-a", code: "CTR-A" },
+    { id: "container-b", code: "CTR-B" },
+    { id: "container-c", code: "CTR-C" },
+  ];
+  const records = [
+    { id: "waste-1", status: "available", category: "organic", containerId: "container-a", weightKg: 1.25 },
+    { id: "waste-2", status: "available", category: "recyclable", containerId: "container-a", weightKg: 0.75 },
+    { id: "waste-3", status: "available", category: "organic", containerId: "container-b", weightKg: 3 },
+    { id: "waste-3", status: "available", category: "organic", containerId: "container-b", weightKg: 3 },
+  ] as const;
+
+  assert.deepEqual(summarizeAvailableStockByContainer(containers, records), [
+    { containerId: "container-b", containerCode: "CTR-B", availableWeightKg: 3, availableRecordCount: 1 },
+    { containerId: "container-a", containerCode: "CTR-A", availableWeightKg: 2, availableRecordCount: 2 },
+    { containerId: "container-c", containerCode: "CTR-C", availableWeightKg: 0, availableRecordCount: 0 },
+  ]);
+});
+
+test("excludes sold records and records outside the real container set from stock summaries", () => {
+  const summaries = summarizeAvailableStockByContainer(
+    [{ id: "container-a", code: "CTR-A" }],
+    [
+      { id: "waste-1", status: "sold", category: "organic", containerId: "container-a", weightKg: 9 },
+      { id: "waste-2", status: "available", category: "organic", containerId: "missing", weightKg: 4 },
+    ],
+  );
+
+  assert.deepEqual(summaries, [
+    { containerId: "container-a", containerCode: "CTR-A", availableWeightKg: 0, availableRecordCount: 0 },
+  ]);
+  assert.equal(summaries.reduce((total, summary) => total + summary.availableWeightKg, 0), 0);
 });
 
 test("preserves sold waste in history and combines status and category filters", () => {

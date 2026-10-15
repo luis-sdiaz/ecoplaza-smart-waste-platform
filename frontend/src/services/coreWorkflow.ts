@@ -1,4 +1,5 @@
 import { isTimestampInRange, type TimestampRange } from "./reportDateRange.ts";
+import { isSafeWasteWeightKg } from "./wasteWeight.ts";
 
 type SalesFilterRecord = {
   buyerId: string;
@@ -13,6 +14,71 @@ type WasteFilterRecord = {
 
 export type WasteStatusFilter = WasteFilterRecord["status"] | "all";
 export type WasteCategoryFilter = WasteFilterRecord["category"] | "all";
+
+type InventorySummaryContainer = {
+  id: string;
+  code: string;
+};
+
+type InventorySummaryRecord = WasteFilterRecord & {
+  id: string;
+  weightKg: number;
+};
+
+export type ContainerStockSummary = {
+  containerId: string;
+  containerCode: string;
+  availableWeightKg: number;
+  availableRecordCount: number;
+};
+
+export function summarizeAvailableStockByContainer(
+  containers: readonly InventorySummaryContainer[],
+  records: readonly InventorySummaryRecord[],
+): ContainerStockSummary[] {
+  const summaries = new Map<string, {
+    containerCode: string;
+    availableWeightGrams: number;
+    availableRecordCount: number;
+  }>();
+
+  for (const container of containers) {
+    if (!summaries.has(container.id)) {
+      summaries.set(container.id, {
+        containerCode: container.code,
+        availableWeightGrams: 0,
+        availableRecordCount: 0,
+      });
+    }
+  }
+
+  const countedRecordIds = new Set<string>();
+  for (const record of records) {
+    if (record.status !== "available" || countedRecordIds.has(record.id)) continue;
+
+    const summary = summaries.get(record.containerId);
+    if (summary === undefined || !isSafeWasteWeightKg(record.weightKg)) continue;
+
+    const weightGrams = Math.round(record.weightKg * 1000);
+    const nextWeightGrams = summary.availableWeightGrams + weightGrams;
+    if (!Number.isSafeInteger(nextWeightGrams)) continue;
+
+    countedRecordIds.add(record.id);
+    summary.availableWeightGrams = nextWeightGrams;
+    summary.availableRecordCount += 1;
+  }
+
+  return Array.from(summaries, ([containerId, summary]) => ({
+    containerId,
+    containerCode: summary.containerCode,
+    availableWeightKg: summary.availableWeightGrams / 1000,
+    availableRecordCount: summary.availableRecordCount,
+  })).sort((left, right) =>
+    right.availableWeightKg - left.availableWeightKg ||
+    left.containerCode.localeCompare(right.containerCode) ||
+    left.containerId.localeCompare(right.containerId)
+  );
+}
 
 export function filterSalesHistory<T extends SalesFilterRecord>(
   sales: readonly T[],
