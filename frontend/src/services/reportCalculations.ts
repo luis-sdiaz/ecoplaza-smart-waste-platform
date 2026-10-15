@@ -14,6 +14,13 @@ export interface ReportSalesTrendItem {
   grossSalesValue: number;
 }
 
+export interface ReportSalesCategoryItem {
+  category: ReportWasteCategory;
+  salesCount: number;
+  soldWeightKg: number;
+  grossSalesValue: number;
+}
+
 export interface ReportStatistics {
   wasteRecordCount: number;
   totalRegisteredWeightKg: number;
@@ -22,6 +29,7 @@ export interface ReportStatistics {
   salesCount: number;
   grossSalesValue: number;
   distribution: ReportCategoryDistributionItem[];
+  salesByCategory: ReportSalesCategoryItem[];
   salesTrend: ReportSalesTrendItem[];
 }
 
@@ -35,10 +43,17 @@ export interface ReportWasteInput {
 export interface ReportSaleInput {
   id: string;
   wasteRecordId: string;
+  category: ReportWasteCategory;
   weightKg: number;
   totalValue: number;
   soldAt: string;
 }
+
+const REPORT_CATEGORIES: ReportWasteCategory[] = [
+  "organic",
+  "recyclable",
+  "nonRecyclable",
+];
 
 function sumSafely(values: ReadonlyArray<number>): number | null {
   let sum = 0;
@@ -100,6 +115,32 @@ export function calculateSalesTrend(
   return trend;
 }
 
+export function calculateSalesByCategory(
+  sales: ReadonlyArray<Pick<ReportSaleInput, "category" | "weightKg" | "totalValue">>,
+): ReportSalesCategoryItem[] | null {
+  if (sales.some((sale) => !REPORT_CATEGORIES.includes(sale.category))) return null;
+
+  const performance: ReportSalesCategoryItem[] = [];
+
+  for (const category of REPORT_CATEGORIES) {
+    const categorySales = sales.filter((sale) => sale.category === category);
+    const soldWeightKg = sumSafely(categorySales.map((sale) => sale.weightKg));
+    const grossSalesValue = sumSafeMonetaryValues(
+      categorySales.map((sale) => sale.totalValue),
+    );
+
+    if (soldWeightKg === null || grossSalesValue === null) return null;
+    performance.push({
+      category,
+      salesCount: categorySales.length,
+      soldWeightKg,
+      grossSalesValue,
+    });
+  }
+
+  return performance;
+}
+
 export function calculateReportStatistics(
   wasteRecords: ReadonlyArray<ReportWasteInput>,
   sales: ReadonlyArray<ReportSaleInput>,
@@ -120,6 +161,7 @@ export function calculateReportStatistics(
   );
   const soldWeightKg = sumSafely(sales.map((sale) => sale.weightKg));
   const grossSalesValue = sumSafeMonetaryValues(sales.map((sale) => sale.totalValue));
+  const salesByCategory = calculateSalesByCategory(sales);
   const salesTrend = calculateSalesTrend(sales);
 
   if (
@@ -127,13 +169,13 @@ export function calculateReportStatistics(
     availableWeightKg === null ||
     soldWeightKg === null ||
     grossSalesValue === null ||
+    salesByCategory === null ||
     salesTrend === null
   ) {
     return null;
   }
 
-  const categories: ReportWasteCategory[] = ["organic", "recyclable", "nonRecyclable"];
-  const distribution = categories.map((category) => {
+  const distribution = REPORT_CATEGORIES.map((category) => {
     const weightKg = sumSafely(
       wasteRecords
         .filter((record) => record.category === category)
@@ -159,6 +201,7 @@ export function calculateReportStatistics(
     salesCount: sales.length,
     grossSalesValue,
     distribution: distribution as ReportCategoryDistributionItem[],
+    salesByCategory,
     salesTrend,
   };
 }

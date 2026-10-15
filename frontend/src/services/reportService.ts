@@ -17,8 +17,10 @@ import {
 
 export {
   calculateReportStatistics,
+  calculateSalesByCategory,
   calculateSalesTrend,
   type ReportCategoryDistributionItem,
+  type ReportSalesCategoryItem,
   type ReportSalesTrendItem,
   type ReportStatistics,
   type ReportWasteCategory,

@@ -25,6 +25,7 @@ const report = {
   salesCount: 1,
   grossSalesValue: 11000.25,
   distribution: [{ category: "organic" as const, weightKg: 12.5, percentage: 100 }],
+  salesByCategory: [],
   salesTrend: [],
 };
 

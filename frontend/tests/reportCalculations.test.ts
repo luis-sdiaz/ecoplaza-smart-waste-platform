@@ -17,11 +17,11 @@ const wasteRecords: ReportWasteInput[] = [
 
 const sales: ReportSaleInput[] = [
   {
-    id: "sale-1", wasteRecordId: "waste-2", weightKg: 20,
+    id: "sale-1", wasteRecordId: "waste-2", category: "recyclable", weightKg: 20,
     totalValue: 1000.25, soldAt: "2026-10-13T05:00:00.000Z",
   },
   {
-    id: "sale-2", wasteRecordId: "waste-3", weightKg: 5,
+    id: "sale-2", wasteRecordId: "waste-3", category: "nonRecyclable", weightKg: 5,
     totalValue: 2000.5, soldAt: "2026-10-14T04:59:59.999Z",
   },
 ];
@@ -41,6 +41,21 @@ test("calculates historical, available, sold, revenue, and category values", () 
     { category: "nonRecyclable", weightKg: 5 },
   ]);
   assert.equal(result?.distribution.reduce((sum, item) => sum + item.percentage, 0), 100);
+  assert.deepEqual(result?.salesByCategory, [
+    { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
+    { category: "recyclable", salesCount: 1, soldWeightKg: 20, grossSalesValue: 1000.25 },
+    { category: "nonRecyclable", salesCount: 1, soldWeightKg: 5, grossSalesValue: 2000.5 },
+  ]);
+});
+
+test("uses sale categories even when their waste records are outside the report period", () => {
+  const result = calculateReportStatistics([], [sales[0]]);
+
+  assert.deepEqual(result?.salesByCategory, [
+    { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
+    { category: "recyclable", salesCount: 1, soldWeightKg: 20, grossSalesValue: 1000.25 },
+    { category: "nonRecyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
+  ]);
 });
 
 test("groups sales by their real local completion date without rounding revenue", () => {
@@ -70,6 +85,11 @@ test("returns valid zero statistics for an interval without records", () => {
       { category: "organic", weightKg: 0, percentage: 0 },
       { category: "recyclable", weightKg: 0, percentage: 0 },
       { category: "nonRecyclable", weightKg: 0, percentage: 0 },
+    ],
+    salesByCategory: [
+      { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
+      { category: "recyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
+      { category: "nonRecyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
     ],
     salesTrend: [],
   });

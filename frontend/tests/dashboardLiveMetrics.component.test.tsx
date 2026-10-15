@@ -33,6 +33,7 @@ function statistics(availableWeightKg: number, grossSalesValue: number) {
       { category: "recyclable" as const, weightKg: 0, percentage: 0 },
       { category: "nonRecyclable" as const, weightKg: 0, percentage: 0 },
     ],
+    salesByCategory: [],
     salesTrend: [],
   };
 }
