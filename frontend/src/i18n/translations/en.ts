@@ -375,7 +375,7 @@ const en = {
     exportErrorTitle: "Export failed",
     exportFileError: "The CSV file could not be saved. Please try again.",
     csv: {
-      reference: "Sale reference", completedAt: "Completion date (ISO 8601)",
+      reference: "Unique sale identifier (UUID)", completedAt: "Completion date (ISO 8601)",
       category: "Waste category", weightKg: "Weight sold (kg)",
       unitPriceCop: "Price per kilogram (COP)", totalValueCop: "Total value (COP)",
     },

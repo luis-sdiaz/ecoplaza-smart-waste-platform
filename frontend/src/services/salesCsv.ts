@@ -33,7 +33,7 @@ export function createSalesCsv(
       labels.totalValueCop,
     ]),
     ...sales.map((sale) => createCsvRow([
-      `SAL-${sale.id.slice(0, 8).toUpperCase()}`,
+      sale.id,
       sale.soldAt,
       labels.categories[sale.category],
       validNumber(sale.weightKg),

@@ -375,7 +375,7 @@ const es = {
     exportErrorTitle: "No fue posible exportar",
     exportFileError: "No se pudo guardar el archivo CSV. Inténtalo nuevamente.",
     csv: {
-      reference: "Referencia de venta", completedAt: "Fecha de realización (ISO 8601)",
+      reference: "Identificador único de venta (UUID)", completedAt: "Fecha de realización (ISO 8601)",
       category: "Categoría del residuo", weightKg: "Peso vendido (kg)",
       unitPriceCop: "Precio por kilogramo (COP)", totalValueCop: "Valor total (COP)",
     },

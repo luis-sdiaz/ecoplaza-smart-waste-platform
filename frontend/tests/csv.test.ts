@@ -87,11 +87,72 @@ test("creates a BOM-prefixed report CSV with filtered period and numeric values"
   assert.throws(() => createReportCsv({ ...report, grossSalesValue: Number.POSITIVE_INFINITY }, reportLabels));
 });
 
-test("creates sales CSV without personal fields and rejects invalid numbers", () => {
+test("creates sales CSV with complete UUIDs and bilingual professional headers", () => {
+  const spanishLabels = {
+    ...es.sales.csv,
+    categories: getCsvCategoryLabels(translateFrom(es)),
+  };
+  const englishLabels = {
+    ...en.sales.csv,
+    categories: getCsvCategoryLabels(translateFrom(en)),
+  };
+  const firstSale = {
+    id: "12345678-1234-4234-8234-123456789abc",
+    buyerId: "22345678-1234-4234-8234-123456789abc",
+    wasteRecordId: "32345678-1234-4234-8234-123456789abc",
+    weightKg: 12.5,
+    unitPrice: 2500.25,
+    totalValue: 31253.125,
+    soldAt: "2026-10-13T15:30:00.000Z",
+    buyerName: "Excluded buyer",
+    wasteRecordNumber: "9",
+    category: "organic" as const,
+  };
+  const secondSale = {
+    ...firstSale,
+    id: "12345678-abcd-4abc-8abc-fedcba987654",
+    category: "recyclable" as const,
+    weightKg: 7,
+    unitPrice: 1800,
+    totalValue: 12600,
+    soldAt: "2026-10-14T09:45:12.345-05:00",
+  };
+
+  const spanishCsv = createSalesCsv([firstSale, secondSale], spanishLabels);
+  const englishCsv = createSalesCsv([firstSale, secondSale], englishLabels);
+  const spanishRows = spanishCsv.slice(1, -2).split("\r\n");
+  const englishRows = englishCsv.slice(1, -2).split("\r\n");
+
+  assert.equal(
+    spanishRows[0],
+    "Identificador único de venta (UUID);Fecha de realización (ISO 8601);Categoría del residuo;Peso vendido (kg);Precio por kilogramo (COP);Valor total (COP)",
+  );
+  assert.equal(
+    englishRows[0],
+    "Unique sale identifier (UUID);Completion date (ISO 8601);Waste category;Weight sold (kg);Price per kilogram (COP);Total value (COP)",
+  );
+  assert.equal(
+    spanishRows[1],
+    "12345678-1234-4234-8234-123456789abc;2026-10-13T15:30:00.000Z;Orgánicos;12.5;2500.25;31253.125",
+  );
+  assert.equal(
+    spanishRows[2],
+    "12345678-abcd-4abc-8abc-fedcba987654;2026-10-14T09:45:12.345-05:00;Reciclables;7;1800;12600",
+  );
+  assert.equal(englishRows[1].split(";")[0], firstSale.id);
+  assert.equal(englishRows[2].split(";")[0], secondSale.id);
+  assert.notEqual(englishRows[1].split(";")[0], englishRows[2].split(";")[0]);
+  assert.ok(spanishCsv.startsWith("\uFEFF"));
+  assert.ok(spanishCsv.endsWith("\r\n"));
+  assert.equal(spanishCsv.includes("SAL-12345678"), false);
+  assert.equal(spanishCsv.includes("Excluded buyer"), false);
+});
+
+test("keeps sales CSV escaping, formula protection, and numeric validation", () => {
   const labels = {
-    reference: "Reference", completedAt: "Date", category: "Category",
+    reference: "Identifier", completedAt: "Date", category: "Category",
     weightKg: "Weight", unitPriceCop: "Price", totalValueCop: "Total",
-    categories: { organic: "=FORMULA", recyclable: "Recyclable", nonRecyclable: "Other" },
+    categories: { organic: "=FORMULA;\"value\"", recyclable: "Recyclable", nonRecyclable: "Other" },
   };
   const sale = {
     id: "12345678-1234-4234-8234-123456789abc",
@@ -105,9 +166,8 @@ test("creates sales CSV without personal fields and rejects invalid numbers", ()
     wasteRecordNumber: "9",
     category: "organic" as const,
   };
+
   const csv = createSalesCsv([sale], labels);
-  assert.ok(csv.startsWith("\uFEFF"));
-  assert.ok(csv.includes("SAL-12345678;2026-10-13T15:30:00.000Z;'=FORMULA;12.5;2500.25;31253.125"));
-  assert.equal(csv.includes("Excluded buyer"), false);
+  assert.ok(csv.includes(";\"'=FORMULA;\"\"value\"\"\";"));
   assert.throws(() => createSalesCsv([{ ...sale, totalValue: Number.NaN }], labels));
 });
