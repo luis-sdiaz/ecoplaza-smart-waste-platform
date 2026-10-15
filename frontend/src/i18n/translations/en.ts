@@ -449,10 +449,12 @@ const en = {
   },
   assistant: {
     eyebrow: "Artificial intelligence", title: "AI Assistant",
-    description: "Analyze EcoPlaza information and get intelligent support for waste management.",
-    panelTitle: "EcoPlaza AI", panelDescription: "Waste analysis assistant", local: "Local AI",
-    greeting: "Hello. I can help you interpret EcoPlaza data, look up waste information, and analyze the operation's overall status.",
-    placeholder: "Ask a question about EcoPlaza...",
+    description: "Review the current status of EcoPlaza's assistance module.",
+    panelTitle: "EcoPlaza AI", panelDescription: "Assistance module for waste analysis",
+    availabilityLabel: "Unavailable",
+    greeting: "The assistant experience is prepared, but conversational analysis is not connected yet.",
+    unavailableTitle: "Conversational interaction unavailable",
+    unavailableDescription: "You cannot send questions or receive responses yet. This section will be enabled when a real, secure AI service is available.",
   },
   settings: {
     eyebrow: "System preferences", title: "Settings",

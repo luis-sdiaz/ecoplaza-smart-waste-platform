@@ -449,10 +449,12 @@ const es = {
   },
   assistant: {
     eyebrow: "Inteligencia artificial", title: "Asistente IA",
-    description: "Analiza información de EcoPlaza y obtén apoyo inteligente para la gestión de residuos.",
-    panelTitle: "EcoPlaza IA", panelDescription: "Asistente para análisis de residuos", local: "IA local",
-    greeting: "Hola. Puedo ayudarte a interpretar los datos de EcoPlaza, consultar información sobre residuos y analizar el estado general de la operación.",
-    placeholder: "Escribe una pregunta sobre EcoPlaza...",
+    description: "Consulta el estado actual del módulo de asistencia para EcoPlaza.",
+    panelTitle: "EcoPlaza IA", panelDescription: "Módulo de asistencia para análisis de residuos",
+    availabilityLabel: "No disponible",
+    greeting: "La experiencia del asistente está preparada, pero el análisis conversacional aún no está conectado.",
+    unavailableTitle: "Interacción conversacional no disponible",
+    unavailableDescription: "Todavía no puedes enviar preguntas ni recibir respuestas. Esta sección se habilitará cuando exista un servicio de IA real y seguro.",
   },
   settings: {
     eyebrow: "Preferencias del sistema", title: "Configuración",

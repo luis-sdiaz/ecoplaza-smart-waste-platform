@@ -1,4 +1,4 @@
-import { Bot, Send, Sparkles } from "lucide-react";
+import { Bot, CircleOff, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 function AssistantPanel() {
@@ -23,7 +23,7 @@ function AssistantPanel() {
         </div>
 
         <span className="rounded-full bg-ecoplaza-background px-3 py-1 text-xs font-medium text-ecoplaza-primary">
-          {t("assistant.local")}
+          {t("assistant.availabilityLabel")}
         </span>
       </div>
 
@@ -42,19 +42,19 @@ function AssistantPanel() {
       </div>
 
       <div className="border-t border-ecoplaza-border p-5">
-        <div className="flex items-end gap-3 rounded-xl border border-ecoplaza-border bg-ecoplaza-background p-2">
-          <textarea
-            rows={2}
-            placeholder={t("assistant.placeholder")}
-            className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-ecoplaza-text outline-none placeholder:text-ecoplaza-text-muted"
-          />
-
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-ecoplaza-primary text-ecoplaza-on-primary"
-          >
-            <Send size={18} />
-          </button>
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3"
+        >
+          <CircleOff className="mt-0.5 shrink-0 text-ecoplaza-text-muted" size={18} />
+          <div>
+            <p className="text-sm font-medium text-ecoplaza-text">
+              {t("assistant.unavailableTitle")}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-ecoplaza-text-muted">
+              {t("assistant.unavailableDescription")}
+            </p>
+          </div>
         </div>
       </div>
     </article>
