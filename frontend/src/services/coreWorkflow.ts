@@ -12,6 +12,10 @@ type WasteFilterRecord = {
   containerId: string;
 };
 
+type WasteHistoryFilterRecord = WasteFilterRecord & {
+  registeredAt: string;
+};
+
 export type WasteStatusFilter = WasteFilterRecord["status"] | "all";
 export type WasteCategoryFilter = WasteFilterRecord["category"] | "all";
 
@@ -103,14 +107,18 @@ export function filterAvailableInventory<T extends WasteFilterRecord>(
   );
 }
 
-export function filterWasteHistory<T extends WasteFilterRecord>(
+export function filterWasteHistory<T extends WasteHistoryFilterRecord>(
   records: readonly T[],
   status: WasteStatusFilter = "all",
   category: WasteCategoryFilter = "all",
+  containerId = "all",
+  dateRange?: TimestampRange,
 ): T[] {
   return records.filter((record) =>
     (status === "all" || record.status === status) &&
-    (category === "all" || record.category === category)
+    (category === "all" || record.category === category) &&
+    (containerId === "all" || record.containerId === containerId) &&
+    (dateRange === undefined || isTimestampInRange(record.registeredAt, dateRange))
   );
 }
 

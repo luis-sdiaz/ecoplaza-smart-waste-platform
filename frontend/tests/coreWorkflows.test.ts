@@ -34,10 +34,10 @@ test("filters sales by date, buyer, and both filters without including the end b
 });
 
 const wasteRecords = [
-  { id: "waste-1", status: "available", category: "organic", containerId: "container-a" },
-  { id: "waste-2", status: "sold", category: "organic", containerId: "container-a" },
-  { id: "waste-3", status: "available", category: "recyclable", containerId: "container-b" },
-  { id: "waste-4", status: "registered", category: "nonRecyclable", containerId: "container-b" },
+  { id: "waste-1", status: "available", category: "organic", containerId: "container-a", registeredAt: "2026-10-01T05:00:00.000Z" },
+  { id: "waste-2", status: "sold", category: "organic", containerId: "container-a", registeredAt: "2026-10-05T12:00:00.000Z" },
+  { id: "waste-3", status: "available", category: "recyclable", containerId: "container-b", registeredAt: "2026-10-11T04:59:59.999Z" },
+  { id: "waste-4", status: "registered", category: "nonRecyclable", containerId: "container-b", registeredAt: "2026-10-11T05:00:00.000Z" },
 ] as const;
 
 test("keeps only available inventory and combines category and container filters", () => {
@@ -86,6 +86,25 @@ test("preserves sold waste in history and combines status and category filters",
   assert.deepEqual(filterWasteHistory(wasteRecords, "sold").map(({ id }) => id), ["waste-2"]);
   assert.deepEqual(filterWasteHistory(wasteRecords, "available", "organic").map(({ id }) => id), ["waste-1"]);
   assert.deepEqual(filterWasteHistory(wasteRecords, "sold", "recyclable"), []);
+});
+
+test("combines waste history date and container filters with local-day boundaries", () => {
+  assert.deepEqual(
+    filterWasteHistory(wasteRecords, "all", "all", "container-a", dateRange).map(({ id }) => id),
+    ["waste-1", "waste-2"],
+  );
+  assert.deepEqual(
+    filterWasteHistory(wasteRecords, "sold", "organic", "container-a", dateRange).map(({ id }) => id),
+    ["waste-2"],
+  );
+  assert.deepEqual(
+    filterWasteHistory(wasteRecords, "all", "all", "container-b", dateRange).map(({ id }) => id),
+    ["waste-3"],
+  );
+  assert.deepEqual(filterWasteHistory(wasteRecords, "all", "all", "container-a", {
+    startInclusive: "2026-11-01T05:00:00.000Z",
+    endExclusive: "2026-12-01T05:00:00.000Z",
+  }), []);
 });
 
 test("collects every page using inclusive database ranges", async () => {

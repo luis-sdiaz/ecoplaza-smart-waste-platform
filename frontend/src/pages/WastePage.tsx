@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { AlertTriangle, Database, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
@@ -24,6 +24,11 @@ import {
   type WasteStatus,
 } from "../services/wasteService";
 import { filterWasteHistory } from "../services/coreWorkflow";
+import {
+  isValidReportDateRange,
+  toTimestampRange,
+  type ReportDateRange,
+} from "../services/reportDateRange";
 
 const WASTE_RECORDS_STORAGE_PREFIX = "ecoplaza-waste-records:";
 
@@ -105,6 +110,11 @@ function UserWastePage({ userId }: { userId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<WasteStatus | "all">("all");
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
+  const [containerFilter, setContainerFilter] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
+  const [dateRangeError, setDateRangeError] = useState(false);
   const [notification, setNotification] = useState<WasteRegistrationNotification | null>(null);
   const requestRevisionRef = useRef(0);
   const isSubmittingRef = useRef(false);
@@ -228,8 +238,16 @@ function UserWastePage({ userId }: { userId: string }) {
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
-  const filteredRemoteRecords = filterWasteHistory(remoteRecords, statusFilter, categoryFilter);
-  const hasActiveFilters = statusFilter !== "all" || categoryFilter !== "all";
+  const timestampRange = activeDateRange === null ? undefined : toTimestampRange(activeDateRange);
+  const filteredRemoteRecords = filterWasteHistory(
+    remoteRecords,
+    statusFilter,
+    categoryFilter,
+    containerFilter,
+    timestampRange,
+  );
+  const hasActiveFilters = statusFilter !== "all" || categoryFilter !== "all" ||
+    containerFilter !== "all" || activeDateRange !== null;
   const tableRecords: WasteRecord[] = filteredRemoteRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
@@ -243,6 +261,27 @@ function UserWastePage({ userId }: { userId: string }) {
     `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value)} ${t("common.kg")}`;
   const registrationUnavailable = isLoading || loadError !== null || containers.length === 0;
   const metricsUnavailable = isLoading || loadError !== null;
+
+  const applyDateRange = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const nextRange = { startDate, endDate };
+    if (!isValidReportDateRange(nextRange)) {
+      setDateRangeError(true);
+      return;
+    }
+    setDateRangeError(false);
+    setActiveDateRange(nextRange);
+  };
+
+  const clearHistoryFilters = (): void => {
+    setStatusFilter("all");
+    setCategoryFilter("all");
+    setContainerFilter("all");
+    setStartDate("");
+    setEndDate("");
+    setActiveDateRange(null);
+    setDateRangeError(false);
+  };
 
   return (
     <section className="p-8">
@@ -307,15 +346,69 @@ function UserWastePage({ userId }: { userId: string }) {
               <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
             </select>
           </label>
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("waste.containerFilter")}</span>
+            <select
+              value={containerFilter}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setContainerFilter(event.target.value)}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            >
+              <option value="all">{t("waste.allContainers")}</option>
+              {containers.map((container) => (
+                <option key={container.id} value={container.id}>{container.code}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <form onSubmit={applyDateRange} className="mt-3 flex flex-wrap items-end justify-end gap-3">
+          <label className="text-sm text-ecoplaza-text-muted">
+            <span className="block">{t("waste.startDate")}</span>
+            <input
+              type="date"
+              value={startDate}
+              max={endDate || undefined}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="mt-1 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            />
+          </label>
+          <label className="text-sm text-ecoplaza-text-muted">
+            <span className="block">{t("waste.endDate")}</span>
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="mt-1 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isLoading || loadError !== null}
+            className="rounded-xl bg-ecoplaza-secondary px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t("waste.applyDateRange")}
+          </button>
           <button
             type="button"
-            disabled={!hasActiveFilters || isLoading}
-            onClick={() => { setStatusFilter("all"); setCategoryFilter("all"); }}
+            disabled={(!hasActiveFilters && startDate === "" && endDate === "") || isLoading}
+            onClick={clearHistoryFilters}
             className="rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t("waste.clearFilters")}
           </button>
-        </div>
+        </form>
+        {dateRangeError && (
+          <p role="alert" className="mt-2 text-right text-sm text-ecoplaza-danger">{t("waste.invalidDateRange")}</p>
+        )}
+        {activeDateRange !== null && (
+          <p className="mt-2 text-right text-xs font-medium text-ecoplaza-primary">
+            {t("waste.activeDateRange", { start: activeDateRange.startDate, end: activeDateRange.endDate })}
+          </p>
+        )}
 
         <div className="mt-4">
           {isLoading ? (
