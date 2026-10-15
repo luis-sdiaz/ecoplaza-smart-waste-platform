@@ -16,6 +16,7 @@ import {
   saveReportCsv,
   type ReportCsvLabels,
 } from "../services/reportCsvService";
+import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import {
   getReportDateRangePreset,
   isValidReportDateRange,
@@ -178,11 +179,7 @@ function UserReportsPage({ userId }: { userId: string }) {
       from: t("reports.csv.from"),
       to: t("reports.csv.to"),
       allTime: t("reports.csv.allTime"),
-      categories: {
-        organic: t("categories.organic"),
-        recyclable: t("categories.recyclable"),
-        nonRecyclable: t("categories.nonRecyclable"),
-      },
+      categories: getCsvCategoryLabels(t),
     };
 
     try {

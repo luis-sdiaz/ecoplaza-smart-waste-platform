@@ -25,6 +25,7 @@ import {
   exportSalesHistory,
   type SalesCsvLabels,
 } from "../services/salesCsvService";
+import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import {
   isValidReportDateRange,
   toTimestampRange,
@@ -350,11 +351,7 @@ function UserSalesPage({ userId }: { userId: string }) {
       weightKg: t("sales.csv.weightKg"),
       unitPriceCop: t("sales.csv.unitPriceCop"),
       totalValueCop: t("sales.csv.totalValueCop"),
-      categories: {
-        organic: t("categories.organic"),
-        recyclable: t("categories.recyclable"),
-        nonRecyclable: t("categories.nonRecyclable"),
-      },
+      categories: getCsvCategoryLabels(t),
     };
 
     try {

@@ -3,6 +3,9 @@ import test from "node:test";
 import { createReportCsv } from "../src/services/reportCsvService.ts";
 import { createSalesCsv } from "../src/services/salesCsv.ts";
 import { escapeCsvValue } from "../src/services/csvService.ts";
+import { getCsvCategoryLabels } from "../src/services/csvCategoryLabels.ts";
+import en from "../src/i18n/translations/en.ts";
+import es from "../src/i18n/translations/es.ts";
 
 const reportLabels = {
   section: "Section", metric: "Metric", value: "Value", unit: "Unit",
@@ -24,6 +27,42 @@ const report = {
   distribution: [{ category: "organic" as const, weightKg: 12.5, percentage: 100 }],
   salesTrend: [],
 };
+
+function translateFrom(
+  translations: typeof es,
+): (key: string) => string {
+  return (key) => {
+    const value = key.split(".").reduce<unknown>((current, segment) => {
+      if (typeof current !== "object" || current === null || !(segment in current)) {
+        return undefined;
+      }
+      return (current as Record<string, unknown>)[segment];
+    }, translations);
+
+    return typeof value === "string" ? value : key;
+  };
+}
+
+test("resolves CSV waste category labels in Spanish and English", () => {
+  const spanishLabels = getCsvCategoryLabels(translateFrom(es));
+  const englishLabels = getCsvCategoryLabels(translateFrom(en));
+
+  assert.deepEqual(spanishLabels, {
+    organic: "Orgánicos",
+    recyclable: "Reciclables",
+    nonRecyclable: "No aprovechables",
+  });
+  assert.deepEqual(englishLabels, {
+    organic: "Organic",
+    recyclable: "Recyclable",
+    nonRecyclable: "Non-recyclable",
+  });
+  assert.equal(
+    [...Object.values(spanishLabels), ...Object.values(englishLabels)]
+      .some((label) => label.startsWith("common.")),
+    false,
+  );
+});
 
 test("escapes CSV syntax and neutralizes spreadsheet formulas", () => {
   assert.equal(escapeCsvValue("plain"), "plain");
