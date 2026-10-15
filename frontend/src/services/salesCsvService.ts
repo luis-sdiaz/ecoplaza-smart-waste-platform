@@ -1,4 +1,5 @@
 import { saveCsvFile } from "./csvService";
+import type { CsvExportLanguage } from "./csvService";
 import {
   listSales,
   type SalesErrorCode,
@@ -16,6 +17,7 @@ export type SalesCsvExportResult =
 export async function exportSalesHistory(
   labels: SalesCsvLabels,
   defaultFileName: string,
+  language: CsvExportLanguage,
   dateRange?: TimestampRange,
   buyerId?: string,
   sortOption: SalesSortOption = "newest",
@@ -25,7 +27,7 @@ export async function exportSalesHistory(
 
   try {
     const status = await saveCsvFile(
-      createSalesCsv(sortSalesHistory(salesResult.data, sortOption), labels),
+      createSalesCsv(sortSalesHistory(salesResult.data, sortOption), labels, language),
       defaultFileName,
     );
     return { ok: true, status };

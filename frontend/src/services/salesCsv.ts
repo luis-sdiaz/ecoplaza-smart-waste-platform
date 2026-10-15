@@ -1,4 +1,8 @@
-import { createCsvRow, createUtf8Csv } from "./csvService.ts";
+import {
+  createCsvRow,
+  createUtf8Csv,
+  type CsvExportLanguage,
+} from "./csvService.ts";
 import type { SaleHistoryItem } from "./salesService";
 import type { WasteCategory } from "./wasteService";
 
@@ -22,6 +26,7 @@ function validNumber(value: number): number {
 export function createSalesCsv(
   sales: ReadonlyArray<SaleHistoryItem>,
   labels: SalesCsvLabels,
+  language: CsvExportLanguage,
 ): string {
   const rows = [
     createCsvRow([
@@ -31,7 +36,7 @@ export function createSalesCsv(
       labels.weightKg,
       labels.unitPriceCop,
       labels.totalValueCop,
-    ]),
+    ], language),
     ...sales.map((sale) => createCsvRow([
       sale.id,
       sale.soldAt,
@@ -39,7 +44,7 @@ export function createSalesCsv(
       validNumber(sale.weightKg),
       validNumber(sale.unitPrice),
       validNumber(sale.totalValue),
-    ])),
+    ], language)),
   ];
 
   return createUtf8Csv(rows);

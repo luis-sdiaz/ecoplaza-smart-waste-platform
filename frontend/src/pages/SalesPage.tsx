@@ -376,6 +376,7 @@ function UserSalesPage({ userId }: { userId: string }) {
         activeDateRange === null
           ? `ecoplaza-sales-${new Date().toISOString().slice(0, 10)}.csv`
           : `ecoplaza-sales-${activeDateRange.startDate}-${activeDateRange.endDate}.csv`,
+        i18n.resolvedLanguage === "en" ? "en" : "es",
         activeTimestampRange,
         buyerFilter || undefined,
         sortOption,

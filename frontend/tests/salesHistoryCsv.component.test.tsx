@@ -219,7 +219,7 @@ describe("filtered sales history and CSV integration", () => {
     expect(csv).toContain(saleAlphaLate.id);
     expect(csv).not.toContain(saleAlphaEarly.id);
     expect(csv).not.toContain(saleBeta.id);
-    expect(csv).toContain("sales.csv.reference;sales.csv.completedAt");
+    expect(csv).toContain("sales.csv.reference,sales.csv.completedAt");
 
     const lastCall = salesMocks.listSales.mock.calls.at(-1)!;
     expect(lastCall[1]).toBe(buyerAlpha.id);

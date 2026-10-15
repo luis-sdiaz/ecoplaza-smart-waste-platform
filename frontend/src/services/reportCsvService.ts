@@ -5,6 +5,7 @@ import {
   createCsvRow,
   createUtf8Csv,
   saveCsvFile,
+  type CsvExportLanguage,
 } from "./csvService.ts";
 
 export { escapeCsvValue } from "./csvService.ts";
@@ -47,31 +48,32 @@ function validNumber(value: number): number {
 export function createReportCsv(
   statistics: ReportStatistics,
   labels: ReportCsvLabels,
+  language: CsvExportLanguage,
   dateRange?: ReportDateRange,
 ): string {
   const rows = [
-    createCsvRow([labels.section, labels.metric, labels.value, labels.unit]),
-    createCsvRow([
-      labels.period,
-      dateRange === undefined ? labels.allTime : labels.from,
-      dateRange === undefined ? "" : dateRange.startDate,
-      dateRange === undefined ? "" : `${labels.to}: ${dateRange.endDate}`,
-    ]),
-    createCsvRow([labels.summary, labels.records, validNumber(statistics.wasteRecordCount), labels.countUnit]),
-    createCsvRow([labels.summary, labels.historicalWeight, validNumber(statistics.totalRegisteredWeightKg), labels.kilogramsUnit]),
-    createCsvRow([labels.summary, labels.availableWeight, validNumber(statistics.availableWeightKg), labels.kilogramsUnit]),
-    createCsvRow([labels.summary, labels.soldWeight, validNumber(statistics.soldWeightKg), labels.kilogramsUnit]),
-    createCsvRow([labels.summary, labels.sales, validNumber(statistics.salesCount), labels.countUnit]),
-    createCsvRow([labels.summary, labels.grossRevenue, validNumber(statistics.grossSalesValue), labels.copUnit]),
+    createCsvRow([labels.section, labels.metric, labels.value, labels.unit], language),
+    ...(dateRange === undefined
+      ? [createCsvRow([labels.period, labels.allTime, "", ""], language)]
+      : [
+          createCsvRow([labels.period, labels.from, dateRange.startDate, ""], language),
+          createCsvRow([labels.period, labels.to, dateRange.endDate, ""], language),
+        ]),
+    createCsvRow([labels.summary, labels.records, validNumber(statistics.wasteRecordCount), labels.countUnit], language),
+    createCsvRow([labels.summary, labels.historicalWeight, validNumber(statistics.totalRegisteredWeightKg), labels.kilogramsUnit], language),
+    createCsvRow([labels.summary, labels.availableWeight, validNumber(statistics.availableWeightKg), labels.kilogramsUnit], language),
+    createCsvRow([labels.summary, labels.soldWeight, validNumber(statistics.soldWeightKg), labels.kilogramsUnit], language),
+    createCsvRow([labels.summary, labels.sales, validNumber(statistics.salesCount), labels.countUnit], language),
+    createCsvRow([labels.summary, labels.grossRevenue, validNumber(statistics.grossSalesValue), labels.copUnit], language),
     "",
-    createCsvRow([labels.distribution, labels.category, labels.weight, labels.percentage]),
+    createCsvRow([labels.distribution, labels.category, labels.weight, labels.percentage], language),
     ...statistics.distribution.map((item) =>
       createCsvRow([
         labels.distribution,
         labels.categories[item.category],
         validNumber(item.weightKg),
         validNumber(item.percentage),
-      ]),
+      ], language),
     ),
   ];
 
@@ -82,10 +84,11 @@ export async function saveReportCsv(
   statistics: ReportStatistics,
   labels: ReportCsvLabels,
   defaultFileName: string,
+  language: CsvExportLanguage,
   dateRange?: ReportDateRange,
 ): Promise<SaveReportCsvResult> {
   return saveCsvFile(
-    createReportCsv(statistics, labels, dateRange),
+    createReportCsv(statistics, labels, language, dateRange),
     defaultFileName,
   );
 }

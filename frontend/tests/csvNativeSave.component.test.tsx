@@ -79,32 +79,32 @@ describe("native CSV save flows", () => {
     tauriMocks.save.mockResolvedValueOnce("C:\\exports\\report.csv");
     tauriMocks.writeTextFile.mockResolvedValueOnce(undefined);
 
-    await expect(saveReportCsv(report, reportLabels, "report.csv")).resolves.toBe("saved");
+    await expect(saveReportCsv(report, reportLabels, "report.csv", "en")).resolves.toBe("saved");
     expect(tauriMocks.save).toHaveBeenCalledWith({
       defaultPath: "report.csv",
       filters: [{ name: "CSV", extensions: ["csv"] }],
     });
     expect(tauriMocks.writeTextFile).toHaveBeenCalledWith(
       "C:\\exports\\report.csv",
-      createReportCsv(report, reportLabels),
+      createReportCsv(report, reportLabels, "en"),
     );
   });
 
   test("does not write or report success when the report dialog is cancelled", async () => {
     tauriMocks.save.mockResolvedValueOnce(null);
 
-    await expect(saveReportCsv(report, reportLabels, "report.csv")).resolves.toBe("cancelled");
+    await expect(saveReportCsv(report, reportLabels, "report.csv", "en")).resolves.toBe("cancelled");
     expect(tauriMocks.writeTextFile).not.toHaveBeenCalled();
   });
 
   test("propagates report dialog and write failures without a false saved result", async () => {
     tauriMocks.save.mockRejectedValueOnce(new Error("dialog failed"));
-    await expect(saveReportCsv(report, reportLabels, "report.csv")).rejects.toThrow("dialog failed");
+    await expect(saveReportCsv(report, reportLabels, "report.csv", "en")).rejects.toThrow("dialog failed");
     expect(tauriMocks.writeTextFile).not.toHaveBeenCalled();
 
     tauriMocks.save.mockResolvedValueOnce("C:\\exports\\report.csv");
     tauriMocks.writeTextFile.mockRejectedValueOnce(new Error("write failed"));
-    await expect(saveReportCsv(report, reportLabels, "report.csv")).rejects.toThrow("write failed");
+    await expect(saveReportCsv(report, reportLabels, "report.csv", "en")).rejects.toThrow("write failed");
   });
 
   test("prevents a second native save while the first dialog is pending", async () => {
@@ -125,34 +125,34 @@ describe("native CSV save flows", () => {
     tauriMocks.save.mockResolvedValueOnce("C:\\exports\\sales.csv");
     tauriMocks.writeTextFile.mockResolvedValueOnce(undefined);
 
-    await expect(exportSalesHistory(salesLabels, "sales.csv")).resolves.toEqual({
+    await expect(exportSalesHistory(salesLabels, "sales.csv", "en")).resolves.toEqual({
       ok: true,
       status: "saved",
     });
     expect(tauriMocks.writeTextFile).toHaveBeenCalledWith(
       "C:\\exports\\sales.csv",
-      createSalesCsv([sale], salesLabels),
+      createSalesCsv([sale], salesLabels, "en"),
     );
   });
 
   test("handles sales cancellation and native failures without writing or false success", async () => {
     salesMocks.listSales.mockResolvedValue({ ok: true, data: [sale] });
     tauriMocks.save.mockResolvedValueOnce(null);
-    await expect(exportSalesHistory(salesLabels, "sales.csv")).resolves.toEqual({
+    await expect(exportSalesHistory(salesLabels, "sales.csv", "en")).resolves.toEqual({
       ok: true,
       status: "cancelled",
     });
     expect(tauriMocks.writeTextFile).not.toHaveBeenCalled();
 
     tauriMocks.save.mockRejectedValueOnce(new Error("dialog failed"));
-    await expect(exportSalesHistory(salesLabels, "sales.csv")).resolves.toEqual({
+    await expect(exportSalesHistory(salesLabels, "sales.csv", "en")).resolves.toEqual({
       ok: false,
       error: "file_error",
     });
 
     tauriMocks.save.mockResolvedValueOnce("C:\\exports\\sales.csv");
     tauriMocks.writeTextFile.mockRejectedValueOnce(new Error("write failed"));
-    await expect(exportSalesHistory(salesLabels, "sales.csv")).resolves.toEqual({
+    await expect(exportSalesHistory(salesLabels, "sales.csv", "en")).resolves.toEqual({
       ok: false,
       error: "file_error",
     });

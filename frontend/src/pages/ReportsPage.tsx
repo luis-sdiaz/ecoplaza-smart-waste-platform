@@ -191,6 +191,7 @@ function UserReportsPage({ userId }: { userId: string }) {
         activeDateRange === null
           ? `ecoplaza-report-${new Date().toISOString().slice(0, 10)}.csv`
           : `ecoplaza-report-${activeDateRange.startDate}-${activeDateRange.endDate}.csv`,
+        i18n.resolvedLanguage === "en" ? "en" : "es",
         activeDateRange ?? undefined,
       );
       if (result === "saved") setExportNotice("success");

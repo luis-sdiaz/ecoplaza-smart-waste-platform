@@ -67,7 +67,8 @@ test("resolves CSV waste category labels in Spanish and English", () => {
 
 test("escapes CSV syntax and neutralizes spreadsheet formulas", () => {
   assert.equal(escapeCsvValue("plain"), "plain");
-  assert.equal(escapeCsvValue("a;b"), '"a;b"');
+  assert.equal(escapeCsvValue("a,b"), '"a,b"');
+  assert.equal(escapeCsvValue("a;b", "es"), '"a;b"');
   assert.equal(escapeCsvValue('a"b'), '"a""b"');
   assert.equal(escapeCsvValue("a\nb"), '"a\nb"');
   assert.equal(escapeCsvValue("=1+1"), "'=1+1");
@@ -76,16 +77,49 @@ test("escapes CSV syntax and neutralizes spreadsheet formulas", () => {
   assert.equal(escapeCsvValue("@SUM(A1)"), "'@SUM(A1)");
 });
 
-test("creates a BOM-prefixed report CSV with filtered period and numeric values", () => {
-  const csv = createReportCsv(report, reportLabels, {
+test("creates a Spanish Excel-compatible report without losing numeric precision", () => {
+  const preciseReport = {
+    ...report,
+    totalRegisteredWeightKg: 2.5,
+    availableWeightKg: 7,
+    soldWeightKg: 0.123456789012345,
+    grossSalesValue: 11000.255,
+    distribution: [{
+      category: "organic" as const,
+      weightKg: 2.5,
+      percentage: 33.333333333333336,
+    }],
+  };
+  const csv = createReportCsv(preciseReport, reportLabels, "es", {
     startDate: "2026-10-01", endDate: "2026-10-13",
   });
   assert.ok(csv.startsWith("\uFEFF"));
   assert.ok(csv.endsWith("\r\n"));
-  assert.ok(csv.includes("Period;From;2026-10-01;To: 2026-10-13"));
-  assert.ok(csv.includes("Summary;Revenue;11000.25;COP"));
-  assert.ok(csv.includes("Distribution;Organic;12.5;100"));
-  assert.throws(() => createReportCsv({ ...report, grossSalesValue: Number.POSITIVE_INFINITY }, reportLabels));
+  assert.ok(csv.includes("Period;From;2026-10-01;\r\n"));
+  assert.ok(csv.includes("Period;To;2026-10-13;\r\n"));
+  assert.ok(csv.includes("Summary;Historical;2,5;kg"));
+  assert.ok(csv.includes("Summary;Available;7;kg"));
+  assert.ok(csv.includes("Summary;Sold;0,123456789012345;kg"));
+  assert.ok(csv.includes("Summary;Revenue;11000,255;COP"));
+  assert.ok(csv.includes("Distribution;Organic;2,5;33,333333333333336"));
+  assert.equal(csv.includes("To: 2026-10-13"), false);
+  assert.throws(() => createReportCsv(
+    { ...report, grossSalesValue: Number.POSITIVE_INFINITY },
+    reportLabels,
+    "es",
+  ));
+});
+
+test("uses English CSV separators and decimal points", () => {
+  const csv = createReportCsv(report, reportLabels, "en", {
+    startDate: "2026-10-01", endDate: "2026-10-13",
+  });
+
+  assert.ok(csv.includes("Section,Metric,Value,Unit"));
+  assert.ok(csv.includes("Period,From,2026-10-01,"));
+  assert.ok(csv.includes("Period,To,2026-10-13,"));
+  assert.ok(csv.includes("Summary,Revenue,11000.25,COP"));
+  assert.ok(csv.includes("Distribution,Organic,12.5,100"));
 });
 
 test("creates sales CSV with complete UUIDs and bilingual professional headers", () => {
@@ -119,8 +153,8 @@ test("creates sales CSV with complete UUIDs and bilingual professional headers",
     soldAt: "2026-10-14T09:45:12.345-05:00",
   };
 
-  const spanishCsv = createSalesCsv([firstSale, secondSale], spanishLabels);
-  const englishCsv = createSalesCsv([firstSale, secondSale], englishLabels);
+  const spanishCsv = createSalesCsv([firstSale, secondSale], spanishLabels, "es");
+  const englishCsv = createSalesCsv([firstSale, secondSale], englishLabels, "en");
   const spanishRows = spanishCsv.slice(1, -2).split("\r\n");
   const englishRows = englishCsv.slice(1, -2).split("\r\n");
 
@@ -130,19 +164,20 @@ test("creates sales CSV with complete UUIDs and bilingual professional headers",
   );
   assert.equal(
     englishRows[0],
-    "Unique sale identifier (UUID);Completion date (ISO 8601);Waste category;Weight sold (kg);Price per kilogram (COP);Total value (COP)",
+    "Unique sale identifier (UUID),Completion date (ISO 8601),Waste category,Weight sold (kg),Price per kilogram (COP),Total value (COP)",
   );
   assert.equal(
     spanishRows[1],
-    "12345678-1234-4234-8234-123456789abc;2026-10-13T15:30:00.000Z;Orgánicos;12.5;2500.25;31253.125",
+    "12345678-1234-4234-8234-123456789abc;2026-10-13T15:30:00.000Z;Orgánicos;12,5;2500,25;31253,125",
   );
   assert.equal(
     spanishRows[2],
     "12345678-abcd-4abc-8abc-fedcba987654;2026-10-14T09:45:12.345-05:00;Reciclables;7;1800;12600",
   );
-  assert.equal(englishRows[1].split(";")[0], firstSale.id);
-  assert.equal(englishRows[2].split(";")[0], secondSale.id);
-  assert.notEqual(englishRows[1].split(";")[0], englishRows[2].split(";")[0]);
+  assert.equal(englishRows[1].split(",")[0], firstSale.id);
+  assert.equal(englishRows[2].split(",")[0], secondSale.id);
+  assert.notEqual(englishRows[1].split(",")[0], englishRows[2].split(",")[0]);
+  assert.ok(englishRows[1].endsWith(",12.5,2500.25,31253.125"));
   assert.ok(spanishCsv.startsWith("\uFEFF"));
   assert.ok(spanishCsv.endsWith("\r\n"));
   assert.equal(spanishCsv.includes("SAL-12345678"), false);
@@ -168,7 +203,7 @@ test("keeps sales CSV escaping, formula protection, and numeric validation", () 
     category: "organic" as const,
   };
 
-  const csv = createSalesCsv([sale], labels);
+  const csv = createSalesCsv([sale], labels, "es");
   assert.ok(csv.includes(";\"'=FORMULA;\"\"value\"\"\";"));
-  assert.throws(() => createSalesCsv([{ ...sale, totalValue: Number.NaN }], labels));
+  assert.throws(() => createSalesCsv([{ ...sale, totalValue: Number.NaN }], labels, "es"));
 });
