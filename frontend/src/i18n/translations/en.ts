@@ -145,6 +145,7 @@ const en = {
     wasteNonRecyclable: "Non-recyclable waste", kg: "kg", category: "Category",
     wasteNonRecoverable: "Non-recoverable waste",
     status: "Status", quantity: "Quantity", date: "Date", material: "Material",
+    loadingPage: "Loading page...",
   },
   dashboard: {
     eyebrow: "General overview", title: "Dashboard",

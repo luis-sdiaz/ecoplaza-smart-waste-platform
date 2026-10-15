@@ -1,18 +1,39 @@
+import { lazy, Suspense } from "react";
 import { Outlet, Route, Routes } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import AppLayout from "./layouts/AppLayout";
-import BuyersPage from "./pages/BuyersPage";
-import DashboardPage from "./pages/DashboardPage";
-import InventoryPage from "./pages/InventoryPage";
-import SalesPage from "./pages/SalesPage";
-import SensorsPage from "./pages/SensorsPage";
-import WastePage from "./pages/WastePage";
-import ReportsPage from "./pages/ReportsPage";
-import AssistantPage from "./pages/AssistantPage";
-import SettingsPage from "./pages/SettingsPage";
-import NotFoundPage from "./pages/NotFoundPage";
 import LoginPage from "./pages/LoginPage";
-import ProfilePage from "./pages/ProfilePage";
+
+const AssistantPage = lazy(() => import("./pages/AssistantPage"));
+const BuyersPage = lazy(() => import("./pages/BuyersPage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const InventoryPage = lazy(() => import("./pages/InventoryPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const ReportsPage = lazy(() => import("./pages/ReportsPage"));
+const SalesPage = lazy(() => import("./pages/SalesPage"));
+const SensorsPage = lazy(() => import("./pages/SensorsPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const WastePage = lazy(() => import("./pages/WastePage"));
+
+function RouteLoading() {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex min-h-full items-center justify-center gap-3 p-8 text-sm text-ecoplaza-text-muted"
+    >
+      <span
+        aria-hidden="true"
+        className="h-5 w-5 animate-spin rounded-full border-2 border-ecoplaza-border border-t-ecoplaza-primary"
+      />
+      {t("common.loadingPage")}
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -22,7 +43,9 @@ function App() {
         <Route
           element={
             <AppLayout>
-              <Outlet />
+              <Suspense fallback={<RouteLoading />}>
+                <Outlet />
+              </Suspense>
             </AppLayout>
           }
         >
