@@ -231,7 +231,7 @@ const en = {
     record: "Record", container: "Container", registerButton: "Register waste",
     modalTitle: "Register new waste", cancel: "Cancel", register: "Register", registering: "Registering...",
     selectCategory: "Select a category.", selectContainer: "Select a container.",
-    invalidWeight: "Enter a weight greater than zero.",
+    invalidWeight: "Enter a weight greater than zero with up to three decimal places.",
     categoryField: "Category", containerField: "Container", weightField: "Weight",
     registerSuccessTitle: "Waste registered",
     registerSuccessDescription: "The record was saved successfully in PostgreSQL.",

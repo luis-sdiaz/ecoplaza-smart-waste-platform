@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabase";
 import { listContainers } from "./containerService";
 import type { TimestampRange } from "./reportDateRange";
 import { collectPaginatedData } from "./coreWorkflow";
+import { isSafeWasteWeightKg } from "./wasteWeight";
 
 export const WASTE_CATEGORIES = [
   "organic",
@@ -390,7 +391,7 @@ export async function createWasteRecord(
   if (!isWasteCategory(input.category)) {
     return { ok: false, error: { code: "invalid_category", retryable: false } };
   }
-  if (!Number.isFinite(input.weightKg) || input.weightKg <= 0) {
+  if (!isSafeWasteWeightKg(input.weightKg)) {
     return { ok: false, error: { code: "invalid_weight", retryable: false } };
   }
 

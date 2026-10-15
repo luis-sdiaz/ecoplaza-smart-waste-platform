@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { Container } from "../services/containerService";
 import type { WasteCategory } from "../services/wasteService";
+import { parseWasteWeightKg } from "../services/wasteWeight";
 
 export interface WasteRegistrationValues {
   category: WasteCategory;
@@ -44,19 +45,21 @@ function WasteRegistrationModal({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const parsedWeight = Number(weight);
+    const parsedWeight = parseWasteWeightKg(weight);
     const nextErrors: WasteRegistrationErrors = {
       category: category === "",
       container: containerId === "",
-      weight:
-        weight.trim() === "" ||
-        !Number.isFinite(parsedWeight) ||
-        parsedWeight <= 0,
+      weight: parsedWeight === null,
     };
 
     setErrors(nextErrors);
 
-    if (nextErrors.category || nextErrors.container || nextErrors.weight) {
+    if (
+      nextErrors.category ||
+      nextErrors.container ||
+      nextErrors.weight ||
+      parsedWeight === null
+    ) {
       return;
     }
 
@@ -177,7 +180,8 @@ function WasteRegistrationModal({
             <input
               id="waste-weight"
               type="number"
-              step="any"
+              min="0.001"
+              step="0.001"
               inputMode="decimal"
               disabled={isSubmitting}
               value={weight}

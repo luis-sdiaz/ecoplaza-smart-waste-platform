@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --test --experimental-strip-types tests/reportCalculations.test.ts tests/reportDateRange.test.ts tests/csv.test.ts tests/coreWorkflows.test.ts",
+    "test": "node --test --experimental-strip-types tests/reportCalculations.test.ts tests/reportDateRange.test.ts tests/csv.test.ts tests/coreWorkflows.test.ts tests/wasteWeight.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

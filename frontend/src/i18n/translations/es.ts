@@ -231,7 +231,7 @@ const es = {
     record: "Registro", container: "Contenedor", registerButton: "Registrar residuo",
     modalTitle: "Registrar nuevo residuo", cancel: "Cancelar", register: "Registrar", registering: "Registrando...",
     selectCategory: "Selecciona una categoría.", selectContainer: "Selecciona un contenedor.",
-    invalidWeight: "Ingresa un peso mayor que cero.",
+    invalidWeight: "Ingresa un peso mayor que cero con máximo tres decimales.",
     categoryField: "Categoría", containerField: "Contenedor", weightField: "Peso",
     registerSuccessTitle: "Residuo registrado",
     registerSuccessDescription: "El registro se guardó correctamente en PostgreSQL.",
