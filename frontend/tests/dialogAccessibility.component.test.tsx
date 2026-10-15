@@ -6,6 +6,12 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+vi.mock("../src/services/buyerService", () => ({
+  isValidBuyerEmail: vi.fn(() => true),
+  isValidBuyerName: vi.fn(() => true),
+  isValidBuyerPhone: vi.fn(() => true),
+}));
+
 import BuyerFormModal from "../src/components/BuyerFormModal";
 
 afterEach(cleanup);
