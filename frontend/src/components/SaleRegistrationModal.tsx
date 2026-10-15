@@ -4,11 +4,16 @@ import { useTranslation } from "react-i18next";
 import type { Buyer } from "../services/buyerService";
 import type { Container } from "../services/containerService";
 import { parseUnitPrice } from "../services/salesService";
+import {
+  calculateSafeEstimatedTotal,
+  MAX_MONETARY_FRACTION_DIGITS,
+} from "../services/monetarySafety";
 import type { RemoteWasteRecord } from "../services/wasteService";
 
 export type SaleRegistrationValues = {
   buyerId: string;
   wasteRecordId: string;
+  weightKg: number;
   unitPrice: number;
 };
 
@@ -50,8 +55,11 @@ function SaleRegistrationModal({
   const selectedWasteRecord = wasteRecords.find((record) => record.id === wasteRecordId) ?? null;
   const unitPrice = parseUnitPrice(unitPriceInput);
   const previewTotal = selectedWasteRecord && unitPrice !== null
-    ? selectedWasteRecord.weightKg * unitPrice
+    ? calculateSafeEstimatedTotal(selectedWasteRecord.weightKg, unitPrice)
     : null;
+  const hasUnsafeTotal = selectedWasteRecord !== null
+    && unitPrice !== null
+    && previewTotal === null;
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
   const isUnavailable = buyers.length === 0 || wasteRecords.length === 0;
   const formatWeight = (value: number): string =>
@@ -60,7 +68,7 @@ function SaleRegistrationModal({
     new Intl.NumberFormat(locale, {
       style: "currency",
       currency: "COP",
-      maximumFractionDigits: 2,
+      maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
     }).format(value);
   const translateCategory = (category: RemoteWasteRecord["category"]): string =>
     category === "organic"
@@ -75,7 +83,7 @@ function SaleRegistrationModal({
     const nextErrors: SaleFormErrors = {
       buyer: !buyers.some((buyer) => buyer.id === buyerId),
       wasteRecord: !wasteRecords.some((record) => record.id === wasteRecordId),
-      unitPrice: unitPrice === null,
+      unitPrice: unitPrice === null || hasUnsafeTotal,
     };
     setErrors(nextErrors);
 
@@ -83,13 +91,19 @@ function SaleRegistrationModal({
       nextErrors.buyer ||
       nextErrors.wasteRecord ||
       nextErrors.unitPrice ||
+      selectedWasteRecord === null ||
       unitPrice === null ||
       isSubmitting
     ) {
       return;
     }
 
-    onSubmit({ buyerId, wasteRecordId, unitPrice });
+    onSubmit({
+      buyerId,
+      wasteRecordId,
+      weightKg: selectedWasteRecord.weightKg,
+      unitPrice,
+    });
   };
 
   const fieldClassName = (hasError: boolean): string =>
@@ -236,10 +250,15 @@ function SaleRegistrationModal({
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-ecoplaza-text-muted">{t("sales.estimatedTotal")}</span>
               <span className="text-base font-semibold text-ecoplaza-text">
-                {previewTotal !== null && Number.isFinite(previewTotal) ? formatCurrency(previewTotal) : "—"}
+                {previewTotal !== null ? formatCurrency(previewTotal) : "—"}
               </span>
             </div>
             <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.databaseTotalNotice")}</p>
+            {hasUnsafeTotal && (
+              <p role="alert" className="mt-1 text-xs text-ecoplaza-danger">
+                {t("sales.unsafeEstimatedTotal")}
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

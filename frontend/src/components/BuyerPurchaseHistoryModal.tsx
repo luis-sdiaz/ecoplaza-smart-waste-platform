@@ -1,5 +1,6 @@
 import { AlertTriangle, Database, LoaderCircle, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import type { Buyer } from "../services/buyerService";
 import type { SaleHistoryItem } from "../services/salesService";
 
@@ -27,7 +28,7 @@ function BuyerPurchaseHistoryModal({
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "COP",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
 
   return (

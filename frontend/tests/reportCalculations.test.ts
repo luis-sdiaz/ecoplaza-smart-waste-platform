@@ -49,6 +49,15 @@ test("groups sales by their real local completion date without rounding revenue"
   ]);
 });
 
+test("sums fractional database totals without binary accumulation drift", () => {
+  assert.deepEqual(calculateSalesTrend([
+    { soldAt: "2026-10-13T05:00:00.000Z", totalValue: 0.1 },
+    { soldAt: "2026-10-13T06:00:00.000Z", totalValue: 0.2 },
+  ]), [
+    { date: "2026-10-13", salesCount: 2, grossSalesValue: 0.3 },
+  ]);
+});
+
 test("returns valid zero statistics for an interval without records", () => {
   assert.deepEqual(calculateReportStatistics([], []), {
     wasteRecordCount: 0,
@@ -71,4 +80,8 @@ test("rejects duplicate records and invalid numeric or date values", () => {
   assert.equal(calculateReportStatistics(wasteRecords, [...sales, { ...sales[1], id: "sale-3" }]), null);
   assert.equal(calculateReportStatistics([{ ...wasteRecords[0], weightKg: Number.NaN }], []), null);
   assert.equal(calculateSalesTrend([{ soldAt: "invalid", totalValue: 10 }]), null);
+  assert.equal(calculateSalesTrend([{
+    soldAt: "2026-10-13T05:00:00.000Z",
+    totalValue: Number("90071992547.40992"),
+  }]), null);
 });

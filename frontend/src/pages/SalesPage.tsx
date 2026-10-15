@@ -33,6 +33,10 @@ import {
   type TimestampRange,
 } from "../services/reportDateRange";
 import { filterSalesHistory, RequestRevisionTracker } from "../services/coreWorkflow";
+import {
+  MAX_MONETARY_FRACTION_DIGITS,
+  sumSafeMonetaryValues,
+} from "../services/monetarySafety";
 
 const demoSales: DemoSale[] = [
   { id: "SAL-001", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 80, total: 640000, date: "03/10/2026", status: "Completada" },
@@ -296,10 +300,10 @@ function UserSalesPage({ userId }: { userId: string }) {
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "COP",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
   const weightFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const totalRevenue = sales.reduce((total, sale) => total + sale.totalValue, 0);
+  const totalRevenue = sumSafeMonetaryValues(sales.map((sale) => sale.totalValue));
   const totalWeight = sales.reduce((total, sale) => total + sale.weightKg, 0);
   const servedBuyers = new Set(sales.map((sale) => sale.buyerId)).size;
   const metricsUnavailable = isLoading || loadError !== null;
@@ -391,7 +395,7 @@ function UserSalesPage({ userId }: { userId: string }) {
 
       <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(sales.length)} description={t("sales.operations")} badge={metricBadge} />
-        <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} badge={metricBadge} />
+        <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable || totalRevenue === null ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} badge={metricBadge} />
         <MetricCard title={t("sales.soldMaterial")} value={metricsUnavailable ? "—" : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`} description={t("sales.quantitySold")} badge={metricBadge} />
         <MetricCard title={t("sales.servedBuyers")} value={metricsUnavailable ? "—" : String(servedBuyers)} description={t("sales.buyersWithSales")} badge={metricBadge} />
       </div>

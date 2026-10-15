@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { AlertTriangle, CalendarRange, Download, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
@@ -104,7 +105,7 @@ function UserReportsPage({ userId }: { userId: string }) {
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "COP",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
   const metricsUnavailable = isLoading || loadError !== null || statistics === null;
   const formatWeight = (weightKg: number): string =>

@@ -1,5 +1,6 @@
 import { Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import type { SaleHistoryItem } from "../services/salesService";
 
 interface SalesTableProps {
@@ -13,7 +14,7 @@ function SalesTable({ sales, onViewDetails }: SalesTableProps) {
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "COP",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
   const numberFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });

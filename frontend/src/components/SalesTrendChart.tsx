@@ -1,5 +1,6 @@
 import { ChartNoAxesCombined } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import type { ReportSalesTrendItem } from "../services/reportService";
 
 interface SalesTrendChartProps {
@@ -14,7 +15,7 @@ function SalesTrendChart({ data, isFiltered }: SalesTrendChartProps) {
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "COP",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
   const dateFormatter = new Intl.DateTimeFormat(locale, {
     month: "short",

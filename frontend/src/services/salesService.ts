@@ -9,6 +9,14 @@ import {
 } from "./wasteService";
 import type { TimestampRange } from "./reportDateRange";
 import { collectPaginatedData, filterSalesHistory } from "./coreWorkflow";
+import {
+  calculateSafeEstimatedTotal,
+  isSafeUnitPrice,
+  parseSafeSaleTotal,
+  parseUnitPrice,
+} from "./monetarySafety";
+
+export { parseUnitPrice } from "./monetarySafety";
 
 export type Sale = {
   id: string;
@@ -35,6 +43,7 @@ export type SaleFormData = {
 export type CreateSaleInput = {
   buyerId: string;
   wasteRecordId: string;
+  weightKg: number;
   unitPrice: number;
 };
 
@@ -86,31 +95,9 @@ const INVALID_PARAMETER_CODE = "22023";
 const NOT_FOUND_CODE = "P0002";
 const SALE_STATE_CODE = "P0001";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const PRICE_INPUT_PATTERN = /^(?:0|[1-9]\d{0,12})(?:[.,]\d{1,2})?$/;
 const SALE_FIELDS = "id, owner_id, buyer_id, waste_record_id, weight_kg, unit_price, total_value, sold_at";
 const SALE_HISTORY_FIELDS = `${SALE_FIELDS}, buyer:buyers!sales_owner_buyer_fkey(name), waste_record:waste_records!sales_owner_waste_record_fkey(record_number, category)`;
 const pendingWasteRecordIds = new Set<string>();
-
-export function parseUnitPrice(value: string): number | null {
-  const normalizedValue = value.trim();
-  if (!PRICE_INPUT_PATTERN.test(normalizedValue)) return null;
-
-  const parsedValue = Number(normalizedValue.replace(",", "."));
-  const cents = Math.round(parsedValue * 100);
-
-  return Number.isFinite(parsedValue) &&
-    parsedValue > 0 &&
-    Number.isSafeInteger(cents)
-    ? parsedValue
-    : null;
-}
-
-function isValidUnitPrice(value: number): boolean {
-  if (!Number.isFinite(value) || value <= 0) return false;
-
-  const normalizedValue = String(value);
-  return parseUnitPrice(normalizedValue) !== null;
-}
 
 function isWasteCategory(value: string): value is WasteCategory {
   return WASTE_CATEGORIES.some((category) => category === value);
@@ -212,8 +199,10 @@ function toRecordNumber(value: number | string): string | null {
 
 function toSale(row: SaleRow, ownerId: string): Sale | null {
   const weightKg = toPositiveNumber(row.weight_kg);
-  const unitPrice = toPositiveNumber(row.unit_price);
-  const totalValue = toPositiveNumber(row.total_value);
+  const unitPrice = typeof row.unit_price === "number"
+    ? (isSafeUnitPrice(row.unit_price) ? row.unit_price : null)
+    : parseUnitPrice(row.unit_price);
+  const totalValue = parseSafeSaleTotal(row.total_value);
   const soldAt = new Date(row.sold_at);
 
   if (
@@ -381,7 +370,10 @@ export async function createSale(input: CreateSaleInput): Promise<SalesServiceRe
   if (!UUID_PATTERN.test(input.wasteRecordId)) {
     return { ok: false, error: { code: "invalid_waste_record", retryable: false } };
   }
-  if (!isValidUnitPrice(input.unitPrice)) {
+  if (
+    !isSafeUnitPrice(input.unitPrice) ||
+    calculateSafeEstimatedTotal(input.weightKg, input.unitPrice) === null
+  ) {
     return { ok: false, error: { code: "invalid_unit_price", retryable: false } };
   }
   if (pendingWasteRecordIds.has(input.wasteRecordId)) {

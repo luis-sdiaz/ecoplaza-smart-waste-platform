@@ -345,6 +345,7 @@ const es = {
     noAvailableWaste: "No hay residuos disponibles para vender.",
     fullWeight: "Peso completo", unitPriceField: "Precio por kilogramo (COP)",
     unitPricePlaceholder: "Ej. 2500", unitPriceHelp: "Usa un valor positivo con máximo dos decimales.",
+    unsafeEstimatedTotal: "El peso y el precio generan un total que no puede representarse con precisión segura.",
     invalidUnitPrice: "Ingresa un precio positivo y válido con máximo dos decimales.",
     estimatedTotal: "Total estimado", databaseTotalNotice: "El valor definitivo será calculado por PostgreSQL.",
     cancel: "Cancelar", confirm: "Confirmar venta", confirming: "Confirmando...",

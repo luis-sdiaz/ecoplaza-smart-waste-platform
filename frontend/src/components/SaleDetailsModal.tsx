@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import type { SaleHistoryItem } from "../services/salesService";
 
 interface SaleDetailsModalProps {
@@ -18,7 +19,7 @@ function SaleDetailsModal({ sale, onClose }: SaleDetailsModalProps) {
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "COP",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
 
   const fields = [

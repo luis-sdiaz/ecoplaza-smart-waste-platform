@@ -1,3 +1,5 @@
+import { sumSafeMonetaryValues } from "./monetarySafety.ts";
+
 export type ReportWasteCategory = "organic" | "recyclable" | "nonRecyclable";
 
 export interface ReportCategoryDistributionItem {
@@ -90,7 +92,7 @@ export function calculateSalesTrend(
     .sort(([left], [right]) => left.localeCompare(right));
 
   for (const [date, values] of sortedBuckets) {
-    const grossSalesValue = sumSafely(values);
+    const grossSalesValue = sumSafeMonetaryValues(values);
     if (grossSalesValue === null) return null;
     trend.push({ date, salesCount: values.length, grossSalesValue });
   }
@@ -117,7 +119,7 @@ export function calculateReportStatistics(
       .map((record) => record.weightKg),
   );
   const soldWeightKg = sumSafely(sales.map((sale) => sale.weightKg));
-  const grossSalesValue = sumSafely(sales.map((sale) => sale.totalValue));
+  const grossSalesValue = sumSafeMonetaryValues(sales.map((sale) => sale.totalValue));
   const salesTrend = calculateSalesTrend(sales);
 
   if (
