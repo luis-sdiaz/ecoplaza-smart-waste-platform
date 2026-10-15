@@ -339,6 +339,8 @@ const es = {
     dateRange: "Período de ventas", dateRangeDescription: "Filtra el historial por la fecha real de realización de cada venta.",
     startDate: "Fecha inicial", endDate: "Fecha final", applyDateRange: "Aplicar filtro",
     clearDateRange: "Ver todo", clearFilters: "Limpiar filtros", buyerFilter: "Comprador",
+    sortBy: "Ordenar por", sortNewest: "Más recientes primero", sortOldest: "Más antiguas primero",
+    sortValueDesc: "Mayor valor primero", sortValueAsc: "Menor valor primero",
     allBuyers: "Todos los compradores", invalidDateRange: "Selecciona un período válido; la fecha inicial no puede ser posterior a la final.",
     activeDateRange: "Mostrando ventas del {{start}} al {{end}}.",
     loading: "Cargando ventas y opciones disponibles...", retry: "Reintentar",

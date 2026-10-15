@@ -339,6 +339,8 @@ const en = {
     dateRange: "Sales period", dateRangeDescription: "Filter history by each sale's actual completion date.",
     startDate: "Start date", endDate: "End date", applyDateRange: "Apply filter",
     clearDateRange: "View all", clearFilters: "Clear filters", buyerFilter: "Buyer",
+    sortBy: "Sort by", sortNewest: "Newest first", sortOldest: "Oldest first",
+    sortValueDesc: "Highest value first", sortValueAsc: "Lowest value first",
     allBuyers: "All buyers", invalidDateRange: "Select a valid period; the start date cannot be later than the end date.",
     activeDateRange: "Showing sales from {{start}} to {{end}}.",
     loading: "Loading sales and available options...", retry: "Try again",

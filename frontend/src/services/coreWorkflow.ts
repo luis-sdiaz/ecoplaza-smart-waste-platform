@@ -6,6 +6,39 @@ type SalesFilterRecord = {
   soldAt: string;
 };
 
+type SalesSortRecord = {
+  id: string;
+  soldAt: string;
+  totalValue: number;
+};
+
+export type SalesSortOption = "newest" | "oldest" | "valueDesc" | "valueAsc";
+
+function compareValues(left: number, right: number): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+export function sortSalesHistory<T extends SalesSortRecord>(
+  sales: readonly T[],
+  option: SalesSortOption,
+): T[] {
+  return [...sales].sort((left, right) => {
+    const leftDate = new Date(left.soldAt).getTime();
+    const rightDate = new Date(right.soldAt).getTime();
+    const dateComparison = compareValues(leftDate, rightDate);
+    const valueComparison = compareValues(left.totalValue, right.totalValue);
+
+    if (option === "newest" && dateComparison !== 0) return -dateComparison;
+    if (option === "oldest" && dateComparison !== 0) return dateComparison;
+    if (option === "valueDesc" && valueComparison !== 0) return -valueComparison;
+    if (option === "valueAsc" && valueComparison !== 0) return valueComparison;
+    if ((option === "valueDesc" || option === "valueAsc") && dateComparison !== 0) {
+      return -dateComparison;
+    }
+    return left.id.localeCompare(right.id);
+  });
+}
+
 type WasteFilterRecord = {
   status: "registered" | "available" | "sold";
   category: "organic" | "recyclable" | "nonRecyclable";

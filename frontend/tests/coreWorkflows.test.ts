@@ -6,6 +6,7 @@ import {
   filterSalesHistory,
   filterWasteHistory,
   RequestRevisionTracker,
+  sortSalesHistory,
   summarizeAvailableStockByContainer,
 } from "../src/services/coreWorkflow.ts";
 
@@ -15,10 +16,10 @@ const buyerA = "11111111-1111-4111-8111-111111111111";
 const buyerB = "22222222-2222-4222-8222-222222222222";
 
 const sales = [
-  { id: "sale-1", buyerId: buyerA, soldAt: "2026-10-01T05:00:00.000Z" },
-  { id: "sale-2", buyerId: buyerB, soldAt: "2026-10-08T17:00:00.000Z" },
-  { id: "sale-3", buyerId: buyerA, soldAt: "2026-10-11T04:59:59.999Z" },
-  { id: "sale-4", buyerId: buyerA, soldAt: "2026-10-11T05:00:00.000Z" },
+  { id: "sale-1", buyerId: buyerA, soldAt: "2026-10-01T05:00:00.000Z", totalValue: 500 },
+  { id: "sale-2", buyerId: buyerB, soldAt: "2026-10-08T17:00:00.000Z", totalValue: 900 },
+  { id: "sale-3", buyerId: buyerA, soldAt: "2026-10-11T04:59:59.999Z", totalValue: 900 },
+  { id: "sale-4", buyerId: buyerA, soldAt: "2026-10-11T05:00:00.000Z", totalValue: 200 },
 ];
 
 const dateRange = {
@@ -31,6 +32,26 @@ test("filters sales by date, buyer, and both filters without including the end b
   assert.deepEqual(filterSalesHistory(sales, undefined, buyerA).map(({ id }) => id), ["sale-1", "sale-3", "sale-4"]);
   assert.deepEqual(filterSalesHistory(sales, dateRange, buyerA).map(({ id }) => id), ["sale-1", "sale-3"]);
   assert.deepEqual(filterSalesHistory(sales, dateRange, "33333333-3333-4333-8333-333333333333"), []);
+});
+
+test("sorts completed sales by date and value with deterministic tie breakers", () => {
+  assert.deepEqual(sortSalesHistory(sales, "newest").map(({ id }) => id), ["sale-4", "sale-3", "sale-2", "sale-1"]);
+  assert.deepEqual(sortSalesHistory(sales, "oldest").map(({ id }) => id), ["sale-1", "sale-2", "sale-3", "sale-4"]);
+  assert.deepEqual(sortSalesHistory(sales, "valueDesc").map(({ id }) => id), ["sale-3", "sale-2", "sale-1", "sale-4"]);
+  assert.deepEqual(sortSalesHistory(sales, "valueAsc").map(({ id }) => id), ["sale-4", "sale-1", "sale-3", "sale-2"]);
+  assert.deepEqual(sales.map(({ id }) => id), ["sale-1", "sale-2", "sale-3", "sale-4"]);
+
+  const exactTies = [
+    { id: "sale-b", soldAt: "2026-10-10T12:00:00.000Z", totalValue: 700 },
+    { id: "sale-a", soldAt: "2026-10-10T12:00:00.000Z", totalValue: 700 },
+  ];
+  assert.deepEqual(sortSalesHistory(exactTies, "newest").map(({ id }) => id), ["sale-a", "sale-b"]);
+  assert.deepEqual(sortSalesHistory(exactTies, "valueDesc").map(({ id }) => id), ["sale-a", "sale-b"]);
+});
+
+test("sorts the complete result after combining sales filters", () => {
+  const filtered = filterSalesHistory(sales, dateRange, buyerA);
+  assert.deepEqual(sortSalesHistory(filtered, "valueDesc").map(({ id }) => id), ["sale-3", "sale-1"]);
 });
 
 const wasteRecords = [

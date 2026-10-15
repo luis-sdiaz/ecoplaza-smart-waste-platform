@@ -32,7 +32,12 @@ import {
   type ReportDateRange,
   type TimestampRange,
 } from "../services/reportDateRange";
-import { filterSalesHistory, RequestRevisionTracker } from "../services/coreWorkflow";
+import {
+  filterSalesHistory,
+  RequestRevisionTracker,
+  sortSalesHistory,
+  type SalesSortOption,
+} from "../services/coreWorkflow";
 import {
   MAX_MONETARY_FRACTION_DIGITS,
   sumSafeMonetaryValues,
@@ -106,6 +111,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
   const [dateRangeError, setDateRangeError] = useState<string | null>(null);
   const [buyerFilter, setBuyerFilter] = useState("");
+  const [sortOption, setSortOption] = useState<SalesSortOption>("newest");
 
   const applyLoadResults = useCallback((
     salesResult: SalesListResult,
@@ -317,6 +323,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   );
   const metricBadge = t(isFiltered ? "sales.filteredData" : "sales.realData");
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
+  const sortedSales = sortSalesHistory(sales, sortOption);
   const formatInputDate = (value: string): string =>
     dateFormatter.format(new Date(`${value}T00:00:00`));
 
@@ -371,6 +378,7 @@ function UserSalesPage({ userId }: { userId: string }) {
           : `ecoplaza-sales-${activeDateRange.startDate}-${activeDateRange.endDate}.csv`,
         activeTimestampRange,
         buyerFilter || undefined,
+        sortOption,
       );
 
       if (result.ok) {
@@ -443,12 +451,26 @@ function UserSalesPage({ userId }: { userId: string }) {
               <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.dateRangeDescription")}</p>
             </div>
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_auto_auto] xl:items-end">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto] xl:items-end">
             <label className="text-xs font-medium text-ecoplaza-text-muted">
               {t("sales.buyerFilter")}
               <select value={buyerFilter} disabled={isLoading} onChange={(event) => applyBuyerFilter(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text">
                 <option value="">{t("sales.allBuyers")}</option>
                 {buyers.map((buyer) => <option key={buyer.id} value={buyer.id}>{buyer.name}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-ecoplaza-text-muted">
+              {t("sales.sortBy")}
+              <select
+                value={sortOption}
+                disabled={isLoading}
+                onChange={(event) => setSortOption(event.target.value as SalesSortOption)}
+                className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text"
+              >
+                <option value="newest">{t("sales.sortNewest")}</option>
+                <option value="oldest">{t("sales.sortOldest")}</option>
+                <option value="valueDesc">{t("sales.sortValueDesc")}</option>
+                <option value="valueAsc">{t("sales.sortValueAsc")}</option>
               </select>
             </label>
             <label className="text-xs font-medium text-ecoplaza-text-muted">
@@ -504,7 +526,7 @@ function UserSalesPage({ userId }: { userId: string }) {
               <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(emptyState.descriptionKey)}</p>
             </div>
           ) : (
-            <SalesTable sales={sales} onViewDetails={setSelectedSale} />
+            <SalesTable sales={sortedSales} onViewDetails={setSelectedSale} />
           )}
         </div>
       </div>
