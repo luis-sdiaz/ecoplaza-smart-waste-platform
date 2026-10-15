@@ -7,35 +7,26 @@ import PageHeader from "../components/PageHeader";
 import SensorStatusCard from "../components/SensorStatusCard";
 import WasteSummaryCard from "../components/WasteSummaryCard";
 import {
-  getWasteStatistics,
-  type WasteErrorCode,
-  type WasteStatistics,
-} from "../services/wasteService";
+  getReportStatistics,
+  type ReportErrorCode,
+  type ReportStatistics,
+  type ReportWasteCategory,
+} from "../services/reportService";
+import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 
-const EMPTY_STATISTICS: WasteStatistics = {
-  recordCount: 0,
-  totalWeightKg: 0,
-  organicWeightKg: 0,
-  recyclableWeightKg: 0,
-  nonRecyclableWeightKg: 0,
-  organicPercentage: 0,
-  recyclablePercentage: 0,
-  nonRecyclablePercentage: 0,
-};
+type StatisticsResult = Awaited<ReturnType<typeof getReportStatistics>>;
 
-type StatisticsResult = Awaited<ReturnType<typeof getWasteStatistics>>;
-
-function getStatisticsErrorKey(code: WasteErrorCode): string {
+function getStatisticsErrorKey(code: ReportErrorCode): string {
   if (code === "unauthorized") return "dashboard.unauthorized";
   if (code === "network_error") return "dashboard.networkError";
   if (code === "permission_denied") return "dashboard.permissionError";
   return "dashboard.statisticsError";
 }
 
-function UserDashboardPage() {
+function UserDashboardPage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
-  const [statistics, setStatistics] = useState<WasteStatistics>(EMPTY_STATISTICS);
+  const [statistics, setStatistics] = useState<ReportStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -46,7 +37,7 @@ function UserDashboardPage() {
     if (requestRevision !== requestRevisionRef.current) return;
 
     if (!result.ok) {
-      setStatistics(EMPTY_STATISTICS);
+      setStatistics(null);
       setLoadError(getStatisticsErrorKey(result.error.code));
       setIsLoading(false);
       return;
@@ -62,21 +53,35 @@ function UserDashboardPage() {
     setIsLoading(true);
     setLoadError(null);
 
-    const result = await getWasteStatistics();
-    applyStatisticsResult(result, requestRevision);
+    try {
+      const result = await getReportStatistics();
+      applyStatisticsResult(result, requestRevision);
+    } catch {
+      if (requestRevision !== requestRevisionRef.current) return;
+      setStatistics(null);
+      setLoadError("dashboard.statisticsError");
+      setIsLoading(false);
+    }
   }, [applyStatisticsResult]);
 
   useEffect(() => {
     const requestRevision = ++requestRevisionRef.current;
 
-    void getWasteStatistics().then((result) => {
-      applyStatisticsResult(result, requestRevision);
-    });
+    void getReportStatistics()
+      .then((result) => {
+        applyStatisticsResult(result, requestRevision);
+      })
+      .catch(() => {
+        if (requestRevision !== requestRevisionRef.current) return;
+        setStatistics(null);
+        setLoadError("dashboard.statisticsError");
+        setIsLoading(false);
+      });
 
     return () => {
       requestRevisionRef.current += 1;
     };
-  }, [applyStatisticsResult]);
+  }, [applyStatisticsResult, userId]);
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const formatWeight = (weightKg: number): string =>
@@ -86,8 +91,22 @@ function UserDashboardPage() {
       style: "percent",
       maximumFractionDigits: 1,
     }).format(percentage / 100);
-  const realValueUnavailable = isLoading || loadError !== null;
+  const currencyFormatter = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
+  });
+  const realValueUnavailable = isLoading || loadError !== null || statistics === null;
+  const metricValue = (format: (data: ReportStatistics) => string): string =>
+    realValueUnavailable || statistics === null ? "—" : format(statistics);
+  const categoryValue = (
+    category: ReportWasteCategory,
+    field: "weightKg" | "percentage",
+  ): number => statistics?.distribution.find((item) => item.category === category)?.[field] ?? 0;
   const demoBadge = t("dashboard.demoData");
+  const realBadge = t("dashboard.realData");
+  const hasNoCommercialActivity = !realValueUnavailable && statistics !== null &&
+    statistics.availableWeightKg === 0 && statistics.salesCount === 0;
 
   return (
     <section className="p-8">
@@ -121,12 +140,18 @@ function UserDashboardPage() {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-4 gap-4">
+      {hasNoCommercialActivity && (
+        <div role="status" className="mt-6 rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text-muted">
+          {t("dashboard.emptyCommercialActivity")}
+        </div>
+      )}
+
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           title={t("dashboard.registeredWaste")}
-          value={realValueUnavailable ? "—" : formatWeight(statistics.totalWeightKg)}
+          value={metricValue((data) => formatWeight(data.totalRegisteredWeightKg))}
           description={t("dashboard.realWasteDescription")}
-          badge={t("dashboard.realData")}
+          badge={realBadge}
         />
         <MetricCard
           title={t("dashboard.activeSensors")}
@@ -136,15 +161,15 @@ function UserDashboardPage() {
         />
         <MetricCard
           title={t("dashboard.availableInventory")}
-          value="386 kg"
+          value={metricValue((data) => formatWeight(data.availableWeightKg))}
           description={t("dashboard.materialForSale")}
-          badge={demoBadge}
+          badge={realBadge}
         />
         <MetricCard
           title={t("dashboard.revenue")}
-          value="$2.480.000"
+          value={metricValue((data) => currencyFormatter.format(data.grossSalesValue))}
           description={t("dashboard.accumulatedSales")}
-          badge={demoBadge}
+          badge={realBadge}
         />
       </div>
 
@@ -176,21 +201,21 @@ function UserDashboardPage() {
         <div className="mt-4 grid grid-cols-3 gap-4">
           <WasteSummaryCard
             title={t("common.organic")}
-            amount={realValueUnavailable ? "—" : formatWeight(statistics.organicWeightKg)}
-            percentage={realValueUnavailable ? 0 : statistics.organicPercentage}
-            percentageLabel={realValueUnavailable ? "—" : formatPercentage(statistics.organicPercentage)}
+            amount={realValueUnavailable ? "—" : formatWeight(categoryValue("organic", "weightKg"))}
+            percentage={realValueUnavailable ? 0 : categoryValue("organic", "percentage")}
+            percentageLabel={realValueUnavailable ? "—" : formatPercentage(categoryValue("organic", "percentage"))}
           />
           <WasteSummaryCard
             title={t("common.recyclable")}
-            amount={realValueUnavailable ? "—" : formatWeight(statistics.recyclableWeightKg)}
-            percentage={realValueUnavailable ? 0 : statistics.recyclablePercentage}
-            percentageLabel={realValueUnavailable ? "—" : formatPercentage(statistics.recyclablePercentage)}
+            amount={realValueUnavailable ? "—" : formatWeight(categoryValue("recyclable", "weightKg"))}
+            percentage={realValueUnavailable ? 0 : categoryValue("recyclable", "percentage")}
+            percentageLabel={realValueUnavailable ? "—" : formatPercentage(categoryValue("recyclable", "percentage"))}
           />
           <WasteSummaryCard
             title={t("common.nonRecyclable")}
-            amount={realValueUnavailable ? "—" : formatWeight(statistics.nonRecyclableWeightKg)}
-            percentage={realValueUnavailable ? 0 : statistics.nonRecyclablePercentage}
-            percentageLabel={realValueUnavailable ? "—" : formatPercentage(statistics.nonRecyclablePercentage)}
+            amount={realValueUnavailable ? "—" : formatWeight(categoryValue("nonRecyclable", "weightKg"))}
+            percentage={realValueUnavailable ? 0 : categoryValue("nonRecyclable", "percentage")}
+            percentageLabel={realValueUnavailable ? "—" : formatPercentage(categoryValue("nonRecyclable", "percentage"))}
           />
         </div>
       </div>
@@ -200,7 +225,7 @@ function UserDashboardPage() {
 
 function DashboardPage() {
   const { user } = useAuth();
-  return user ? <UserDashboardPage key={user.id} /> : null;
+  return user ? <UserDashboardPage key={user.id} userId={user.id} /> : null;
 }
 
 export default DashboardPage;

@@ -21,6 +21,7 @@ export {
   type ReportCategoryDistributionItem,
   type ReportSalesTrendItem,
   type ReportStatistics,
+  type ReportWasteCategory,
 } from './reportCalculations'
 
 export type ReportErrorCode =
