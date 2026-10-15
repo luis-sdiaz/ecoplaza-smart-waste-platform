@@ -35,7 +35,7 @@ export interface ReportCsvLabels {
   categories: Record<WasteCategory, string>;
 }
 
-export type SaveReportCsvResult = "saved" | "cancelled";
+export type SaveReportCsvResult = "saved" | "cancelled" | "busy";
 
 function validNumber(value: number): number {
   if (!Number.isFinite(value) || value < 0) {

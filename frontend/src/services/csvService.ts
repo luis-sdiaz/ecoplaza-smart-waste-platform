@@ -4,7 +4,9 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 const CSV_SEPARATOR = ";";
 const FORMULA_PREFIX_PATTERN = /^[\t\r ]*[=+\-@]/;
 
-export type SaveCsvResult = "saved" | "cancelled";
+export type SaveCsvResult = "saved" | "cancelled" | "busy";
+
+let isSaveInProgress = false;
 
 function protectCsvFormula(value: string): string {
   return FORMULA_PREFIX_PATTERN.test(value) ? `'${value}` : value;
@@ -29,12 +31,19 @@ export async function saveCsvFile(
   content: string,
   defaultFileName: string,
 ): Promise<SaveCsvResult> {
-  const filePath = await save({
-    defaultPath: defaultFileName,
-    filters: [{ name: "CSV", extensions: ["csv"] }],
-  });
+  if (isSaveInProgress) return "busy";
+  isSaveInProgress = true;
 
-  if (filePath === null) return "cancelled";
-  await writeTextFile(filePath, content);
-  return "saved";
+  try {
+    const filePath = await save({
+      defaultPath: defaultFileName,
+      filters: [{ name: "CSV", extensions: ["csv"] }],
+    });
+
+    if (filePath === null) return "cancelled";
+    await writeTextFile(filePath, content);
+    return "saved";
+  } finally {
+    isSaveInProgress = false;
+  }
 }

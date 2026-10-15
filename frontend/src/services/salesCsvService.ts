@@ -10,7 +10,7 @@ import { sortSalesHistory, type SalesSortOption } from "./coreWorkflow";
 export { createSalesCsv, type SalesCsvLabels } from "./salesCsv";
 
 export type SalesCsvExportResult =
-  | { ok: true; status: "saved" | "cancelled" }
+  | { ok: true; status: "saved" | "cancelled" | "busy" }
   | { ok: false; error: SalesErrorCode | "file_error" };
 
 export async function exportSalesHistory(
