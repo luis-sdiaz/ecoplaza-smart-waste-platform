@@ -13,6 +13,7 @@ import {
 } from "../src/services/coreWorkflow.ts";
 import { filterAndSortBuyers } from "../src/services/buyerFilters.ts";
 import { calculateMaterialStatusBreakdown } from "../src/services/dashboardMaterialStatus.ts";
+import { summarizeBuyerPurchases } from "../src/services/buyerPurchaseSummary.ts";
 
 process.env.TZ = "America/Bogota";
 
@@ -65,6 +66,16 @@ test("calculates honest material status shares including other and zero states",
     availablePercentage: 0, soldPercentage: 0, otherPercentage: 0,
   });
   assert.equal(calculateMaterialStatusBreakdown(10, 8, 4), null);
+});
+
+test("summarizes buyer purchases with exact weight and monetary arithmetic", () => {
+  const purchases = [
+    { id: "sale-1", buyerId: buyerA, wasteRecordId: "waste-1", weightKg: 0.1, unitPrice: 1, totalValue: 0.1, soldAt: "2026-10-01", buyerName: "Buyer", wasteRecordNumber: "1", category: "organic" as const },
+    { id: "sale-2", buyerId: buyerA, wasteRecordId: "waste-2", weightKg: 0.2, unitPrice: 1, totalValue: 0.2, soldAt: "2026-10-02", buyerName: "Buyer", wasteRecordNumber: "2", category: "recyclable" as const },
+  ];
+  assert.deepEqual(summarizeBuyerPurchases(purchases), { purchaseCount: 2, totalWeightKg: 0.3, totalValue: 0.3 });
+  assert.deepEqual(summarizeBuyerPurchases([]), { purchaseCount: 0, totalWeightKg: 0, totalValue: 0 });
+  assert.equal(summarizeBuyerPurchases([{ ...purchases[0], totalValue: Number.NaN }]), null);
 });
 
 test("filters sales by date, buyer, and both filters without including the end boundary", () => {

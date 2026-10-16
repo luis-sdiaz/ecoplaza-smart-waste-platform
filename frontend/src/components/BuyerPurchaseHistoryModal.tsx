@@ -8,6 +8,7 @@ import { useDialogFocus } from "../hooks/useDialogFocus";
 import { saveBuyerPurchaseCsv } from "../services/buyerPurchaseCsv";
 import type { SalesCsvLabels } from "../services/salesCsv";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
+import { summarizeBuyerPurchases } from "../services/buyerPurchaseSummary";
 
 interface BuyerPurchaseHistoryModalProps {
   buyer: Buyer;
@@ -38,6 +39,7 @@ function BuyerPurchaseHistoryModal({
     currency: "COP",
     maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
+  const purchaseSummary = summarizeBuyerPurchases(sales);
 
   const exportPurchases = async (): Promise<void> => {
     if (isExporting || isLoading || error !== null || sales.length === 0) return;
@@ -121,8 +123,28 @@ function BuyerPurchaseHistoryModal({
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("buyers.noPurchasesTitle")}</h3>
               <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.noPurchasesDescription")}</p>
             </div>
+          ) : purchaseSummary === null ? (
+            <div role="alert" className="flex min-h-48 flex-col items-center justify-center text-center">
+              <AlertTriangle className="text-ecoplaza-danger" size={24} aria-hidden="true" />
+              <p className="mt-3 max-w-md text-sm text-ecoplaza-text-muted">{t("buyers.purchaseSummaryError")}</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-ecoplaza-border">
+            <>
+              <dl className="mb-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background/60 p-4">
+                  <dt className="text-xs font-medium text-ecoplaza-text-muted">{t("buyers.purchaseCount")}</dt>
+                  <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{numberFormatter.format(purchaseSummary.purchaseCount)}</dd>
+                </div>
+                <div className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background/60 p-4">
+                  <dt className="text-xs font-medium text-ecoplaza-text-muted">{t("buyers.totalPurchasedWeight")}</dt>
+                  <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{numberFormatter.format(purchaseSummary.totalWeightKg)} {t("common.kg")}</dd>
+                </div>
+                <div className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background/60 p-4">
+                  <dt className="text-xs font-medium text-ecoplaza-text-muted">{t("buyers.totalPurchasedValue")}</dt>
+                  <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{currencyFormatter.format(purchaseSummary.totalValue)}</dd>
+                </div>
+              </dl>
+              <div className="overflow-x-auto rounded-xl border border-ecoplaza-border">
               <table className="w-full min-w-[680px]">
                 <thead className="bg-ecoplaza-background">
                   <tr>
@@ -143,7 +165,8 @@ function BuyerPurchaseHistoryModal({
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
         </div>
       </section>
