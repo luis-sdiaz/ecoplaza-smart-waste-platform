@@ -91,6 +91,14 @@ test("combines sales category with buyer and date filters", () => {
   assert.deepEqual(filterSalesHistory(categorizedSales, dateRange, undefined, "recyclable").map(({ id }) => id), ["sale-2"]);
 });
 
+test("searches sales by full UUID or visible short identifier with other filters", () => {
+  const searchableSales = sales.map((sale, index) => ({ ...sale, category: index === 0 ? "organic" as const : "recyclable" as const }));
+  assert.deepEqual(filterSalesHistory(searchableSales, undefined, undefined, "all", " SAL-999 "), []);
+  assert.deepEqual(filterSalesHistory(searchableSales, undefined, undefined, "all", " SALE-1 ").map(({ id }) => id), ["sale-1"]);
+  assert.deepEqual(filterSalesHistory(searchableSales, undefined, buyerA, "organic", "  SALE-1  ").map(({ id }) => id), ["sale-1"]);
+  assert.deepEqual(filterSalesHistory(searchableSales, undefined, undefined, "all", "missing"), []);
+});
+
 test("sorts completed sales by date and value with deterministic tie breakers", () => {
   assert.deepEqual(sortSalesHistory(sales, "newest").map(({ id }) => id), ["sale-4", "sale-3", "sale-2", "sale-1"]);
   assert.deepEqual(sortSalesHistory(sales, "oldest").map(({ id }) => id), ["sale-1", "sale-2", "sale-3", "sale-4"]);

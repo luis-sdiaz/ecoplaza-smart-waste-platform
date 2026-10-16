@@ -93,7 +93,7 @@ const buyerBeta = {
 };
 
 const saleAlphaEarly: Sale = {
-  id: "10000000-0000-4000-8000-000000000001",
+  id: "10000001-0000-4000-8000-000000000001",
   buyerId: buyerAlpha.id,
   wasteRecordId: "20000000-0000-4000-8000-000000000001",
   weightKg: 10,
@@ -105,7 +105,7 @@ const saleAlphaEarly: Sale = {
   category: "recyclable",
 };
 const saleBeta: Sale = {
-  id: "10000000-0000-4000-8000-000000000002",
+  id: "10000002-0000-4000-8000-000000000002",
   buyerId: buyerBeta.id,
   wasteRecordId: "20000000-0000-4000-8000-000000000002",
   weightKg: 20,
@@ -117,7 +117,7 @@ const saleBeta: Sale = {
   category: "organic",
 };
 const saleAlphaLate: Sale = {
-  id: "10000000-0000-4000-8000-000000000003",
+  id: "10000003-0000-4000-8000-000000000003",
   buyerId: buyerAlpha.id,
   wasteRecordId: "20000000-0000-4000-8000-000000000003",
   weightKg: 30,
@@ -192,6 +192,27 @@ beforeEach(() => {
 });
 
 describe("filtered sales history and CSV integration", () => {
+  test("searches by full and short sale identifiers and exports only matches", async () => {
+    render(<SalesPage />);
+    await screen.findByTitle(saleAlphaLate.id);
+
+    const search = screen.getByLabelText("sales.saleSearchLabel");
+    fireEvent.change(search, { target: { value: `  sal-${saleBeta.id.slice(0, 8).toUpperCase()}  ` } });
+    await waitFor(() => expectVisible([saleBeta.id]));
+
+    fireEvent.click(screen.getByRole("button", { name: "sales.exportCsv" }));
+    await waitFor(() => expect(nativeMocks.writeTextFile).toHaveBeenCalledOnce());
+    const csv = nativeMocks.writeTextFile.mock.calls[0][1] as string;
+    expect(csv).toContain(saleBeta.id);
+    expect(csv).not.toContain(saleAlphaEarly.id);
+    expect(csv).not.toContain(saleAlphaLate.id);
+
+    fireEvent.change(search, { target: { value: saleAlphaEarly.id.toUpperCase() } });
+    await waitFor(() => expectVisible([saleAlphaEarly.id]));
+    fireEvent.change(search, { target: { value: "missing-id" } });
+    expect(await screen.findByText("sales.emptySearchTitle")).toBeTruthy();
+  }, 15_000);
+
   test("combines buyer and date filters and exports exactly the visible history", async () => {
     render(<SalesPage />);
     await screen.findByTitle(saleAlphaLate.id);

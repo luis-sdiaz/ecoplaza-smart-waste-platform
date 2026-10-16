@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { AlertTriangle, CalendarRange, Database, Download, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, CalendarRange, Database, Download, LoaderCircle, RefreshCw, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import type { Buyer } from "../services/buyerService";
@@ -113,6 +113,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [dateRangeError, setDateRangeError] = useState<string | null>(null);
   const [buyerFilter, setBuyerFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<WasteCategoryFilter>("all");
+  const [saleSearch, setSaleSearch] = useState("");
   const [sortOption, setSortOption] = useState<SalesSortOption>("newest");
 
   const applyLoadResults = useCallback((
@@ -313,21 +314,21 @@ function UserSalesPage({ userId }: { userId: string }) {
     maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
   const weightFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const categorySales = filterSalesHistory(sales, undefined, undefined, categoryFilter);
-  const totalRevenue = sumSafeMonetaryValues(categorySales.map((sale) => sale.totalValue));
-  const totalWeight = categorySales.reduce((total, sale) => total + sale.weightKg, 0);
-  const servedBuyers = new Set(categorySales.map((sale) => sale.buyerId)).size;
+  const visibleSales = filterSalesHistory(sales, undefined, undefined, categoryFilter, saleSearch);
+  const totalRevenue = sumSafeMonetaryValues(visibleSales.map((sale) => sale.totalValue));
+  const totalWeight = visibleSales.reduce((total, sale) => total + sale.weightKg, 0);
+  const servedBuyers = new Set(visibleSales.map((sale) => sale.buyerId)).size;
   const metricsUnavailable = isLoading || loadError !== null;
   const registrationUnavailable = metricsUnavailable || buyers.length === 0 || wasteRecords.length === 0;
-  const exportUnavailable = metricsUnavailable || categorySales.length === 0 || isExporting;
-  const isFiltered = activeDateRange !== null || buyerFilter !== "" || categoryFilter !== "all";
+  const exportUnavailable = metricsUnavailable || visibleSales.length === 0 || isExporting;
+  const isFiltered = activeDateRange !== null || buyerFilter !== "" || categoryFilter !== "all" || saleSearch.trim() !== "";
   const emptyState = getSalesEmptyState(
     buyerFilter !== "",
     activeDateRange !== null,
   );
   const metricBadge = t(isFiltered ? "sales.filteredData" : "sales.realData");
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
-  const sortedSales = sortSalesHistory(categorySales, sortOption);
+  const sortedSales = sortSalesHistory(visibleSales, sortOption);
   const formatInputDate = (value: string): string =>
     dateFormatter.format(new Date(`${value}T00:00:00`));
 
@@ -352,6 +353,7 @@ function UserSalesPage({ userId }: { userId: string }) {
     setActiveDateRange(null);
     setBuyerFilter("");
     setCategoryFilter("all");
+    setSaleSearch("");
     void loadSalesData();
   };
 
@@ -386,6 +388,7 @@ function UserSalesPage({ userId }: { userId: string }) {
         buyerFilter || undefined,
         categoryFilter,
         sortOption,
+        saleSearch,
       );
 
       if (result.ok) {
@@ -414,7 +417,7 @@ function UserSalesPage({ userId }: { userId: string }) {
       <PageHeader eyebrow={t("sales.eyebrow")} title={t("sales.title")} description={t("sales.description")} />
 
       <div className="mt-8 grid grid-cols-4 gap-4">
-        <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(sales.length)} description={t("sales.operations")} badge={metricBadge} />
+        <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(visibleSales.length)} description={t("sales.operations")} badge={metricBadge} />
         <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable || totalRevenue === null ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} badge={metricBadge} />
         <MetricCard title={t("sales.soldMaterial")} value={metricsUnavailable ? "—" : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`} description={t("sales.quantitySold")} badge={metricBadge} />
         <MetricCard title={t("sales.servedBuyers")} value={metricsUnavailable ? "—" : String(servedBuyers)} description={t("sales.buyersWithSales")} badge={metricBadge} />
@@ -458,7 +461,21 @@ function UserSalesPage({ userId }: { userId: string }) {
               <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.dateRangeDescription")}</p>
             </div>
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto_auto] xl:items-end">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1fr_1fr_1fr_1fr_auto_auto] xl:items-end">
+            <label className="text-xs font-medium text-ecoplaza-text-muted">
+              {t("sales.saleSearchLabel")}
+              <span className="relative mt-1 block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted" size={15} aria-hidden="true" />
+                <input
+                  type="search"
+                  value={saleSearch}
+                  disabled={isLoading}
+                  onChange={(event) => setSaleSearch(event.target.value)}
+                  placeholder={t("sales.saleSearchPlaceholder")}
+                  className="block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background py-2 pr-3 pl-9 text-sm text-ecoplaza-text"
+                />
+              </span>
+            </label>
             <label className="text-xs font-medium text-ecoplaza-text-muted">
               {t("sales.buyerFilter")}
               <select value={buyerFilter} disabled={isLoading} onChange={(event) => applyBuyerFilter(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text">
@@ -537,11 +554,11 @@ function UserSalesPage({ userId }: { userId: string }) {
                 {t("sales.retry")}
               </button>
             </div>
-          ) : categorySales.length === 0 ? (
+          ) : visibleSales.length === 0 ? (
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
               <Database size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t(categoryFilter === "all" ? emptyState.titleKey : "sales.emptyCategoryTitle")}</h3>
-              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(categoryFilter === "all" ? emptyState.descriptionKey : "sales.emptyCategoryDescription")}</p>
+              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t(saleSearch.trim() !== "" ? "sales.emptySearchTitle" : categoryFilter === "all" ? emptyState.titleKey : "sales.emptyCategoryTitle")}</h3>
+              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(saleSearch.trim() !== "" ? "sales.emptySearchDescription" : categoryFilter === "all" ? emptyState.descriptionKey : "sales.emptyCategoryDescription")}</p>
             </div>
           ) : (
             <SalesTable sales={sortedSales} onViewDetails={setSelectedSale} />

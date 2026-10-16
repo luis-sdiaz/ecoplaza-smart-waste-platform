@@ -22,13 +22,14 @@ export async function exportSalesHistory(
   buyerId?: string,
   category: WasteCategoryFilter = "all",
   sortOption: SalesSortOption = "newest",
+  saleSearch = "",
 ): Promise<SalesCsvExportResult> {
   const salesResult = await listSales(dateRange, buyerId);
   if (!salesResult.ok) return { ok: false, error: salesResult.error.code };
 
   try {
     const status = await saveCsvFile(
-      createSalesCsv(sortSalesHistory(filterSalesHistory(salesResult.data, undefined, undefined, category), sortOption), labels, language),
+      createSalesCsv(sortSalesHistory(filterSalesHistory(salesResult.data, undefined, undefined, category, saleSearch), sortOption), labels, language),
       defaultFileName,
     );
     return { ok: true, status };

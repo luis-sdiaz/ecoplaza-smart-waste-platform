@@ -2,6 +2,7 @@ import { isTimestampInRange, type TimestampRange } from "./reportDateRange.ts";
 import { isSafeWasteWeightKg } from "./wasteWeight.ts";
 
 type SalesFilterRecord = {
+  id: string;
   buyerId: string;
   soldAt: string;
   category?: "organic" | "recyclable" | "nonRecyclable";
@@ -168,11 +169,18 @@ export function filterSalesHistory<T extends SalesFilterRecord>(
   dateRange?: TimestampRange,
   buyerId?: string,
   category: WasteCategoryFilter = "all",
+  saleSearch = "",
 ): T[] {
+  const normalizedSearch = saleSearch.trim().toLocaleLowerCase();
   return sales.filter((sale) =>
     (dateRange === undefined || isTimestampInRange(sale.soldAt, dateRange)) &&
     (buyerId === undefined || sale.buyerId === buyerId) &&
-    (category === "all" || sale.category === category)
+    (category === "all" || sale.category === category) &&
+    (normalizedSearch === "" || (() => {
+      const normalizedId = sale.id.toLocaleLowerCase();
+      const visibleId = `sal-${normalizedId.slice(0, 8)}`;
+      return normalizedId.includes(normalizedSearch) || visibleId.includes(normalizedSearch);
+    })())
   );
 }
 
