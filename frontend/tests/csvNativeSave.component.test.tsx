@@ -33,7 +33,7 @@ const categories = {
 };
 const reportLabels = {
   section: "Section", metric: "Metric", value: "Value", unit: "Unit",
-  summary: "Summary", distribution: "Distribution", salesPerformance: "Sales performance", category: "Category",
+  summary: "Summary", distribution: "Distribution", salesPerformance: "Sales performance", salesTrend: "Daily sales trend", date: "Date", category: "Category",
   weight: "Weight", percentage: "Percentage", records: "Records",
   historicalWeight: "Historical", availableWeight: "Available", soldWeight: "Sold",
   sales: "Sales", grossRevenue: "Revenue", countUnit: "records", kilogramsUnit: "kg",

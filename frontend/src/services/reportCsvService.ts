@@ -18,6 +18,8 @@ export interface ReportCsvLabels {
   summary: string;
   distribution: string;
   salesPerformance: string;
+  salesTrend: string;
+  date: string;
   category: string;
   weight: string;
   percentage: string;
@@ -89,6 +91,14 @@ export function createReportCsv(
       labels.categories[item.category],
       validNumber(item.salesCount),
       validNumber(item.soldWeightKg),
+      validNumber(item.grossSalesValue),
+    ], language)),
+    "",
+    createCsvRow([labels.salesTrend, labels.date, labels.sales, labels.grossRevenue], language),
+    ...statistics.salesTrend.map((item) => createCsvRow([
+      labels.salesTrend,
+      item.date,
+      validNumber(item.salesCount),
       validNumber(item.grossSalesValue),
     ], language)),
   ];
