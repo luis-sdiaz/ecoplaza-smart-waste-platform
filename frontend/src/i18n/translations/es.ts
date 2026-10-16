@@ -274,6 +274,8 @@ const es = {
     emptyDescription: "Los residuos con otro estado no se incluyen en el inventario disponible.",
     categoryFilter: "Categoría", allCategories: "Todas las categorías",
     containerFilter: "Contenedor", allContainers: "Todos los contenedores", clearFilters: "Limpiar filtros",
+    sortBy: "Ordenar por", sortNewest: "Más recientes primero", sortOldest: "Más antiguos primero",
+    sortWeightDesc: "Mayor peso primero", sortWeightAsc: "Menor peso primero",
     emptyFilteredTitle: "No hay materiales con estos filtros",
     emptyFilteredDescription: "No existen residuos disponibles que coincidan con los filtros seleccionados.",
     unauthorized: "Tu sesión no está disponible. Inicia sesión nuevamente.",

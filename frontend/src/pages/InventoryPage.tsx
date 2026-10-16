@@ -21,7 +21,9 @@ import {
 } from "../services/wasteService";
 import {
   filterAvailableInventory,
+  sortAvailableInventory,
   summarizeAvailableStockByContainer,
+  type InventorySortOption,
 } from "../services/coreWorkflow";
 import { saveInventoryCsv, type InventoryCsvLabels } from "../services/inventoryCsv";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
@@ -45,6 +47,7 @@ function InventoryPageContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
   const [containerFilter, setContainerFilter] = useState("all");
+  const [sortOption, setSortOption] = useState<InventorySortOption>("newest");
   const [isExporting, setIsExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
 
@@ -112,9 +115,10 @@ function InventoryPageContent() {
     realValueUnavailable ? "—" : formatWeight(weightKg);
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
   const filteredRecords = filterAvailableInventory(records, categoryFilter, containerFilter);
+  const visibleRecords = sortAvailableInventory(filteredRecords, sortOption);
   const containerSummaries = summarizeAvailableStockByContainer(containers, records);
   const hasActiveFilters = categoryFilter !== "all" || containerFilter !== "all";
-  const tableItems: InventoryItem[] = filteredRecords.map((record) => ({
+  const tableItems: InventoryItem[] = visibleRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
     weightKg: record.weightKg,
@@ -123,7 +127,7 @@ function InventoryPageContent() {
   }));
 
   const exportInventory = async (): Promise<void> => {
-    if (filteredRecords.length === 0 || isExporting) return;
+    if (visibleRecords.length === 0 || isExporting) return;
     setIsExporting(true);
     setExportNotice(null);
     const labels: InventoryCsvLabels = {
@@ -132,7 +136,7 @@ function InventoryPageContent() {
       registeredAt: t("inventory.csv.registeredAt"), categories: getCsvCategoryLabels(t),
     };
     try {
-      const result = await saveInventoryCsv(filteredRecords, containerCodes, labels,
+      const result = await saveInventoryCsv(visibleRecords, containerCodes, labels,
         i18n.resolvedLanguage === "en" ? "en" : "es",
         `ecoplaza-inventory-${new Date().toISOString().slice(0, 10)}.csv`);
       if (result === "saved") setExportNotice("success");
@@ -257,6 +261,17 @@ function InventoryPageContent() {
               <option value="organic">{t("common.organic")}</option>
               <option value="recyclable">{t("common.recyclable")}</option>
               <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("inventory.sortBy")}</span>
+            <select value={sortOption} onChange={(event) => setSortOption(event.target.value as InventorySortOption)}
+              disabled={isLoading || loadError !== null}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text">
+              <option value="newest">{t("inventory.sortNewest")}</option>
+              <option value="oldest">{t("inventory.sortOldest")}</option>
+              <option value="weightDesc">{t("inventory.sortWeightDesc")}</option>
+              <option value="weightAsc">{t("inventory.sortWeightAsc")}</option>
             </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">

@@ -274,6 +274,8 @@ const en = {
     emptyDescription: "Waste records with another status are not included in available inventory.",
     categoryFilter: "Category", allCategories: "All categories",
     containerFilter: "Container", allContainers: "All containers", clearFilters: "Clear filters",
+    sortBy: "Sort by", sortNewest: "Newest first", sortOldest: "Oldest first",
+    sortWeightDesc: "Highest weight first", sortWeightAsc: "Lowest weight first",
     emptyFilteredTitle: "No materials match these filters",
     emptyFilteredDescription: "There are no available waste records matching the selected filters.",
     unauthorized: "Your session is unavailable. Sign in again.",

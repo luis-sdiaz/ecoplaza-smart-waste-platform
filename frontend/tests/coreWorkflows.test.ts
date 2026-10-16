@@ -6,6 +6,7 @@ import {
   filterSalesHistory,
   filterWasteHistory,
   RequestRevisionTracker,
+  sortAvailableInventory,
   sortSalesHistory,
   summarizeAvailableStockByContainer,
 } from "../src/services/coreWorkflow.ts";
@@ -76,6 +77,19 @@ test("keeps only available inventory and combines category and container filters
   assert.deepEqual(filterAvailableInventory(wasteRecords).map(({ id }) => id), ["waste-1", "waste-3"]);
   assert.deepEqual(filterAvailableInventory(wasteRecords, "organic", "container-a").map(({ id }) => id), ["waste-1"]);
   assert.deepEqual(filterAvailableInventory(wasteRecords, "organic", "container-b"), []);
+});
+
+test("sorts filtered inventory by date and weight with deterministic ties", () => {
+  const records = [
+    { id: "b", registeredAt: "2026-10-02T12:00:00.000Z", weightKg: 5 },
+    { id: "a", registeredAt: "2026-10-02T12:00:00.000Z", weightKg: 5 },
+    { id: "c", registeredAt: "2026-10-01T12:00:00.000Z", weightKg: 2 },
+  ];
+  assert.deepEqual(sortAvailableInventory(records, "newest").map(({ id }) => id), ["a", "b", "c"]);
+  assert.deepEqual(sortAvailableInventory(records, "oldest").map(({ id }) => id), ["c", "a", "b"]);
+  assert.deepEqual(sortAvailableInventory(records, "weightDesc").map(({ id }) => id), ["a", "b", "c"]);
+  assert.deepEqual(sortAvailableInventory(records, "weightAsc").map(({ id }) => id), ["c", "a", "b"]);
+  assert.deepEqual(records.map(({ id }) => id), ["b", "a", "c"]);
 });
 
 test("summarizes available stock for every real container without double counting", () => {

@@ -52,6 +52,22 @@ type WasteHistoryFilterRecord = WasteFilterRecord & {
 
 export type WasteStatusFilter = WasteFilterRecord["status"] | "all";
 export type WasteCategoryFilter = WasteFilterRecord["category"] | "all";
+export type InventorySortOption = "newest" | "oldest" | "weightDesc" | "weightAsc";
+
+type InventorySortRecord = { id: string; registeredAt: string; weightKg: number };
+
+export function sortAvailableInventory<T extends InventorySortRecord>(records: readonly T[], option: InventorySortOption): T[] {
+  return [...records].sort((left, right) => {
+    const dateComparison = compareValues(Date.parse(left.registeredAt), Date.parse(right.registeredAt));
+    const weightComparison = compareValues(left.weightKg, right.weightKg);
+    if (option === "newest" && dateComparison !== 0) return -dateComparison;
+    if (option === "oldest" && dateComparison !== 0) return dateComparison;
+    if (option === "weightDesc" && weightComparison !== 0) return -weightComparison;
+    if (option === "weightAsc" && weightComparison !== 0) return weightComparison;
+    if ((option === "weightDesc" || option === "weightAsc") && dateComparison !== 0) return -dateComparison;
+    return left.id.localeCompare(right.id);
+  });
+}
 
 type InventorySummaryContainer = {
   id: string;
