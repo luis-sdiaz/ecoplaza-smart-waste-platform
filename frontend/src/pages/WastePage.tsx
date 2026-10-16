@@ -23,7 +23,7 @@ import {
   type WasteErrorCode,
   type WasteStatus,
 } from "../services/wasteService";
-import { filterWasteHistory } from "../services/coreWorkflow";
+import { filterWasteHistory, sortWasteHistory, type WasteSortOption } from "../services/coreWorkflow";
 import { saveWasteCsv, type WasteCsvLabels } from "../services/wasteCsv";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import {
@@ -115,6 +115,7 @@ function UserWastePage({ userId }: { userId: string }) {
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
   const [containerFilter, setContainerFilter] = useState("all");
   const [recordSearch, setRecordSearch] = useState("");
+  const [sortOption, setSortOption] = useState<WasteSortOption>("newest");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
@@ -253,9 +254,10 @@ function UserWastePage({ userId }: { userId: string }) {
     timestampRange,
     recordSearch,
   );
+  const visibleRemoteRecords = sortWasteHistory(filteredRemoteRecords, sortOption);
   const hasActiveFilters = statusFilter !== "all" || categoryFilter !== "all" ||
     containerFilter !== "all" || activeDateRange !== null || recordSearch.trim() !== "";
-  const tableRecords: WasteRecord[] = filteredRemoteRecords.map((record) => ({
+  const tableRecords: WasteRecord[] = visibleRemoteRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
     weight: record.weightKg,
@@ -292,7 +294,7 @@ function UserWastePage({ userId }: { userId: string }) {
   };
 
   const exportWasteHistory = async (): Promise<void> => {
-    if (filteredRemoteRecords.length === 0 || isExporting) return;
+    if (visibleRemoteRecords.length === 0 || isExporting) return;
     setIsExporting(true);
     setNotification(null);
     const labels: WasteCsvLabels = {
@@ -303,7 +305,7 @@ function UserWastePage({ userId }: { userId: string }) {
       statuses: { registered: t("common.registered"), available: t("common.available"), sold: t("common.sold") },
     };
     try {
-      const result = await saveWasteCsv(filteredRemoteRecords, containerCodes, labels,
+      const result = await saveWasteCsv(visibleRemoteRecords, containerCodes, labels,
         i18n.resolvedLanguage === "en" ? "en" : "es",
         `ecoplaza-waste-${new Date().toISOString().slice(0, 10)}.csv`);
       if (result === "saved") showNotification("success", "waste.exportSuccessTitle", "waste.exportSuccessDescription");
@@ -339,7 +341,7 @@ function UserWastePage({ userId }: { userId: string }) {
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("waste.remoteDescription")}</p>
           </div>
           <div className="flex shrink-0 gap-2">
-            <button type="button" disabled={filteredRemoteRecords.length === 0 || isExporting || loadError !== null}
+            <button type="button" disabled={visibleRemoteRecords.length === 0 || isExporting || loadError !== null}
               onClick={() => void exportWasteHistory()}
               className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60">
               {isExporting ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
@@ -360,6 +362,20 @@ function UserWastePage({ userId }: { userId: string }) {
             <input type="search" value={recordSearch} disabled={isLoading || loadError !== null}
               onChange={(event) => setRecordSearch(event.target.value)} placeholder={t("waste.recordSearchPlaceholder")}
               className="w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface py-2 pr-3 pl-10 text-sm text-ecoplaza-text" />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("waste.sortLabel")}</span>
+            <select
+              value={sortOption}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setSortOption(event.target.value as WasteSortOption)}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            >
+              <option value="newest">{t("waste.sortNewest")}</option>
+              <option value="oldest">{t("waste.sortOldest")}</option>
+              <option value="weightDesc">{t("waste.sortWeightDesc")}</option>
+              <option value="weightAsc">{t("waste.sortWeightAsc")}</option>
+            </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("waste.statusFilter")}</span>

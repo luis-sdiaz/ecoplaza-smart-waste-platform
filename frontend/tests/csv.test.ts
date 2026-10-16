@@ -280,6 +280,16 @@ test("exports the supplied filtered waste history with localized values", () => 
   assert.equal(csv.includes("RES-"), false);
 });
 
+test("preserves the selected waste-history order in CSV", () => {
+  const records = [
+    { id: "waste-heavy", recordNumber: "2", containerId: "container-1", category: "organic" as const, weightKg: 9, registeredAt: "2026-10-14T14:00:00.000Z", status: "available" as const },
+    { id: "waste-light", recordNumber: "1", containerId: "container-1", category: "organic" as const, weightKg: 1, registeredAt: "2026-10-15T14:00:00.000Z", status: "available" as const },
+  ];
+  const labels = { recordNumber: "Record", id: "UUID", category: "Category", weightKg: "Weight", container: "Container", registeredAt: "Date", status: "Status", categories: { organic: "Organic", recyclable: "Recyclable", nonRecyclable: "Other" }, statuses: { registered: "Registered", available: "Available", sold: "Sold" } };
+  const csv = createWasteCsv(records, new Map([["container-1", "CTR-1"]]), labels, "en");
+  assert.ok(csv.indexOf("waste-heavy") < csv.indexOf("waste-light"));
+});
+
 test("exports only supplied available inventory records", () => {
   const records = [{ id: "record-id", recordNumber: "7", containerId: "container-1", category: "recyclable" as const, weightKg: 4.125, registeredAt: "2026-10-15T15:00:00.000Z", status: "available" as const }];
   const labels = { recordNumber: "Record", container: "Container", category: "Category", weightKg: "Weight", registeredAt: "Date", categories: { organic: "Organic", recyclable: "Recyclable", nonRecyclable: "Other" } };

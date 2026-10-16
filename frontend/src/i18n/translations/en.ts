@@ -237,6 +237,8 @@ const en = {
     emptyDescription: "Register your first waste record to store it securely in PostgreSQL.",
     statusFilter: "Status", allStatuses: "All statuses",
     recordSearchLabel: "Search by record number", recordSearchPlaceholder: "Search record number...",
+    sortLabel: "Sort", sortNewest: "Newest first", sortOldest: "Oldest first",
+    sortWeightDesc: "Highest weight", sortWeightAsc: "Lowest weight",
     categoryFilter: "Category", allCategories: "All categories", clearFilters: "Clear filters",
     containerFilter: "Container", allContainers: "All containers",
     startDate: "Start date", endDate: "End date", applyDateRange: "Apply dates",

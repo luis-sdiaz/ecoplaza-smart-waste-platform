@@ -237,6 +237,8 @@ const es = {
     emptyDescription: "Registra tu primer residuo para guardarlo de forma segura en PostgreSQL.",
     statusFilter: "Estado", allStatuses: "Todos los estados",
     recordSearchLabel: "Buscar por número de registro", recordSearchPlaceholder: "Buscar número de registro...",
+    sortLabel: "Ordenar", sortNewest: "Más recientes", sortOldest: "Más antiguos",
+    sortWeightDesc: "Mayor peso", sortWeightAsc: "Menor peso",
     categoryFilter: "Categoría", allCategories: "Todas las categorías", clearFilters: "Limpiar filtros",
     containerFilter: "Contenedor", allContainers: "Todos los contenedores",
     startDate: "Fecha inicial", endDate: "Fecha final", applyDateRange: "Aplicar fechas",
