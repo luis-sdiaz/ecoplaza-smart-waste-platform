@@ -6,6 +6,7 @@ import { createBuyerCsv } from "../src/services/buyerCsv.ts";
 import { createWasteCsv } from "../src/services/wasteCsv.ts";
 import { createInventoryCsv } from "../src/services/inventoryCsv.ts";
 import { createContainerCsv } from "../src/services/containerCsv.ts";
+import { createBuyerPurchaseCsv } from "../src/services/buyerPurchaseCsv.ts";
 import { escapeCsvValue } from "../src/services/csvService.ts";
 import { getCsvCategoryLabels } from "../src/services/csvCategoryLabels.ts";
 import en from "../src/i18n/translations/en.ts";
@@ -254,6 +255,20 @@ test("exports supplied containers in their visible order with complete identifie
   assert.ok(englishCsv.indexOf("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa") < englishCsv.indexOf("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"));
   assert.ok(englishCsv.includes("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb,'=UNSAFE,2026-10-14T14:00:00.000Z"));
   assert.ok(spanishCsv.includes("UUID;Code;Created"));
+});
+
+test("exports only the selected buyer's real purchase history", () => {
+  const selectedBuyerId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const sales = [
+    { id: "11111111-1111-4111-8111-111111111111", buyerId: selectedBuyerId, wasteRecordId: "33333333-3333-4333-8333-333333333333", weightKg: 2.5, unitPrice: 1200, totalValue: 3000, soldAt: "2026-10-15T14:00:00.000Z", buyerName: "Selected", wasteRecordNumber: "1", category: "organic" as const },
+    { id: "22222222-2222-4222-8222-222222222222", buyerId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", wasteRecordId: "44444444-4444-4444-8444-444444444444", weightKg: 1, unitPrice: 900, totalValue: 900, soldAt: "2026-10-14T14:00:00.000Z", buyerName: "Other", wasteRecordNumber: "2", category: "recyclable" as const },
+  ];
+  const labels = { reference: "Sale UUID", completedAt: "Date", category: "Category", weightKg: "Weight", unitPriceCop: "Unit price", totalValueCop: "Total", categories: { organic: "Organic", recyclable: "Recyclable", nonRecyclable: "Other" } };
+
+  const csv = createBuyerPurchaseCsv(sales, selectedBuyerId, labels, "en");
+
+  assert.ok(csv.includes("11111111-1111-4111-8111-111111111111,2026-10-15T14:00:00.000Z,Organic,2.5,1200,3000"));
+  assert.equal(csv.includes("22222222-2222-4222-8222-222222222222"), false);
 });
 
 test("exports the supplied filtered waste history with localized values", () => {

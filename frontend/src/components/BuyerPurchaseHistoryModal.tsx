@@ -1,9 +1,13 @@
-import { AlertTriangle, Database, LoaderCircle, RefreshCw, X } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import type { Buyer } from "../services/buyerService";
 import type { SaleHistoryItem } from "../services/salesService";
 import { useDialogFocus } from "../hooks/useDialogFocus";
+import { saveBuyerPurchaseCsv } from "../services/buyerPurchaseCsv";
+import type { SalesCsvLabels } from "../services/salesCsv";
+import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 
 interface BuyerPurchaseHistoryModalProps {
   buyer: Buyer;
@@ -23,6 +27,8 @@ function BuyerPurchaseHistoryModal({
   onClose,
 }: BuyerPurchaseHistoryModalProps) {
   const { t, i18n } = useTranslation();
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState<"success" | "error" | null>(null);
   const dialogRef = useDialogFocus(onClose);
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
@@ -33,6 +39,37 @@ function BuyerPurchaseHistoryModal({
     maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
 
+  const exportPurchases = async (): Promise<void> => {
+    if (isExporting || isLoading || error !== null || sales.length === 0) return;
+
+    setIsExporting(true);
+    setExportStatus(null);
+    const labels: SalesCsvLabels = {
+      reference: t("buyers.purchaseCsv.saleId"),
+      completedAt: t("buyers.purchaseCsv.soldAt"),
+      category: t("buyers.purchaseCsv.category"),
+      weightKg: t("buyers.purchaseCsv.weightKg"),
+      unitPriceCop: t("buyers.purchaseCsv.unitPrice"),
+      totalValueCop: t("buyers.purchaseCsv.totalValue"),
+      categories: getCsvCategoryLabels(t),
+    };
+
+    try {
+      const result = await saveBuyerPurchaseCsv(
+        sales,
+        buyer.id,
+        labels,
+        i18n.resolvedLanguage === "en" ? "en" : "es",
+        `ecoplaza-buyer-purchases-${buyer.id}-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      if (result === "saved") setExportStatus("success");
+    } catch {
+      setExportStatus("error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="buyer-history-title">
       <section className="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface shadow-2xl">
@@ -41,12 +78,30 @@ function BuyerPurchaseHistoryModal({
             <h2 id="buyer-history-title" className="text-lg font-semibold text-ecoplaza-text">{t("buyers.purchaseHistoryTitle")}</h2>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.purchaseHistoryDescription", { name: buyer.name })}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label={t("buyers.closePurchaseHistory")} className="rounded-lg p-2 text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text">
-            <X size={19} aria-hidden="true" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isLoading || error !== null || sales.length === 0 || isExporting}
+              onClick={() => void exportPurchases()}
+              className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-border px-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isExporting
+                ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
+                : <Download size={16} aria-hidden="true" />}
+              {isExporting ? t("buyers.exportingPurchases") : t("buyers.exportPurchases")}
+            </button>
+            <button type="button" onClick={onClose} aria-label={t("buyers.closePurchaseHistory")} className="rounded-lg p-2 text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text">
+              <X size={19} aria-hidden="true" />
+            </button>
+          </div>
         </header>
 
         <div className="max-h-[calc(85vh-92px)] overflow-auto p-5">
+          {exportStatus !== null && (
+            <p role={exportStatus === "error" ? "alert" : "status"} className={`mb-4 rounded-xl border px-4 py-3 text-sm ${exportStatus === "error" ? "border-ecoplaza-danger/30 bg-ecoplaza-danger/10 text-ecoplaza-danger" : "border-ecoplaza-primary/30 bg-ecoplaza-primary/10 text-ecoplaza-primary"}`}>
+              {t(exportStatus === "success" ? "buyers.purchaseExportSuccess" : "buyers.purchaseExportError")}
+            </p>
+          )}
           {isLoading ? (
             <div role="status" className="flex min-h-48 items-center justify-center gap-3 text-sm text-ecoplaza-text-muted">
               <LoaderCircle className="animate-spin text-ecoplaza-primary" size={20} aria-hidden="true" />
