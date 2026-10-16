@@ -479,7 +479,7 @@ const es = {
     dismissNotification: "Cerrar notificación",
     csv: {
       section: "Sección", metric: "Indicador", value: "Valor", unit: "Unidad",
-      summary: "Resumen", distribution: "Distribución histórica", category: "Categoría",
+      summary: "Resumen", distribution: "Distribución histórica", salesPerformance: "Rendimiento comercial", category: "Categoría",
       weight: "Peso (kg)", percentage: "Porcentaje (%)", countUnit: "registros",
       copUnit: "COP", period: "Período", from: "Desde", to: "Hasta", allTime: "Todo el historial",
     },

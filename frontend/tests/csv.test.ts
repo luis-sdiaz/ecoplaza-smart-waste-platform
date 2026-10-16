@@ -12,7 +12,7 @@ import es from "../src/i18n/translations/es.ts";
 
 const reportLabels = {
   section: "Section", metric: "Metric", value: "Value", unit: "Unit",
-  summary: "Summary", distribution: "Distribution", category: "Category",
+  summary: "Summary", distribution: "Distribution", salesPerformance: "Sales performance", category: "Category",
   weight: "Weight (kg)", percentage: "Percentage (%)", records: "Records",
   historicalWeight: "Historical", availableWeight: "Available", soldWeight: "Sold",
   sales: "Sales", grossRevenue: "Revenue", countUnit: "records", kilogramsUnit: "kg",
@@ -114,7 +114,10 @@ test("creates a Spanish Excel-compatible report without losing numeric precision
 });
 
 test("uses English CSV separators and decimal points", () => {
-  const csv = createReportCsv(report, reportLabels, "en", {
+  const csv = createReportCsv({
+    ...report,
+    salesByCategory: [{ category: "organic", salesCount: 2, soldWeightKg: 2.5, grossSalesValue: 9000.125 }],
+  }, reportLabels, "en", {
     startDate: "2026-10-01", endDate: "2026-10-13",
   });
 
@@ -123,6 +126,8 @@ test("uses English CSV separators and decimal points", () => {
   assert.ok(csv.includes("Period,To,2026-10-13,"));
   assert.ok(csv.includes("Summary,Revenue,11000.25,COP"));
   assert.ok(csv.includes("Distribution,Organic,12.5,100"));
+  assert.ok(csv.includes("Sales performance,Category,Sales,Sold,Revenue"));
+  assert.ok(csv.includes("Sales performance,Organic,2,2.5,9000.125"));
 });
 
 test("creates sales CSV with complete UUIDs and bilingual professional headers", () => {

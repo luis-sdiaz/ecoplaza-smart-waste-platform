@@ -165,6 +165,7 @@ function UserReportsPage({ userId }: { userId: string }) {
       unit: t("reports.csv.unit"),
       summary: t("reports.csv.summary"),
       distribution: t("reports.csv.distribution"),
+      salesPerformance: t("reports.csv.salesPerformance"),
       category: t("reports.csv.category"),
       weight: t("reports.csv.weight"),
       percentage: t("reports.csv.percentage"),
