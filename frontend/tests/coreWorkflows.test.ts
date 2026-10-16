@@ -9,6 +9,7 @@ import {
   sortSalesHistory,
   summarizeAvailableStockByContainer,
 } from "../src/services/coreWorkflow.ts";
+import { filterAndSortBuyers } from "../src/services/buyerFilters.ts";
 
 process.env.TZ = "America/Bogota";
 
@@ -26,6 +27,16 @@ const dateRange = {
   startInclusive: "2026-10-01T05:00:00.000Z",
   endExclusive: "2026-10-11T05:00:00.000Z",
 };
+
+test("filters buyers by available contact together with search and sorting", () => {
+  const buyers = [
+    { id: "buyer-b", name: "Beta", email: null, phone: "1234567", createdAt: "2026-01-01", updatedAt: "2026-01-02" },
+    { id: "buyer-a", name: "Álvaro", email: "alvaro@example.test", phone: null, createdAt: "2026-01-01", updatedAt: "2026-01-03" },
+    { id: "buyer-c", name: "Alpine", email: "alpine@example.test", phone: "7654321", createdAt: "2026-01-01", updatedAt: "2026-01-04" },
+  ];
+  assert.deepEqual(filterAndSortBuyers(buyers, "al", "name_asc", "es-CO", "email").map(({ id }) => id), ["buyer-c", "buyer-a"]);
+  assert.deepEqual(filterAndSortBuyers(buyers, "", "updated_desc", "es-CO", "phone").map(({ id }) => id), ["buyer-c", "buyer-b"]);
+});
 
 test("filters sales by date, buyer, and both filters without including the end boundary", () => {
   assert.deepEqual(filterSalesHistory(sales, dateRange).map(({ id }) => id), ["sale-1", "sale-2", "sale-3"]);
