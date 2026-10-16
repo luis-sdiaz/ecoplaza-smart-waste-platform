@@ -21,11 +21,12 @@ const userA = { id: "11111111-1111-4111-8111-111111111111" };
 const userB = { id: "22222222-2222-4222-8222-222222222222" };
 
 function statistics(availableWeightKg: number, grossSalesValue: number) {
+  const soldWeightKg = grossSalesValue === 0 ? 0 : 5;
   return {
     wasteRecordCount: availableWeightKg === 0 ? 0 : 2,
-    totalRegisteredWeightKg: availableWeightKg,
+    totalRegisteredWeightKg: availableWeightKg + soldWeightKg,
     availableWeightKg,
-    soldWeightKg: grossSalesValue === 0 ? 0 : 5,
+    soldWeightKg,
     salesCount: grossSalesValue === 0 ? 0 : 1,
     grossSalesValue,
     distribution: [
@@ -77,6 +78,9 @@ describe("Dashboard live commercial metrics", () => {
     expect(await within(metric("dashboard.availableInventory")).findByText("25 kg")).toBeTruthy();
     expect(await within(metric("dashboard.revenue")).findByText(/COP.*1,250\.5/)).toBeTruthy();
     expect(within(metric("dashboard.revenue")).getByText("dashboard.realData")).toBeTruthy();
+    expect(await screen.findByText("dashboard.materialStatusAvailable")).toBeTruthy();
+    expect(screen.getByText("25 kg · 83.3%")).toBeTruthy();
+    expect(screen.getByText("5 kg · 16.7%")).toBeTruthy();
   });
 
   test("shows real zero values and an empty commercial state", async () => {
@@ -87,6 +91,7 @@ describe("Dashboard live commercial metrics", () => {
     expect(await screen.findByText("dashboard.emptyCommercialActivity")).toBeTruthy();
     expect(within(metric("dashboard.availableInventory")).getByText("0 kg")).toBeTruthy();
     expect(within(metric("dashboard.revenue")).getByText(/COP.*0/)).toBeTruthy();
+    expect(screen.getByText("dashboard.materialStatusEmpty")).toBeTruthy();
   });
 
   test("clears user A metrics and ignores its delayed response after switching to B", async () => {

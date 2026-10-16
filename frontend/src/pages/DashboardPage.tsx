@@ -13,6 +13,7 @@ import {
   type ReportWasteCategory,
 } from "../services/reportService";
 import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
+import { calculateMaterialStatusBreakdown } from "../services/dashboardMaterialStatus";
 
 type StatisticsResult = Awaited<ReturnType<typeof getReportStatistics>>;
 
@@ -107,6 +108,11 @@ function UserDashboardPage({ userId }: { userId: string }) {
   const realBadge = t("dashboard.realData");
   const hasNoCommercialActivity = !realValueUnavailable && statistics !== null &&
     statistics.availableWeightKg === 0 && statistics.salesCount === 0;
+  const materialStatus = statistics === null ? null : calculateMaterialStatusBreakdown(
+    statistics.totalRegisteredWeightKg,
+    statistics.availableWeightKg,
+    statistics.soldWeightKg,
+  );
 
   return (
     <section className="p-8">
@@ -171,6 +177,41 @@ function UserDashboardPage({ userId }: { userId: string }) {
           description={t("dashboard.accumulatedSales")}
           badge={realBadge}
         />
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.materialStatus")}</h2>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.materialStatusDescription")}</p>
+          </div>
+          <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{realBadge}</span>
+        </div>
+        {realValueUnavailable || materialStatus === null ? (
+          <p className="mt-4 text-sm text-ecoplaza-text-muted">{realValueUnavailable ? "—" : t("dashboard.materialStatusUnavailable")}</p>
+        ) : materialStatus.totalWeightKg === 0 ? (
+          <p className="mt-4 text-sm text-ecoplaza-text-muted">{t("dashboard.materialStatusEmpty")}</p>
+        ) : (
+          <>
+            <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-ecoplaza-background" aria-label={t("dashboard.materialStatusChart")}>
+              <span className="bg-ecoplaza-primary" style={{ width: `${materialStatus.availablePercentage}%` }} />
+              <span className="bg-ecoplaza-secondary" style={{ width: `${materialStatus.soldPercentage}%` }} />
+              <span className="bg-ecoplaza-text-muted/30" style={{ width: `${materialStatus.otherPercentage}%` }} />
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {([
+                ["available", materialStatus.availableWeightKg, materialStatus.availablePercentage],
+                ["sold", materialStatus.soldWeightKg, materialStatus.soldPercentage],
+                ["other", materialStatus.otherWeightKg, materialStatus.otherPercentage],
+              ] as const).map(([status, weight, percentage]) => (
+                <div key={status} className="rounded-xl bg-ecoplaza-background p-3">
+                  <p className="text-xs text-ecoplaza-text-muted">{t(`dashboard.materialStatus${status[0].toUpperCase()}${status.slice(1)}`)}</p>
+                  <p className="mt-1 text-sm font-semibold text-ecoplaza-text">{formatWeight(weight)} · {formatPercentage(percentage)}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="mt-8">

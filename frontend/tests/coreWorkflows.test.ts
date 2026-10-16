@@ -11,6 +11,7 @@ import {
   summarizeAvailableStockByContainer,
 } from "../src/services/coreWorkflow.ts";
 import { filterAndSortBuyers } from "../src/services/buyerFilters.ts";
+import { calculateMaterialStatusBreakdown } from "../src/services/dashboardMaterialStatus.ts";
 
 process.env.TZ = "America/Bogota";
 
@@ -37,6 +38,18 @@ test("filters buyers by available contact together with search and sorting", () 
   ];
   assert.deepEqual(filterAndSortBuyers(buyers, "al", "name_asc", "es-CO", "email").map(({ id }) => id), ["buyer-c", "buyer-a"]);
   assert.deepEqual(filterAndSortBuyers(buyers, "", "updated_desc", "es-CO", "phone").map(({ id }) => id), ["buyer-c", "buyer-b"]);
+});
+
+test("calculates honest material status shares including other and zero states", () => {
+  assert.deepEqual(calculateMaterialStatusBreakdown(20, 8, 7), {
+    totalWeightKg: 20, availableWeightKg: 8, soldWeightKg: 7, otherWeightKg: 5,
+    availablePercentage: 40, soldPercentage: 35, otherPercentage: 25,
+  });
+  assert.deepEqual(calculateMaterialStatusBreakdown(0, 0, 0), {
+    totalWeightKg: 0, availableWeightKg: 0, soldWeightKg: 0, otherWeightKg: 0,
+    availablePercentage: 0, soldPercentage: 0, otherPercentage: 0,
+  });
+  assert.equal(calculateMaterialStatusBreakdown(10, 8, 4), null);
 });
 
 test("filters sales by date, buyer, and both filters without including the end boundary", () => {
