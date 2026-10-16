@@ -281,6 +281,10 @@ const es = {
     databaseError: "No fue posible cargar el inventario. Inténtalo nuevamente.",
     lot: "Registro", weight: "Peso", container: "Contenedor",
     unknownContainer: "Contenedor no disponible",
+    exportCsv: "Exportar CSV", exporting: "Exportando...", dismissNotification: "Cerrar notificación",
+    exportSuccessTitle: "Inventario exportado", exportSuccessDescription: "Las existencias disponibles filtradas se guardaron correctamente.",
+    exportErrorTitle: "No se exportó el inventario", exportErrorDescription: "No fue posible guardar el archivo CSV. Inténtalo nuevamente.",
+    csv: { recordNumber: "Número de registro", container: "Contenedor", category: "Categoría", weightKg: "Peso disponible (kg)", registeredAt: "Fecha de registro (ISO 8601)" },
   },
   buyers: {
     eyebrow: "Red comercial", title: "Compradores",

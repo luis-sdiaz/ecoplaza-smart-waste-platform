@@ -281,6 +281,10 @@ const en = {
     databaseError: "Inventory could not be loaded. Please try again.",
     lot: "Record", weight: "Weight", container: "Container",
     unknownContainer: "Container unavailable",
+    exportCsv: "Export CSV", exporting: "Exporting...", dismissNotification: "Dismiss notification",
+    exportSuccessTitle: "Inventory exported", exportSuccessDescription: "The filtered available stock was saved successfully.",
+    exportErrorTitle: "Inventory not exported", exportErrorDescription: "The CSV file could not be saved. Please try again.",
+    csv: { recordNumber: "Record number", container: "Container", category: "Category", weightKg: "Available weight (kg)", registeredAt: "Registration date (ISO 8601)" },
   },
   buyers: {
     eyebrow: "Commercial network", title: "Buyers",

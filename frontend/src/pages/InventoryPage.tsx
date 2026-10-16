@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Database, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import ContainerStockSummaryTable from "../components/ContainerStockSummaryTable";
 import InventoryTable, { type InventoryItem } from "../components/InventoryTable";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
+import SuccessToast from "../components/SuccessToast";
 import {
   listContainers,
   type Container,
@@ -22,6 +23,8 @@ import {
   filterAvailableInventory,
   summarizeAvailableStockByContainer,
 } from "../services/coreWorkflow";
+import { saveInventoryCsv, type InventoryCsvLabels } from "../services/inventoryCsv";
+import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 
 type InventoryResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
 type ContainersResult = Awaited<ReturnType<typeof listContainers>>;
@@ -42,6 +45,8 @@ function InventoryPageContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
   const [containerFilter, setContainerFilter] = useState("all");
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
 
   const applyResults = useCallback((
     inventoryResult: InventoryResult,
@@ -116,6 +121,27 @@ function InventoryPageContent() {
     container: containerCodes.get(record.containerId) ?? t("inventory.unknownContainer"),
     registeredAt: record.registeredAt,
   }));
+
+  const exportInventory = async (): Promise<void> => {
+    if (filteredRecords.length === 0 || isExporting) return;
+    setIsExporting(true);
+    setExportNotice(null);
+    const labels: InventoryCsvLabels = {
+      recordNumber: t("inventory.csv.recordNumber"), container: t("inventory.csv.container"),
+      category: t("inventory.csv.category"), weightKg: t("inventory.csv.weightKg"),
+      registeredAt: t("inventory.csv.registeredAt"), categories: getCsvCategoryLabels(t),
+    };
+    try {
+      const result = await saveInventoryCsv(filteredRecords, containerCodes, labels,
+        i18n.resolvedLanguage === "en" ? "en" : "es",
+        `ecoplaza-inventory-${new Date().toISOString().slice(0, 10)}.csv`);
+      if (result === "saved") setExportNotice("success");
+    } catch {
+      setExportNotice("error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <section className="p-8">
@@ -210,9 +236,12 @@ function InventoryPageContent() {
               {t("inventory.availableMaterialsDescription")}
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-            {t("inventory.realData")}
-          </span>
+          <button type="button" disabled={filteredRecords.length === 0 || isExporting || loadError !== null}
+            onClick={() => void exportInventory()}
+            className="flex shrink-0 items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60">
+            {isExporting ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+            {isExporting ? t("inventory.exporting") : t("inventory.exportCsv")}
+          </button>
         </div>
 
         <div className="mt-4 flex flex-wrap justify-end gap-3">
@@ -268,6 +297,12 @@ function InventoryPageContent() {
           ) : null}
         </div>
       </div>
+      {exportNotice !== null && (
+        <SuccessToast title={t(exportNotice === "success" ? "inventory.exportSuccessTitle" : "inventory.exportErrorTitle")}
+          description={t(exportNotice === "success" ? "inventory.exportSuccessDescription" : "inventory.exportErrorDescription")}
+          closeLabel={t("inventory.dismissNotification")} variant={exportNotice === "error" ? "error" : "success"}
+          onClose={() => setExportNotice(null)} />
+      )}
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { createReportCsv } from "../src/services/reportCsvService.ts";
 import { createSalesCsv } from "../src/services/salesCsv.ts";
 import { createBuyerCsv } from "../src/services/buyerCsv.ts";
 import { createWasteCsv } from "../src/services/wasteCsv.ts";
+import { createInventoryCsv } from "../src/services/inventoryCsv.ts";
 import { escapeCsvValue } from "../src/services/csvService.ts";
 import { getCsvCategoryLabels } from "../src/services/csvCategoryLabels.ts";
 import en from "../src/i18n/translations/en.ts";
@@ -237,4 +238,12 @@ test("exports the supplied filtered waste history with localized values", () => 
   assert.ok(csv.includes("Registro;UUID;Categoría;Peso;Contenedor;Fecha;Estado"));
   assert.ok(csv.includes("42;bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb;Orgánicos;2,5;CON-001;2026-10-15T14:00:00.000Z;Disponible"));
   assert.equal(csv.includes("RES-"), false);
+});
+
+test("exports only supplied available inventory records", () => {
+  const records = [{ id: "record-id", recordNumber: "7", containerId: "container-1", category: "recyclable" as const, weightKg: 4.125, registeredAt: "2026-10-15T15:00:00.000Z", status: "available" as const }];
+  const labels = { recordNumber: "Record", container: "Container", category: "Category", weightKg: "Weight", registeredAt: "Date", categories: { organic: "Organic", recyclable: "Recyclable", nonRecyclable: "Other" } };
+  const csv = createInventoryCsv(records, new Map([["container-1", "CON-001"]]), labels, "en");
+  assert.ok(csv.includes("Record,Container,Category,Weight,Date"));
+  assert.ok(csv.includes("7,CON-001,Recyclable,4.125,2026-10-15T15:00:00.000Z"));
 });
