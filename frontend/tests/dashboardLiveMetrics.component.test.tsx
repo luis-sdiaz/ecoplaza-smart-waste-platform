@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const authState = vi.hoisted(() => ({ current: { user: null } as { user: TestUser | null } }));
 const reportMocks = vi.hoisted(() => ({ getReportStatistics: vi.fn() }));
+const salesMocks = vi.hoisted(() => ({ listSales: vi.fn() }));
 
 type TestUser = { id: string };
 
@@ -56,6 +57,10 @@ vi.mock("../src/services/reportService", () => ({
   getReportStatistics: reportMocks.getReportStatistics,
 }));
 
+vi.mock("../src/services/salesService", () => ({
+  listSales: salesMocks.listSales,
+}));
+
 import DashboardPage from "../src/pages/DashboardPage";
 
 afterEach(cleanup);
@@ -63,6 +68,8 @@ afterEach(cleanup);
 beforeEach(() => {
   authState.current = { user: userA };
   reportMocks.getReportStatistics.mockReset();
+  salesMocks.listSales.mockReset();
+  salesMocks.listSales.mockResolvedValue({ ok: true, data: [] });
 });
 
 function metric(title: string): HTMLElement {
@@ -70,6 +77,61 @@ function metric(title: string): HTMLElement {
 }
 
 describe("Dashboard live commercial metrics", () => {
+  test("renders at most five newest real sales", async () => {
+    reportMocks.getReportStatistics.mockResolvedValueOnce(success(statistics(10, 100)));
+    const sales = Array.from({ length: 6 }, (_, index) => ({
+      id: `sale-${index}`,
+      buyerId: userA.id,
+      wasteRecordId: `waste-${index}`,
+      weightKg: index + 1,
+      unitPrice: 100,
+      totalValue: (index + 1) * 100,
+      soldAt: `2026-10-${String(index + 10).padStart(2, "0")}T12:00:00.000Z`,
+      buyerName: `Buyer ${index}`,
+      wasteRecordNumber: String(index + 1),
+      category: "organic" as const,
+    }));
+    salesMocks.listSales.mockResolvedValueOnce({ ok: true, data: sales });
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByTitle("sale-5")).toBeTruthy();
+    expect(screen.getByTitle("sale-1")).toBeTruthy();
+    expect(screen.queryByTitle("sale-0")).toBeNull();
+    expect(screen.getAllByTitle(/^sale-/)).toHaveLength(5);
+  });
+
+  test("isolates recent-sales failures from dashboard metrics", async () => {
+    reportMocks.getReportStatistics.mockResolvedValueOnce(success(statistics(25, 1250.5)));
+    salesMocks.listSales.mockResolvedValueOnce({ ok: false, error: { code: "network_error", retryable: true } });
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("dashboard.recentSalesError")).toBeTruthy();
+    expect(within(metric("dashboard.availableInventory")).getByText("25 kg")).toBeTruthy();
+    expect(within(metric("dashboard.revenue")).getByText(/COP.*1,250\.5/)).toBeTruthy();
+  });
+
+  test("does not show stale recent sales after an account switch", async () => {
+    const pendingA = deferred<{ ok: true; data: Array<Record<string, unknown>> }>();
+    const saleB = { id: "sale-b", buyerId: userB.id, wasteRecordId: "waste-b", weightKg: 2, unitPrice: 100, totalValue: 200, soldAt: "2026-10-16T12:00:00.000Z", buyerName: "Buyer B", wasteRecordNumber: "2", category: "recyclable" as const };
+    const saleA = { ...saleB, id: "sale-a", buyerId: userA.id, buyerName: "Buyer A" };
+    salesMocks.listSales.mockReturnValueOnce(pendingA.promise).mockResolvedValueOnce({ ok: true, data: [saleB] });
+    reportMocks.getReportStatistics.mockResolvedValue(success(statistics(10, 200)));
+
+    const view = render(<DashboardPage />);
+    authState.current = { user: userB };
+    view.rerender(<DashboardPage />);
+    expect(await screen.findByTitle("sale-b")).toBeTruthy();
+
+    await act(async () => {
+      pendingA.resolve({ ok: true, data: [saleA] });
+      await pendingA.promise;
+    });
+    expect(screen.queryByTitle("sale-a")).toBeNull();
+    expect(screen.getByTitle("sale-b")).toBeTruthy();
+  });
+
   test("renders available inventory and gross sales from the report service", async () => {
     reportMocks.getReportStatistics.mockResolvedValueOnce(success(statistics(25, 1250.5)));
 

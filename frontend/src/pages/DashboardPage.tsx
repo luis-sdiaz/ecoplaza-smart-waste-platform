@@ -14,6 +14,8 @@ import {
 } from "../services/reportService";
 import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import { calculateMaterialStatusBreakdown } from "../services/dashboardMaterialStatus";
+import { listSales, type SaleHistoryItem } from "../services/salesService";
+import { sortSalesHistory } from "../services/coreWorkflow";
 
 type StatisticsResult = Awaited<ReturnType<typeof getReportStatistics>>;
 
@@ -27,9 +29,13 @@ function getStatisticsErrorKey(code: ReportErrorCode): string {
 function UserDashboardPage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
+  const salesRevisionRef = useRef(0);
   const [statistics, setStatistics] = useState<ReportStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [recentSales, setRecentSales] = useState<SaleHistoryItem[]>([]);
+  const [areRecentSalesLoading, setAreRecentSalesLoading] = useState(true);
+  const [recentSalesError, setRecentSalesError] = useState(false);
 
   const applyStatisticsResult = useCallback((
     result: StatisticsResult,
@@ -65,6 +71,29 @@ function UserDashboardPage({ userId }: { userId: string }) {
     }
   }, [applyStatisticsResult]);
 
+  const loadRecentSales = useCallback(async (): Promise<void> => {
+    const requestRevision = ++salesRevisionRef.current;
+    setAreRecentSalesLoading(true);
+    setRecentSalesError(false);
+
+    try {
+      const result = await listSales();
+      if (requestRevision !== salesRevisionRef.current) return;
+      if (!result.ok) {
+        setRecentSales([]);
+        setRecentSalesError(true);
+      } else {
+        setRecentSales(sortSalesHistory(result.data, "newest").slice(0, 5));
+      }
+    } catch {
+      if (requestRevision !== salesRevisionRef.current) return;
+      setRecentSales([]);
+      setRecentSalesError(true);
+    } finally {
+      if (requestRevision === salesRevisionRef.current) setAreRecentSalesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const requestRevision = ++requestRevisionRef.current;
 
@@ -84,6 +113,30 @@ function UserDashboardPage({ userId }: { userId: string }) {
     };
   }, [applyStatisticsResult, userId]);
 
+  useEffect(() => {
+    const requestRevision = ++salesRevisionRef.current;
+    void listSales()
+      .then((result) => {
+        if (requestRevision !== salesRevisionRef.current) return;
+        if (!result.ok) {
+          setRecentSales([]);
+          setRecentSalesError(true);
+        } else {
+          setRecentSales(sortSalesHistory(result.data, "newest").slice(0, 5));
+        }
+        setAreRecentSalesLoading(false);
+      })
+      .catch(() => {
+        if (requestRevision !== salesRevisionRef.current) return;
+        setRecentSales([]);
+        setRecentSalesError(true);
+        setAreRecentSalesLoading(false);
+      });
+    return () => {
+      salesRevisionRef.current += 1;
+    };
+  }, [userId]);
+
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const formatWeight = (weightKg: number): string =>
     `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(weightKg)} ${t("common.kg")}`;
@@ -97,6 +150,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
     currency: "COP",
     maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
+  const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
   const realValueUnavailable = isLoading || loadError !== null || statistics === null;
   const metricValue = (format: (data: ReportStatistics) => string): string =>
     realValueUnavailable || statistics === null ? "—" : format(statistics);
@@ -211,6 +265,56 @@ function UserDashboardPage({ userId }: { userId: string }) {
               ))}
             </div>
           </>
+        )}
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.recentSales")}</h2>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesDescription")}</p>
+          </div>
+          <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{realBadge}</span>
+        </div>
+        {areRecentSalesLoading ? (
+          <div role="status" className="mt-4 flex min-h-24 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
+            <LoaderCircle className="animate-spin text-ecoplaza-primary" size={18} aria-hidden="true" />
+            {t("dashboard.loadingRecentSales")}
+          </div>
+        ) : recentSalesError ? (
+          <div role="alert" className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-ecoplaza-danger/10 px-4 py-3 text-sm text-ecoplaza-danger">
+            <span>{t("dashboard.recentSalesError")}</span>
+            <button type="button" onClick={() => void loadRecentSales()} className="flex items-center gap-2 rounded-lg border border-ecoplaza-danger/30 px-3 py-2 font-medium">
+              <RefreshCw size={15} aria-hidden="true" />{t("dashboard.retry")}
+            </button>
+          </div>
+        ) : recentSales.length === 0 ? (
+          <p className="mt-4 rounded-xl bg-ecoplaza-background px-4 py-6 text-center text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesEmpty")}</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px]">
+              <thead>
+                <tr className="text-left text-xs text-ecoplaza-text-muted">
+                  <th className="px-3 py-2 font-semibold">{t("common.date")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("buyers.buyer")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("common.category")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("sales.soldWeight")}</th>
+                  <th className="px-3 py-2 text-right font-semibold">{t("sales.total")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentSales.map((sale) => (
+                  <tr key={sale.id} className="border-t border-ecoplaza-border" title={sale.id}>
+                    <td className="px-3 py-3 text-sm text-ecoplaza-text-muted">{dateFormatter.format(new Date(sale.soldAt))}</td>
+                    <td className="px-3 py-3 text-sm text-ecoplaza-text">{sale.buyerName}</td>
+                    <td className="px-3 py-3 text-sm text-ecoplaza-text">{t(`common.${sale.category}`)}</td>
+                    <td className="px-3 py-3 text-sm text-ecoplaza-text">{formatWeight(sale.weightKg)}</td>
+                    <td className="px-3 py-3 text-right text-sm font-medium text-ecoplaza-text">{currencyFormatter.format(sale.totalValue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
