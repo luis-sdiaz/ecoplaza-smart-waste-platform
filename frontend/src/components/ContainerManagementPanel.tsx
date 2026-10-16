@@ -5,6 +5,7 @@ import {
   Box,
   CircleCheck,
   Database,
+  Download,
   LoaderCircle,
   Plus,
   RefreshCw,
@@ -19,6 +20,8 @@ import {
   type ContainerErrorCode,
 } from "../services/containerService";
 import { sortContainers, type ContainerSortOption } from "../services/coreWorkflow";
+import { saveContainerCsv, type ContainerCsvLabels } from "../services/containerCsv";
+import SuccessToast from "./SuccessToast";
 
 type Feedback = {
   tone: "error" | "success";
@@ -44,6 +47,8 @@ function ContainerManagementPanel() {
   const [sortOption, setSortOption] = useState<ContainerSortOption>("codeAsc");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const isFormUnavailable = isCreating || isLoading || loadError !== null;
@@ -133,6 +138,32 @@ function ContainerManagementPanel() {
     ? "border-ecoplaza-primary/30 bg-ecoplaza-primary/10 text-ecoplaza-primary"
     : "border-ecoplaza-danger/30 bg-ecoplaza-danger/10 text-ecoplaza-danger";
 
+  const exportContainers = async (): Promise<void> => {
+    if (visibleContainers.length === 0 || isExporting) return;
+
+    setIsExporting(true);
+    setExportNotice(null);
+    const labels: ContainerCsvLabels = {
+      id: t("containers.csv.id"),
+      code: t("containers.csv.code"),
+      createdAt: t("containers.csv.createdAt"),
+    };
+
+    try {
+      const result = await saveContainerCsv(
+        visibleContainers,
+        labels,
+        i18n.resolvedLanguage === "en" ? "en" : "es",
+        `ecoplaza-containers-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      if (result === "saved") setExportNotice("success");
+    } catch {
+      setExportNotice("error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <section className="mt-10" aria-labelledby="user-containers-title">
       <div className="flex items-end justify-between gap-4">
@@ -150,9 +181,22 @@ function ContainerManagementPanel() {
           </p>
         </div>
         {!isLoading && !loadError && (
-          <span className="shrink-0 text-sm font-medium text-ecoplaza-text-muted">
-            {t("containers.count", { count: visibleContainers.length })}
-          </span>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="text-sm font-medium text-ecoplaza-text-muted">
+              {t("containers.count", { count: visibleContainers.length })}
+            </span>
+            <button
+              type="button"
+              disabled={visibleContainers.length === 0 || isExporting}
+              onClick={() => void exportContainers()}
+              className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-border px-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isExporting
+                ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
+                : <Download size={16} aria-hidden="true" />}
+              {isExporting ? t("containers.exporting") : t("containers.exportCsv")}
+            </button>
+          </div>
         )}
       </div>
 
@@ -309,6 +353,15 @@ function ContainerManagementPanel() {
           </button>
         </form>
       </div>
+      {exportNotice !== null && (
+        <SuccessToast
+          title={t(exportNotice === "success" ? "containers.exportSuccessTitle" : "containers.exportErrorTitle")}
+          description={t(exportNotice === "success" ? "containers.exportSuccessDescription" : "containers.exportErrorDescription")}
+          closeLabel={t("containers.dismissNotification")}
+          variant={exportNotice === "error" ? "error" : "success"}
+          onClose={() => setExportNotice(null)}
+        />
+      )}
     </section>
   );
 }

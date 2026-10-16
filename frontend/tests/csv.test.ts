@@ -5,6 +5,7 @@ import { createSalesCsv } from "../src/services/salesCsv.ts";
 import { createBuyerCsv } from "../src/services/buyerCsv.ts";
 import { createWasteCsv } from "../src/services/wasteCsv.ts";
 import { createInventoryCsv } from "../src/services/inventoryCsv.ts";
+import { createContainerCsv } from "../src/services/containerCsv.ts";
 import { escapeCsvValue } from "../src/services/csvService.ts";
 import { getCsvCategoryLabels } from "../src/services/csvCategoryLabels.ts";
 import en from "../src/i18n/translations/en.ts";
@@ -237,6 +238,22 @@ test("exports only the supplied filtered buyers with complete identifiers and sa
   assert.ok(englishCsv.includes("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa,'=Unsafe Buyer,buyer@example.test,"));
   assert.ok(spanishCsv.includes("Identifier;Name;Email;Phone"));
   assert.equal(spanishCsv.includes("BUY-"), false);
+});
+
+test("exports supplied containers in their visible order with complete identifiers", () => {
+  const containers = [
+    { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", code: "CTR-2", createdAt: "2026-10-15T14:00:00.000Z" },
+    { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", code: "=UNSAFE", createdAt: "2026-10-14T14:00:00.000Z" },
+  ];
+  const labels = { id: "UUID", code: "Code", createdAt: "Created" };
+
+  const englishCsv = createContainerCsv(containers, labels, "en");
+  const spanishCsv = createContainerCsv(containers, labels, "es");
+
+  assert.ok(englishCsv.includes("UUID,Code,Created"));
+  assert.ok(englishCsv.indexOf("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa") < englishCsv.indexOf("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"));
+  assert.ok(englishCsv.includes("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb,'=UNSAFE,2026-10-14T14:00:00.000Z"));
+  assert.ok(spanishCsv.includes("UUID;Code;Created"));
 });
 
 test("exports the supplied filtered waste history with localized values", () => {
