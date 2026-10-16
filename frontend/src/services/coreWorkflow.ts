@@ -13,10 +13,38 @@ type SalesSortRecord = {
   totalValue: number;
 };
 
+type ContainerSortRecord = {
+  id: string;
+  code: string;
+  createdAt: string;
+};
+
+export type ContainerSortOption = "codeAsc" | "codeDesc" | "newest" | "oldest";
+
 export type SalesSortOption = "newest" | "oldest" | "valueDesc" | "valueAsc";
 
 function compareValues(left: number, right: number): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+export function sortContainers<T extends ContainerSortRecord>(
+  containers: readonly T[],
+  option: ContainerSortOption,
+  locale: string,
+): T[] {
+  return [...containers].sort((left, right) => {
+    const codeComparison = left.code.localeCompare(right.code, locale, {
+      numeric: true,
+      sensitivity: "base",
+    });
+    const dateComparison = compareValues(Date.parse(left.createdAt), Date.parse(right.createdAt));
+
+    if (option === "codeAsc" && codeComparison !== 0) return codeComparison;
+    if (option === "codeDesc" && codeComparison !== 0) return -codeComparison;
+    if (option === "newest" && dateComparison !== 0) return -dateComparison;
+    if (option === "oldest" && dateComparison !== 0) return dateComparison;
+    return left.id.localeCompare(right.id);
+  });
 }
 
 export function sortSalesHistory<T extends SalesSortRecord>(

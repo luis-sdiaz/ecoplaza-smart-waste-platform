@@ -195,6 +195,8 @@ const es = {
     emptyTitle: "Todavía no tienes contenedores",
     emptyDescription: "Registra el código de tu primer contenedor para comenzar. No se añadirán datos demostrativos automáticamente.",
     searchLabel: "Buscar contenedores", searchPlaceholder: "Buscar por código...", clearSearch: "Limpiar búsqueda",
+    sortLabel: "Ordenar contenedores", sortCodeAsc: "Código A–Z", sortCodeDesc: "Código Z–A",
+    sortNewest: "Más recientes", sortOldest: "Más antiguos",
     noSearchResultsTitle: "No hay contenedores para esta búsqueda",
     noSearchResultsDescription: "Prueba con otro código de contenedor.",
     registerTitle: "Registrar contenedor",

@@ -18,6 +18,7 @@ import {
   type Container,
   type ContainerErrorCode,
 } from "../services/containerService";
+import { sortContainers, type ContainerSortOption } from "../services/coreWorkflow";
 
 type Feedback = {
   tone: "error" | "success";
@@ -40,6 +41,7 @@ function ContainerManagementPanel() {
   const [containers, setContainers] = useState<Container[]>([]);
   const [code, setCode] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortOption, setSortOption] = useState<ContainerSortOption>("codeAsc");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -120,11 +122,12 @@ function ContainerManagementPanel() {
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase(locale);
-  const visibleContainers = normalizedSearch === ""
+  const filteredContainers = normalizedSearch === ""
     ? containers
     : containers.filter((container) =>
         container.code.toLocaleLowerCase(locale).includes(normalizedSearch)
       );
+  const visibleContainers = sortContainers(filteredContainers, sortOption, locale);
   const hasActiveSearch = normalizedSearch !== "";
   const feedbackClass = feedback?.tone === "success"
     ? "border-ecoplaza-primary/30 bg-ecoplaza-primary/10 text-ecoplaza-primary"
@@ -156,27 +159,43 @@ function ContainerManagementPanel() {
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-4">
         <div className="min-h-48 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
           {!isLoading && !loadError && containers.length > 0 && (
-            <div className="relative mb-4">
-              <label htmlFor="container-search" className="sr-only">{t("containers.searchLabel")}</label>
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted" size={17} strokeWidth={1.8} aria-hidden="true" />
-              <input
-                id="container-search"
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={t("containers.searchPlaceholder")}
-                className="h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 pl-10 pr-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted/75 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
-              />
-              {hasActiveSearch && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  aria-label={t("containers.clearSearch")}
-                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+            <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
+              <div className="relative">
+                <label htmlFor="container-search" className="sr-only">{t("containers.searchLabel")}</label>
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted" size={17} strokeWidth={1.8} aria-hidden="true" />
+                <input
+                  id="container-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={t("containers.searchPlaceholder")}
+                  className="h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 pl-10 pr-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted/75 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                />
+                {hasActiveSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    aria-label={t("containers.clearSearch")}
+                    className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                  >
+                    <X size={16} strokeWidth={1.8} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              <div>
+                <label htmlFor="container-sort" className="sr-only">{t("containers.sortLabel")}</label>
+                <select
+                  id="container-sort"
+                  value={sortOption}
+                  onChange={(event) => setSortOption(event.target.value as ContainerSortOption)}
+                  className="h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 px-3 text-sm text-ecoplaza-text focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
                 >
-                  <X size={16} strokeWidth={1.8} aria-hidden="true" />
-                </button>
-              )}
+                  <option value="codeAsc">{t("containers.sortCodeAsc")}</option>
+                  <option value="codeDesc">{t("containers.sortCodeDesc")}</option>
+                  <option value="newest">{t("containers.sortNewest")}</option>
+                  <option value="oldest">{t("containers.sortOldest")}</option>
+                </select>
+              </div>
             </div>
           )}
           {isLoading ? (

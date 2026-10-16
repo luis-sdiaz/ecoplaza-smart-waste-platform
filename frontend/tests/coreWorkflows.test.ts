@@ -7,6 +7,7 @@ import {
   filterWasteHistory,
   RequestRevisionTracker,
   sortAvailableInventory,
+  sortContainers,
   sortSalesHistory,
   summarizeAvailableStockByContainer,
 } from "../src/services/coreWorkflow.ts";
@@ -29,6 +30,20 @@ const dateRange = {
   startInclusive: "2026-10-01T05:00:00.000Z",
   endExclusive: "2026-10-11T05:00:00.000Z",
 };
+
+test("sorts containers by localized code and creation date with deterministic ties", () => {
+  const containers = [
+    { id: "container-c", code: "CTR-10", createdAt: "2026-10-02T12:00:00.000Z" },
+    { id: "container-b", code: "ctr-2", createdAt: "2026-10-03T12:00:00.000Z" },
+    { id: "container-a", code: "ÁREA-1", createdAt: "2026-10-03T12:00:00.000Z" },
+  ];
+
+  assert.deepEqual(sortContainers(containers, "codeAsc", "es-CO").map(({ id }) => id), ["container-a", "container-b", "container-c"]);
+  assert.deepEqual(sortContainers(containers, "codeDesc", "es-CO").map(({ id }) => id), ["container-c", "container-b", "container-a"]);
+  assert.deepEqual(sortContainers(containers, "newest", "es-CO").map(({ id }) => id), ["container-a", "container-b", "container-c"]);
+  assert.deepEqual(sortContainers(containers, "oldest", "es-CO").map(({ id }) => id), ["container-c", "container-a", "container-b"]);
+  assert.deepEqual(containers.map(({ id }) => id), ["container-c", "container-b", "container-a"]);
+});
 
 test("filters buyers by available contact together with search and sorting", () => {
   const buyers = [

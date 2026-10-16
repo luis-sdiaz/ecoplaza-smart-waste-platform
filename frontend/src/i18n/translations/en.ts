@@ -195,6 +195,8 @@ const en = {
     emptyTitle: "You don't have any containers yet",
     emptyDescription: "Register your first container code to get started. Demo data will not be added automatically.",
     searchLabel: "Search containers", searchPlaceholder: "Search by code...", clearSearch: "Clear search",
+    sortLabel: "Sort containers", sortCodeAsc: "Code A–Z", sortCodeDesc: "Code Z–A",
+    sortNewest: "Newest first", sortOldest: "Oldest first",
     noSearchResultsTitle: "No containers match your search",
     noSearchResultsDescription: "Try a different container code.",
     registerTitle: "Register container",
