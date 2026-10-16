@@ -47,6 +47,7 @@ type WasteFilterRecord = {
 
 type WasteHistoryFilterRecord = WasteFilterRecord & {
   registeredAt: string;
+  recordNumber?: string;
 };
 
 export type WasteStatusFilter = WasteFilterRecord["status"] | "all";
@@ -146,12 +147,20 @@ export function filterWasteHistory<T extends WasteHistoryFilterRecord>(
   category: WasteCategoryFilter = "all",
   containerId = "all",
   dateRange?: TimestampRange,
+  recordSearch = "",
 ): T[] {
+  const normalizedSearch = recordSearch.replace(/\s+/g, "").toLocaleLowerCase();
   return records.filter((record) =>
     (status === "all" || record.status === status) &&
     (category === "all" || record.category === category) &&
     (containerId === "all" || record.containerId === containerId) &&
-    (dateRange === undefined || isTimestampInRange(record.registeredAt, dateRange))
+    (dateRange === undefined || isTimestampInRange(record.registeredAt, dateRange)) &&
+    (normalizedSearch === "" || (() => {
+      const recordNumber = record.recordNumber ?? "";
+      const normalizedNumber = recordNumber.replace(/\s+/g, "").toLocaleLowerCase();
+      const visibleNumber = `res-${recordNumber.padStart(3, "0")}`.toLocaleLowerCase();
+      return normalizedNumber.includes(normalizedSearch) || visibleNumber.includes(normalizedSearch);
+    })())
   );
 }
 

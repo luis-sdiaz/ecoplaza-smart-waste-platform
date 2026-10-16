@@ -66,10 +66,10 @@ test("sorts the complete result after combining sales filters", () => {
 });
 
 const wasteRecords = [
-  { id: "waste-1", status: "available", category: "organic", containerId: "container-a", registeredAt: "2026-10-01T05:00:00.000Z" },
-  { id: "waste-2", status: "sold", category: "organic", containerId: "container-a", registeredAt: "2026-10-05T12:00:00.000Z" },
-  { id: "waste-3", status: "available", category: "recyclable", containerId: "container-b", registeredAt: "2026-10-11T04:59:59.999Z" },
-  { id: "waste-4", status: "registered", category: "nonRecyclable", containerId: "container-b", registeredAt: "2026-10-11T05:00:00.000Z" },
+  { id: "waste-1", recordNumber: "1", status: "available", category: "organic", containerId: "container-a", registeredAt: "2026-10-01T05:00:00.000Z" },
+  { id: "waste-2", recordNumber: "AB-2", status: "sold", category: "organic", containerId: "container-a", registeredAt: "2026-10-05T12:00:00.000Z" },
+  { id: "waste-3", recordNumber: "3", status: "available", category: "recyclable", containerId: "container-b", registeredAt: "2026-10-11T04:59:59.999Z" },
+  { id: "waste-4", recordNumber: "4", status: "registered", category: "nonRecyclable", containerId: "container-b", registeredAt: "2026-10-11T05:00:00.000Z" },
 ] as const;
 
 test("keeps only available inventory and combines category and container filters", () => {
@@ -137,6 +137,12 @@ test("combines waste history date and container filters with local-day boundarie
     startInclusive: "2026-11-01T05:00:00.000Z",
     endExclusive: "2026-12-01T05:00:00.000Z",
   }), []);
+});
+
+test("searches waste history by record number with spaces and case normalization", () => {
+  assert.deepEqual(filterWasteHistory(wasteRecords, "all", "all", "all", undefined, " res - 001 ").map(({ id }) => id), ["waste-1"]);
+  assert.deepEqual(filterWasteHistory(wasteRecords, "sold", "organic", "container-a", dateRange, " ab-2 ").map(({ id }) => id), ["waste-2"]);
+  assert.deepEqual(filterWasteHistory(wasteRecords, "all", "all", "all", undefined, "missing"), []);
 });
 
 test("collects every page using inclusive database ranges", async () => {

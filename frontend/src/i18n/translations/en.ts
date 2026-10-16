@@ -224,6 +224,7 @@ const en = {
     emptyTitle: "You don't have any waste records yet",
     emptyDescription: "Register your first waste record to store it securely in PostgreSQL.",
     statusFilter: "Status", allStatuses: "All statuses",
+    recordSearchLabel: "Search by record number", recordSearchPlaceholder: "Search record number...",
     categoryFilter: "Category", allCategories: "All categories", clearFilters: "Clear filters",
     containerFilter: "Container", allContainers: "All containers",
     startDate: "Start date", endDate: "End date", applyDateRange: "Apply dates",

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
@@ -114,6 +114,7 @@ function UserWastePage({ userId }: { userId: string }) {
   const [statusFilter, setStatusFilter] = useState<WasteStatus | "all">("all");
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
   const [containerFilter, setContainerFilter] = useState("all");
+  const [recordSearch, setRecordSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
@@ -250,9 +251,10 @@ function UserWastePage({ userId }: { userId: string }) {
     categoryFilter,
     containerFilter,
     timestampRange,
+    recordSearch,
   );
   const hasActiveFilters = statusFilter !== "all" || categoryFilter !== "all" ||
-    containerFilter !== "all" || activeDateRange !== null;
+    containerFilter !== "all" || activeDateRange !== null || recordSearch.trim() !== "";
   const tableRecords: WasteRecord[] = filteredRemoteRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
@@ -282,6 +284,7 @@ function UserWastePage({ userId }: { userId: string }) {
     setStatusFilter("all");
     setCategoryFilter("all");
     setContainerFilter("all");
+    setRecordSearch("");
     setStartDate("");
     setEndDate("");
     setActiveDateRange(null);
@@ -351,6 +354,13 @@ function UserWastePage({ userId }: { userId: string }) {
         </div>
 
         <div className="mt-4 flex flex-wrap justify-end gap-3">
+          <label className="relative min-w-56 flex-1">
+            <span className="sr-only">{t("waste.recordSearchLabel")}</span>
+            <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ecoplaza-text-muted" size={17} aria-hidden="true" />
+            <input type="search" value={recordSearch} disabled={isLoading || loadError !== null}
+              onChange={(event) => setRecordSearch(event.target.value)} placeholder={t("waste.recordSearchPlaceholder")}
+              className="w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface py-2 pr-3 pl-10 text-sm text-ecoplaza-text" />
+          </label>
           <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("waste.statusFilter")}</span>
             <select
