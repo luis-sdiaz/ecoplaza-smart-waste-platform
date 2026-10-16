@@ -298,6 +298,8 @@ const en = {
     permissionError: "You do not have permission to view this inventory.",
     databaseError: "Inventory could not be loaded. Please try again.",
     lot: "Record", weight: "Weight", container: "Container",
+    storageAge: "Storage age", storageAgeDays_one: "{{count}} day", storageAgeDays_other: "{{count}} days",
+    ageUnavailable: "Unavailable", invalidDate: "Invalid date",
     unknownContainer: "Container unavailable",
     exportCsv: "Export CSV", exporting: "Exporting...", dismissNotification: "Dismiss notification",
     exportSuccessTitle: "Inventory exported", exportSuccessDescription: "The filtered available stock was saved successfully.",

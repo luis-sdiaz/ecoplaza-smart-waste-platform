@@ -298,6 +298,8 @@ const es = {
     permissionError: "No tienes permiso para consultar este inventario.",
     databaseError: "No fue posible cargar el inventario. Inténtalo nuevamente.",
     lot: "Registro", weight: "Peso", container: "Contenedor",
+    storageAge: "Antigüedad", storageAgeDays_one: "{{count}} día", storageAgeDays_other: "{{count}} días",
+    ageUnavailable: "No disponible", invalidDate: "Fecha inválida",
     unknownContainer: "Contenedor no disponible",
     exportCsv: "Exportar CSV", exporting: "Exportando...", dismissNotification: "Cerrar notificación",
     exportSuccessTitle: "Inventario exportado", exportSuccessDescription: "Las existencias disponibles filtradas se guardaron correctamente.",

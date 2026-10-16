@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { calculateStorageAgeDays } from "../services/inventoryAge";
 
 export interface InventoryItem {
   id: string;
@@ -23,8 +24,13 @@ function InventoryTable({ items }: InventoryTableProps) {
         : t("common.nonRecyclable");
   const formatWeight = (weightKg: number) =>
     `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(weightKg)} ${t("common.kg")}`;
-  const formatDate = (registeredAt: string) =>
-    new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(registeredAt));
+  const formatDate = (registeredAt: string) => {
+    const date = new Date(registeredAt);
+    return Number.isNaN(date.getTime())
+      ? t("inventory.invalidDate")
+      : new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date);
+  };
+  const now = new Date();
 
   return (
     <div className="overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
@@ -50,11 +56,17 @@ function InventoryTable({ items }: InventoryTableProps) {
             <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
               {t("common.date")}
             </th>
+
+            <th className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
+              {t("inventory.storageAge")}
+            </th>
           </tr>
         </thead>
 
         <tbody>
-          {items.map((item) => (
+          {items.map((item) => {
+            const storageAgeDays = calculateStorageAgeDays(item.registeredAt, now);
+            return (
             <tr key={item.id} className="border-t border-ecoplaza-border">
               <td className="px-5 py-4 text-sm font-medium text-ecoplaza-text">
                 {item.id}
@@ -75,8 +87,14 @@ function InventoryTable({ items }: InventoryTableProps) {
               <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
                 {formatDate(item.registeredAt)}
               </td>
+
+              <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
+                {storageAgeDays === null
+                  ? t("inventory.ageUnavailable")
+                  : t("inventory.storageAgeDays", { count: storageAgeDays })}
+              </td>
             </tr>
-          ))}
+          );})}
         </tbody>
       </table>
     </div>
