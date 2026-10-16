@@ -46,6 +46,12 @@ test("filters sales by date, buyer, and both filters without including the end b
   assert.deepEqual(filterSalesHistory(sales, dateRange, "33333333-3333-4333-8333-333333333333"), []);
 });
 
+test("combines sales category with buyer and date filters", () => {
+  const categorizedSales = sales.map((sale, index) => ({ ...sale, category: index % 2 === 0 ? "organic" as const : "recyclable" as const }));
+  assert.deepEqual(filterSalesHistory(categorizedSales, dateRange, buyerA, "organic").map(({ id }) => id), ["sale-1", "sale-3"]);
+  assert.deepEqual(filterSalesHistory(categorizedSales, dateRange, undefined, "recyclable").map(({ id }) => id), ["sale-2"]);
+});
+
 test("sorts completed sales by date and value with deterministic tie breakers", () => {
   assert.deepEqual(sortSalesHistory(sales, "newest").map(({ id }) => id), ["sale-4", "sale-3", "sale-2", "sale-1"]);
   assert.deepEqual(sortSalesHistory(sales, "oldest").map(({ id }) => id), ["sale-1", "sale-2", "sale-3", "sale-4"]);

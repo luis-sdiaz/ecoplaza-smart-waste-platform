@@ -4,6 +4,7 @@ import { isSafeWasteWeightKg } from "./wasteWeight.ts";
 type SalesFilterRecord = {
   buyerId: string;
   soldAt: string;
+  category?: "organic" | "recyclable" | "nonRecyclable";
 };
 
 type SalesSortRecord = {
@@ -138,10 +139,12 @@ export function filterSalesHistory<T extends SalesFilterRecord>(
   sales: readonly T[],
   dateRange?: TimestampRange,
   buyerId?: string,
+  category: WasteCategoryFilter = "all",
 ): T[] {
   return sales.filter((sale) =>
     (dateRange === undefined || isTimestampInRange(sale.soldAt, dateRange)) &&
-    (buyerId === undefined || sale.buyerId === buyerId)
+    (buyerId === undefined || sale.buyerId === buyerId) &&
+    (category === "all" || sale.category === category)
   );
 }
 

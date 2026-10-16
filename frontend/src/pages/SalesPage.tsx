@@ -37,6 +37,7 @@ import {
   RequestRevisionTracker,
   sortSalesHistory,
   type SalesSortOption,
+  type WasteCategoryFilter,
 } from "../services/coreWorkflow";
 import {
   MAX_MONETARY_FRACTION_DIGITS,
@@ -111,6 +112,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
   const [dateRangeError, setDateRangeError] = useState<string | null>(null);
   const [buyerFilter, setBuyerFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<WasteCategoryFilter>("all");
   const [sortOption, setSortOption] = useState<SalesSortOption>("newest");
 
   const applyLoadResults = useCallback((
@@ -223,6 +225,7 @@ function UserSalesPage({ userId }: { userId: string }) {
           [historyItem],
           activeTimestampRange,
           buyerFilter || undefined,
+          categoryFilter,
         ).length === 1) {
           setSales((current) => [historyItem, ...current.filter((sale) => sale.id !== historyItem.id)]);
         }
@@ -310,20 +313,21 @@ function UserSalesPage({ userId }: { userId: string }) {
     maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
   const weightFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const totalRevenue = sumSafeMonetaryValues(sales.map((sale) => sale.totalValue));
-  const totalWeight = sales.reduce((total, sale) => total + sale.weightKg, 0);
-  const servedBuyers = new Set(sales.map((sale) => sale.buyerId)).size;
+  const categorySales = filterSalesHistory(sales, undefined, undefined, categoryFilter);
+  const totalRevenue = sumSafeMonetaryValues(categorySales.map((sale) => sale.totalValue));
+  const totalWeight = categorySales.reduce((total, sale) => total + sale.weightKg, 0);
+  const servedBuyers = new Set(categorySales.map((sale) => sale.buyerId)).size;
   const metricsUnavailable = isLoading || loadError !== null;
   const registrationUnavailable = metricsUnavailable || buyers.length === 0 || wasteRecords.length === 0;
-  const exportUnavailable = metricsUnavailable || sales.length === 0 || isExporting;
-  const isFiltered = activeDateRange !== null || buyerFilter !== "";
+  const exportUnavailable = metricsUnavailable || categorySales.length === 0 || isExporting;
+  const isFiltered = activeDateRange !== null || buyerFilter !== "" || categoryFilter !== "all";
   const emptyState = getSalesEmptyState(
     buyerFilter !== "",
     activeDateRange !== null,
   );
   const metricBadge = t(isFiltered ? "sales.filteredData" : "sales.realData");
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
-  const sortedSales = sortSalesHistory(sales, sortOption);
+  const sortedSales = sortSalesHistory(categorySales, sortOption);
   const formatInputDate = (value: string): string =>
     dateFormatter.format(new Date(`${value}T00:00:00`));
 
@@ -347,6 +351,7 @@ function UserSalesPage({ userId }: { userId: string }) {
     setDateRangeError(null);
     setActiveDateRange(null);
     setBuyerFilter("");
+    setCategoryFilter("all");
     void loadSalesData();
   };
 
@@ -379,6 +384,7 @@ function UserSalesPage({ userId }: { userId: string }) {
         i18n.resolvedLanguage === "en" ? "en" : "es",
         activeTimestampRange,
         buyerFilter || undefined,
+        categoryFilter,
         sortOption,
       );
 
@@ -452,12 +458,23 @@ function UserSalesPage({ userId }: { userId: string }) {
               <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.dateRangeDescription")}</p>
             </div>
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto] xl:items-end">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto_auto] xl:items-end">
             <label className="text-xs font-medium text-ecoplaza-text-muted">
               {t("sales.buyerFilter")}
               <select value={buyerFilter} disabled={isLoading} onChange={(event) => applyBuyerFilter(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text">
                 <option value="">{t("sales.allBuyers")}</option>
                 {buyers.map((buyer) => <option key={buyer.id} value={buyer.id}>{buyer.name}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-ecoplaza-text-muted">
+              {t("sales.categoryFilter")}
+              <select value={categoryFilter} disabled={isLoading}
+                onChange={(event) => setCategoryFilter(event.target.value as WasteCategoryFilter)}
+                className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text">
+                <option value="all">{t("sales.allCategories")}</option>
+                <option value="organic">{t("common.organic")}</option>
+                <option value="recyclable">{t("common.recyclable")}</option>
+                <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
               </select>
             </label>
             <label className="text-xs font-medium text-ecoplaza-text-muted">
@@ -520,11 +537,11 @@ function UserSalesPage({ userId }: { userId: string }) {
                 {t("sales.retry")}
               </button>
             </div>
-          ) : sales.length === 0 ? (
+          ) : categorySales.length === 0 ? (
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
               <Database size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t(emptyState.titleKey)}</h3>
-              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(emptyState.descriptionKey)}</p>
+              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t(categoryFilter === "all" ? emptyState.titleKey : "sales.emptyCategoryTitle")}</h3>
+              <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t(categoryFilter === "all" ? emptyState.descriptionKey : "sales.emptyCategoryDescription")}</p>
             </div>
           ) : (
             <SalesTable sales={sortedSales} onViewDetails={setSelectedSale} />
