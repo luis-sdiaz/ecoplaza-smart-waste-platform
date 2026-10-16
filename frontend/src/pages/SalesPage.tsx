@@ -44,6 +44,7 @@ import {
   sumSafeMonetaryValues,
 } from "../services/monetarySafety";
 import { getSalesEmptyState } from "../services/salesEmptyState";
+import { calculateAverageSellingPricePerKg } from "../services/salesMetrics";
 
 const demoSales: DemoSale[] = [
   { id: "SAL-001", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 80, total: 640000, date: "03/10/2026", status: "Completada" },
@@ -316,6 +317,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const weightFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
   const visibleSales = filterSalesHistory(sales, undefined, undefined, categoryFilter, saleSearch);
   const totalRevenue = sumSafeMonetaryValues(visibleSales.map((sale) => sale.totalValue));
+  const averageSellingPrice = calculateAverageSellingPricePerKg(visibleSales);
   const totalWeight = visibleSales.reduce((total, sale) => total + sale.weightKg, 0);
   const servedBuyers = new Set(visibleSales.map((sale) => sale.buyerId)).size;
   const metricsUnavailable = isLoading || loadError !== null;
@@ -416,11 +418,12 @@ function UserSalesPage({ userId }: { userId: string }) {
     <section className="p-8">
       <PageHeader eyebrow={t("sales.eyebrow")} title={t("sales.title")} description={t("sales.description")} />
 
-      <div className="mt-8 grid grid-cols-4 gap-4">
+      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(visibleSales.length)} description={t("sales.operations")} badge={metricBadge} />
         <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable || totalRevenue === null ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} badge={metricBadge} />
         <MetricCard title={t("sales.soldMaterial")} value={metricsUnavailable ? "—" : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`} description={t("sales.quantitySold")} badge={metricBadge} />
         <MetricCard title={t("sales.servedBuyers")} value={metricsUnavailable ? "—" : String(servedBuyers)} description={t("sales.buyersWithSales")} badge={metricBadge} />
+        <MetricCard title={t("sales.averagePrice")} value={metricsUnavailable || averageSellingPrice === null ? "—" : currencyFormatter.format(averageSellingPrice)} description={t("sales.averagePriceDescription")} badge={metricBadge} />
       </div>
 
       <div className="mt-8">

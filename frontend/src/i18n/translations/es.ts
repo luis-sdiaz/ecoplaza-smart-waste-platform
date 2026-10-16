@@ -372,6 +372,7 @@ const es = {
     completedSales: "Ventas realizadas", operations: "Operaciones reales registradas",
     soldMaterial: "Material vendido", quantitySold: "Peso total comercializado",
     servedBuyers: "Compradores atendidos", buyersWithSales: "Compradores reales con ventas",
+    averagePrice: "Precio promedio por kg", averagePriceDescription: "Ingresos divididos por peso vendido",
     realData: "Datos reales", filteredData: "Período filtrado", realRevenueDescription: "Total generado por PostgreSQL",
     records: "Ventas registradas", realRecordsDescription: "Historial real de ventas confirmado por PostgreSQL.",
     dateRange: "Período de ventas", dateRangeDescription: "Filtra el historial por la fecha real de realización de cada venta.",

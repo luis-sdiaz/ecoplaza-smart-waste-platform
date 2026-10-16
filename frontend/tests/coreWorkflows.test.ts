@@ -14,6 +14,7 @@ import {
 import { filterAndSortBuyers } from "../src/services/buyerFilters.ts";
 import { calculateMaterialStatusBreakdown } from "../src/services/dashboardMaterialStatus.ts";
 import { summarizeBuyerPurchases } from "../src/services/buyerPurchaseSummary.ts";
+import { calculateAverageSellingPricePerKg } from "../src/services/salesMetrics.ts";
 
 process.env.TZ = "America/Bogota";
 
@@ -76,6 +77,17 @@ test("summarizes buyer purchases with exact weight and monetary arithmetic", () 
   assert.deepEqual(summarizeBuyerPurchases(purchases), { purchaseCount: 2, totalWeightKg: 0.3, totalValue: 0.3 });
   assert.deepEqual(summarizeBuyerPurchases([]), { purchaseCount: 0, totalWeightKg: 0, totalValue: 0 });
   assert.equal(summarizeBuyerPurchases([{ ...purchases[0], totalValue: Number.NaN }]), null);
+});
+
+test("calculates average selling price from filtered sale revenue and weight", () => {
+  assert.equal(calculateAverageSellingPricePerKg([]), null);
+  assert.equal(calculateAverageSellingPricePerKg([{ weightKg: 0, totalValue: 10 }]), null);
+  assert.equal(calculateAverageSellingPricePerKg([{ weightKg: 1.25, totalValue: 3125.5 }]), 2500.4);
+  assert.equal(calculateAverageSellingPricePerKg([
+    { weightKg: 0.1, totalValue: 100.1 },
+    { weightKg: 0.2, totalValue: 200.2 },
+  ]), 1001);
+  assert.equal(calculateAverageSellingPricePerKg([{ weightKg: 1, totalValue: Number.NaN }]), null);
 });
 
 test("filters sales by date, buyer, and both filters without including the end boundary", () => {
