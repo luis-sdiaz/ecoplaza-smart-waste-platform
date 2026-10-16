@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { AlertTriangle, Database, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
@@ -24,6 +24,8 @@ import {
   type WasteStatus,
 } from "../services/wasteService";
 import { filterWasteHistory } from "../services/coreWorkflow";
+import { saveWasteCsv, type WasteCsvLabels } from "../services/wasteCsv";
+import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import {
   isValidReportDateRange,
   toTimestampRange,
@@ -35,6 +37,7 @@ const WASTE_RECORDS_STORAGE_PREFIX = "ecoplaza-waste-records:";
 type WasteRegistrationNotification = {
   id: number;
   variant: "success" | "error";
+  titleKey: string;
   descriptionKey: string;
 };
 
@@ -116,6 +119,7 @@ function UserWastePage({ userId }: { userId: string }) {
   const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
   const [dateRangeError, setDateRangeError] = useState(false);
   const [notification, setNotification] = useState<WasteRegistrationNotification | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const requestRevisionRef = useRef(0);
   const isSubmittingRef = useRef(false);
   const notificationSequenceRef = useRef(0);
@@ -176,10 +180,11 @@ function UserWastePage({ userId }: { userId: string }) {
 
   const showNotification = (
     variant: WasteRegistrationNotification["variant"],
+    titleKey: string,
     descriptionKey: string,
   ): void => {
     notificationSequenceRef.current += 1;
-    setNotification({ id: notificationSequenceRef.current, variant, descriptionKey });
+    setNotification({ id: notificationSequenceRef.current, variant, titleKey, descriptionKey });
   };
 
   const closeNotification = useCallback((): void => {
@@ -203,7 +208,7 @@ function UserWastePage({ userId }: { userId: string }) {
       if (lifecycleRevision !== requestRevisionRef.current) return;
 
       if (!result.ok) {
-        showNotification("error", getWasteErrorKey(result.error.code));
+        showNotification("error", "waste.registerErrorTitle", getWasteErrorKey(result.error.code));
         return;
       }
 
@@ -225,10 +230,10 @@ function UserWastePage({ userId }: { userId: string }) {
       if (containersResult.ok) setContainers(containersResult.data);
 
       setIsModalOpen(false);
-      showNotification("success", "waste.registerSuccessDescription");
+      showNotification("success", "waste.registerSuccessTitle", "waste.registerSuccessDescription");
     } catch {
       if (lifecycleRevision === requestRevisionRef.current) {
-        showNotification("error", "waste.databaseError");
+        showNotification("error", "waste.registerErrorTitle", "waste.databaseError");
       }
     } finally {
       isSubmittingRef.current = false;
@@ -283,6 +288,29 @@ function UserWastePage({ userId }: { userId: string }) {
     setDateRangeError(false);
   };
 
+  const exportWasteHistory = async (): Promise<void> => {
+    if (filteredRemoteRecords.length === 0 || isExporting) return;
+    setIsExporting(true);
+    setNotification(null);
+    const labels: WasteCsvLabels = {
+      recordNumber: t("waste.csv.recordNumber"), id: t("waste.csv.id"),
+      category: t("waste.csv.category"), weightKg: t("waste.csv.weightKg"),
+      container: t("waste.csv.container"), registeredAt: t("waste.csv.registeredAt"),
+      status: t("waste.csv.status"), categories: getCsvCategoryLabels(t),
+      statuses: { registered: t("common.registered"), available: t("common.available"), sold: t("common.sold") },
+    };
+    try {
+      const result = await saveWasteCsv(filteredRemoteRecords, containerCodes, labels,
+        i18n.resolvedLanguage === "en" ? "en" : "es",
+        `ecoplaza-waste-${new Date().toISOString().slice(0, 10)}.csv`);
+      if (result === "saved") showNotification("success", "waste.exportSuccessTitle", "waste.exportSuccessDescription");
+    } catch {
+      showNotification("error", "waste.exportErrorTitle", "waste.exportErrorDescription");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <section className="p-8">
       <PageHeader eyebrow={t("waste.eyebrow")} title={t("waste.title")} description={t("waste.description")} />
@@ -307,14 +335,19 @@ function UserWastePage({ userId }: { userId: string }) {
             <h2 className="text-lg font-semibold text-ecoplaza-text">{t("waste.recentRecords")}</h2>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("waste.remoteDescription")}</p>
           </div>
-          <button
-            type="button"
-            disabled={registrationUnavailable}
-            onClick={() => { setNotification(null); setIsModalOpen(true); }}
-            className="shrink-0 rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            + {t("waste.registerButton")}
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button type="button" disabled={filteredRemoteRecords.length === 0 || isExporting || loadError !== null}
+              onClick={() => void exportWasteHistory()}
+              className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60">
+              {isExporting ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+              {isExporting ? t("waste.exporting") : t("waste.exportCsv")}
+            </button>
+            <button type="button" disabled={registrationUnavailable}
+              onClick={() => { setNotification(null); setIsModalOpen(true); }}
+              className="rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60">
+              + {t("waste.registerButton")}
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap justify-end gap-3">
@@ -469,7 +502,7 @@ function UserWastePage({ userId }: { userId: string }) {
       {notification && (
         <SuccessToast
           key={notification.id}
-          title={t(notification.variant === "success" ? "waste.registerSuccessTitle" : "waste.registerErrorTitle")}
+          title={t(notification.titleKey)}
           description={t(notification.descriptionKey)}
           closeLabel={t("waste.dismissNotification")}
           onClose={closeNotification}

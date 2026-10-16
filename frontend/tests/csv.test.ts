@@ -3,6 +3,7 @@ import test from "node:test";
 import { createReportCsv } from "../src/services/reportCsvService.ts";
 import { createSalesCsv } from "../src/services/salesCsv.ts";
 import { createBuyerCsv } from "../src/services/buyerCsv.ts";
+import { createWasteCsv } from "../src/services/wasteCsv.ts";
 import { escapeCsvValue } from "../src/services/csvService.ts";
 import { getCsvCategoryLabels } from "../src/services/csvCategoryLabels.ts";
 import en from "../src/i18n/translations/en.ts";
@@ -227,4 +228,13 @@ test("exports only the supplied filtered buyers with complete identifiers and sa
   assert.ok(englishCsv.includes("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa,'=Unsafe Buyer,buyer@example.test,"));
   assert.ok(spanishCsv.includes("Identifier;Name;Email;Phone"));
   assert.equal(spanishCsv.includes("BUY-"), false);
+});
+
+test("exports the supplied filtered waste history with localized values", () => {
+  const records = [{ id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", recordNumber: "42", containerId: "container-1", category: "organic" as const, weightKg: 2.5, registeredAt: "2026-10-15T14:00:00.000Z", status: "available" as const }];
+  const labels = { recordNumber: "Registro", id: "UUID", category: "Categoría", weightKg: "Peso", container: "Contenedor", registeredAt: "Fecha", status: "Estado", categories: { organic: "Orgánicos", recyclable: "Reciclables", nonRecyclable: "No aprovechables" }, statuses: { registered: "Registrado", available: "Disponible", sold: "Vendido" } };
+  const csv = createWasteCsv(records, new Map([["container-1", "CON-001"]]), labels, "es");
+  assert.ok(csv.includes("Registro;UUID;Categoría;Peso;Contenedor;Fecha;Estado"));
+  assert.ok(csv.includes("42;bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb;Orgánicos;2,5;CON-001;2026-10-15T14:00:00.000Z;Disponible"));
+  assert.equal(csv.includes("RES-"), false);
 });
