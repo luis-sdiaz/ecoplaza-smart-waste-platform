@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Database, LoaderCircle, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import BuyerFormModal from "../components/BuyerFormModal";
@@ -21,6 +21,7 @@ import {
   filterAndSortBuyers,
   type BuyerSortOption,
 } from "../services/buyerFilters";
+import { saveBuyerCsv, type BuyerCsvLabels } from "../services/buyerCsv";
 import {
   listSales,
   type SaleHistoryItem,
@@ -79,6 +80,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const [purchaseHistory, setPurchaseHistory] = useState<SaleHistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const applyLoadResult = useCallback((
     result: Awaited<ReturnType<typeof listBuyers>>,
@@ -234,6 +236,35 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const visibleBuyers = filterAndSortBuyers(buyers, searchQuery, sortOption, locale);
   const hasActiveSearch = searchQuery.trim() !== "";
 
+  const exportBuyers = async (): Promise<void> => {
+    if (visibleBuyers.length === 0 || isExporting) return;
+
+    setIsExporting(true);
+    setNotification(null);
+    const labels: BuyerCsvLabels = {
+      id: t("buyers.csv.id"),
+      name: t("buyers.csv.name"),
+      email: t("buyers.csv.email"),
+      phone: t("buyers.csv.phone"),
+    };
+
+    try {
+      const result = await saveBuyerCsv(
+        visibleBuyers,
+        labels,
+        i18n.resolvedLanguage === "en" ? "en" : "es",
+        `ecoplaza-buyers-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      if (result === "saved") {
+        showNotification("success", "buyers.exportSuccessTitle", "buyers.exportSuccessDescription");
+      }
+    } catch {
+      showNotification("error", "buyers.exportErrorTitle", "buyers.exportErrorDescription");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <section className="p-8">
       <PageHeader
@@ -274,14 +305,27 @@ function UserBuyersPage({ userId }: { userId: string }) {
             </div>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.recordsDescription")}</p>
           </div>
-          <button
-            type="button"
-            disabled={isLoading || loadError !== null}
-            onClick={openCreateForm}
-            className="shrink-0 rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            + {t("buyers.registerButton")}
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              disabled={isLoading || loadError !== null || visibleBuyers.length === 0 || isExporting}
+              onClick={() => void exportBuyers()}
+              className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isExporting
+                ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
+                : <Download size={17} aria-hidden="true" />}
+              {isExporting ? t("buyers.exporting") : t("buyers.exportCsv")}
+            </button>
+            <button
+              type="button"
+              disabled={isLoading || loadError !== null}
+              onClick={openCreateForm}
+              className="rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              + {t("buyers.registerButton")}
+            </button>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4 md:grid-cols-[1fr_auto]">

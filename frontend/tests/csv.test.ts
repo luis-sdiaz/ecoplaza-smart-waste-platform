@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createReportCsv } from "../src/services/reportCsvService.ts";
 import { createSalesCsv } from "../src/services/salesCsv.ts";
+import { createBuyerCsv } from "../src/services/buyerCsv.ts";
 import { escapeCsvValue } from "../src/services/csvService.ts";
 import { getCsvCategoryLabels } from "../src/services/csvCategoryLabels.ts";
 import en from "../src/i18n/translations/en.ts";
@@ -206,4 +207,24 @@ test("keeps sales CSV escaping, formula protection, and numeric validation", () 
   const csv = createSalesCsv([sale], labels, "es");
   assert.ok(csv.includes(";\"'=FORMULA;\"\"value\"\"\";"));
   assert.throws(() => createSalesCsv([{ ...sale, totalValue: Number.NaN }], labels, "es"));
+});
+
+test("exports only the supplied filtered buyers with complete identifiers and safe contacts", () => {
+  const buyers = [{
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    name: "=Unsafe Buyer",
+    email: "buyer@example.test",
+    phone: null,
+    createdAt: "2026-10-01T12:00:00.000Z",
+    updatedAt: "2026-10-02T12:00:00.000Z",
+  }];
+  const labels = { id: "Identifier", name: "Name", email: "Email", phone: "Phone" };
+
+  const englishCsv = createBuyerCsv(buyers, labels, "en");
+  const spanishCsv = createBuyerCsv(buyers, labels, "es");
+
+  assert.ok(englishCsv.includes("Identifier,Name,Email,Phone"));
+  assert.ok(englishCsv.includes("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa,'=Unsafe Buyer,buyer@example.test,"));
+  assert.ok(spanishCsv.includes("Identifier;Name;Email;Phone"));
+  assert.equal(spanishCsv.includes("BUY-"), false);
 });
