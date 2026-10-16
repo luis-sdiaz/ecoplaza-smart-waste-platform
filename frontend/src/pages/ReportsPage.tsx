@@ -25,6 +25,7 @@ import {
   type ReportDateRange,
   type ReportDateRangePreset,
 } from "../services/reportDateRange";
+import { getHighestRevenueDay } from "../services/reportCalculations";
 
 function getReportErrorKey(code: ReportErrorCode): string {
   if (code === "unauthorized") return "reports.unauthorized";
@@ -117,6 +118,9 @@ function UserReportsPage({ userId }: { userId: string }) {
   const metricBadge = t(isFiltered ? "reports.filteredData" : "reports.realData");
   const isEmptyPeriod = isFiltered && statistics !== null &&
     statistics.wasteRecordCount === 0 && statistics.salesCount === 0;
+  const highestRevenueDay = statistics === null
+    ? null
+    : getHighestRevenueDay(statistics.salesTrend);
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
   const formatInputDate = (value: string): string =>
     dateFormatter.format(new Date(`${value}T00:00:00`));
@@ -391,6 +395,19 @@ function UserReportsPage({ userId }: { userId: string }) {
           title={t("reports.grossSales")}
           value={metricValue((data) => currencyFormatter.format(data.grossSalesValue))}
           description={t("reports.grossSalesDescription")}
+          badge={metricBadge}
+        />
+        <MetricCard
+          title={t("reports.highestRevenueDay")}
+          value={metricsUnavailable || highestRevenueDay === null ? "—" : currencyFormatter.format(highestRevenueDay.grossSalesValue)}
+          description={metricsUnavailable
+            ? t("reports.highestRevenueDayDescription")
+            : highestRevenueDay === null
+              ? t("reports.highestRevenueDayEmpty")
+              : t("reports.highestRevenueDayDetail", {
+                  date: formatInputDate(highestRevenueDay.date),
+                  count: highestRevenueDay.salesCount,
+                })}
           badge={metricBadge}
         />
       </div>

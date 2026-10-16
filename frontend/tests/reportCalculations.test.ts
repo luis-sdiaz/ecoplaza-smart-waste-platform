@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   calculateReportStatistics,
   calculateSalesTrend,
+  getHighestRevenueDay,
   type ReportSaleInput,
   type ReportWasteInput,
 } from "../src/services/reportCalculations.ts";
@@ -71,6 +72,17 @@ test("sums fractional database totals without binary accumulation drift", () => 
   ]), [
     { date: "2026-10-13", salesCount: 2, grossSalesValue: 0.3 },
   ]);
+});
+
+test("selects the highest revenue day with an earliest-date tie breaker", () => {
+  const trend = [
+    { date: "2026-10-15", salesCount: 3, grossSalesValue: 5000 },
+    { date: "2026-10-13", salesCount: 2, grossSalesValue: 5000 },
+    { date: "2026-10-14", salesCount: 4, grossSalesValue: 4000 },
+  ];
+  assert.deepEqual(getHighestRevenueDay(trend), trend[1]);
+  assert.equal(getHighestRevenueDay([]), null);
+  assert.equal(getHighestRevenueDay([{ date: "invalid", salesCount: 1, grossSalesValue: 10 }]), null);
 });
 
 test("returns valid zero statistics for an interval without records", () => {

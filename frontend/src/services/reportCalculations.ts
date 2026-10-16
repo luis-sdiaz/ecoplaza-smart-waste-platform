@@ -14,6 +14,34 @@ export interface ReportSalesTrendItem {
   grossSalesValue: number;
 }
 
+export function getHighestRevenueDay(
+  salesTrend: ReadonlyArray<ReportSalesTrendItem>,
+): ReportSalesTrendItem | null {
+  if (salesTrend.length === 0) return null;
+
+  let highest: ReportSalesTrendItem | null = null;
+  for (const item of salesTrend) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(item.date) ||
+      !Number.isSafeInteger(item.salesCount) ||
+      item.salesCount < 0 ||
+      !Number.isFinite(item.grossSalesValue) ||
+      item.grossSalesValue < 0
+    ) {
+      return null;
+    }
+    if (
+      highest === null ||
+      item.grossSalesValue > highest.grossSalesValue ||
+      (item.grossSalesValue === highest.grossSalesValue && item.date < highest.date)
+    ) {
+      highest = item;
+    }
+  }
+
+  return highest;
+}
+
 export interface ReportSalesCategoryItem {
   category: ReportWasteCategory;
   salesCount: number;
