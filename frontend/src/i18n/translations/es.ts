@@ -392,6 +392,7 @@ const es = {
     realData: "Datos reales", filteredData: "Período filtrado", realRevenueDescription: "Total generado por PostgreSQL",
     records: "Ventas registradas", realRecordsDescription: "Historial real de ventas confirmado por PostgreSQL.",
     dateRange: "Período de ventas", dateRangeDescription: "Filtra el historial por la fecha real de realización de cada venta.",
+    quickRanges: "Períodos rápidos de ventas", last7Days: "Últimos 7 días", last30Days: "Últimos 30 días", currentMonth: "Mes actual",
     startDate: "Fecha inicial", endDate: "Fecha final", applyDateRange: "Aplicar filtro",
     clearDateRange: "Ver todo", clearFilters: "Limpiar filtros", buyerFilter: "Comprador",
     categoryFilter: "Categoría", allCategories: "Todas las categorías",

@@ -27,9 +27,11 @@ import {
 } from "../services/salesCsvService";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import {
+  getReportDateRangePreset,
   isValidReportDateRange,
   toTimestampRange,
   type ReportDateRange,
+  type ReportDateRangePreset,
   type TimestampRange,
 } from "../services/reportDateRange";
 import {
@@ -348,6 +350,15 @@ function UserSalesPage({ userId }: { userId: string }) {
     void loadSalesData(toTimestampRange(nextRange), buyerFilter || undefined);
   };
 
+  const applyDateRangePreset = (preset: ReportDateRangePreset): void => {
+    const nextRange = getReportDateRangePreset(preset);
+    setStartDate(nextRange.startDate);
+    setEndDate(nextRange.endDate);
+    setDateRangeError(null);
+    setActiveDateRange(nextRange);
+    void loadSalesData(toTimestampRange(nextRange), buyerFilter || undefined);
+  };
+
   const clearFilters = (): void => {
     setStartDate("");
     setEndDate("");
@@ -463,6 +474,19 @@ function UserSalesPage({ userId }: { userId: string }) {
               <h3 className="text-sm font-semibold text-ecoplaza-text">{t("sales.dateRange")}</h3>
               <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.dateRangeDescription")}</p>
             </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2" aria-label={t("sales.quickRanges")}>
+            {(["last7Days", "last30Days", "currentMonth"] as const).map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                disabled={isLoading}
+                onClick={() => applyDateRangePreset(preset)}
+                className="rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t(`sales.${preset}`)}
+              </button>
+            ))}
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1fr_1fr_1fr_1fr_auto_auto] xl:items-end">
             <label className="text-xs font-medium text-ecoplaza-text-muted">

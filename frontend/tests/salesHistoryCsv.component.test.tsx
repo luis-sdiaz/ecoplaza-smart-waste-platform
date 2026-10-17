@@ -178,7 +178,10 @@ function expectVisible(ids: string[]) {
   }
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 beforeEach(() => {
   salesMocks.listSales.mockReset();
@@ -269,6 +272,29 @@ describe("filtered sales history and CSV integration", () => {
       endExclusive: expect.any(String),
     }));
     expect(lastCall[1]).toBeUndefined();
+  });
+
+  test("applies a shared quick date preset with category, metrics, and CSV filters", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 16, 12));
+    render(<SalesPage />);
+    await screen.findByTitle(saleAlphaLate.id);
+
+    fireEvent.click(screen.getByRole("button", { name: "sales.last7Days" }));
+    await waitFor(() => expectVisible([saleBeta.id]));
+    expect((screen.getByLabelText("sales.startDate") as HTMLInputElement).value).toBe("2026-10-10");
+    expect((screen.getByLabelText("sales.endDate") as HTMLInputElement).value).toBe("2026-10-16");
+
+    fireEvent.change(screen.getByLabelText("sales.categoryFilter"), { target: { value: "organic" } });
+    expectVisible([saleBeta.id]);
+    expect(screen.getAllByText("20 common.kg")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "sales.exportCsv" }));
+    await waitFor(() => expect(nativeMocks.writeTextFile).toHaveBeenCalledOnce());
+    const csv = nativeMocks.writeTextFile.mock.calls[0][1] as string;
+    expect(csv).toContain(saleBeta.id);
+    expect(csv).not.toContain(saleAlphaEarly.id);
+    expect(csv).not.toContain(saleAlphaLate.id);
   });
 
   test("shows the combined-filter empty state and prevents an empty export", async () => {
