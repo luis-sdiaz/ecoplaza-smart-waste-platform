@@ -15,10 +15,12 @@ const labels: ReportExcelLabels = {
   distributionSheet: "Waste distribution",
   performanceSheet: "Sales performance",
   trendSheet: "Daily sales",
+  monthlySheet: "Monthly summary",
   metric: "Metric", value: "Value", unit: "Unit", category: "Category",
   weight: "Weight", percentage: "Percentage", sales: "Sales",
   grossRevenue: "Gross revenue", date: "Date", records: "Records",
   averagePricePerKg: "Average price (COP/kg)",
+  month: "Month", averagePerOperation: "Average per operation",
   historicalWeight: "Historical weight", availableWeight: "Available weight",
   soldWeight: "Sold weight", period: "Period", from: "From", to: "To",
   allTime: "All history", countUnit: "records", kilogramsUnit: "kg", copUnit: "COP",
@@ -46,6 +48,10 @@ const statistics = {
     { date: "2026-10-13", salesCount: 1, grossSalesValue: 1000.25 },
     { date: "2026-10-14", salesCount: 1, grossSalesValue: 2000.5 },
   ],
+  monthlySales: [
+    { month: "2026-09", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
+    { month: "2026-10", salesCount: 2, grossSalesValue: 3000.75, averageSaleValue: 1500.375 },
+  ],
 };
 
 const salesLabels: SalesExcelLabels = {
@@ -72,7 +78,7 @@ test("creates a valid formatted analytics workbook with real Excel value types",
   const reopened = new Workbook();
   await reopened.xlsx.load(Buffer.from(bytes));
   assert.deepEqual(reopened.worksheets.map(({ name }) => name), [
-    "Summary", "Waste distribution", "Sales performance", "Daily sales",
+    "Summary", "Waste distribution", "Sales performance", "Daily sales", "Monthly summary",
   ]);
 
   const summary = reopened.getWorksheet("Summary")!;
@@ -112,6 +118,14 @@ test("creates a valid formatted analytics workbook with real Excel value types",
   assert.ok(trend.getCell("A4").value instanceof Date);
   assert.equal(trend.getCell("A4").numFmt, "yyyy-mm-dd");
   assert.equal(trend.getCell("C5").value, 2000.5);
+
+  const monthly = reopened.getWorksheet("Monthly summary")!;
+  assert.ok(monthly.getCell("A4").value instanceof Date);
+  assert.equal(monthly.getCell("A4").numFmt, "mmmm yyyy");
+  assert.equal(monthly.getCell("B4").value, 0);
+  assert.equal(monthly.getCell("C5").value, 3000.75);
+  assert.equal(monthly.getCell("D5").value, 1500.375);
+  assert.match(monthly.getCell("D5").numFmt, /COP/);
 
   for (const worksheet of reopened.worksheets) {
     assert.equal(worksheet.getRow(3).height, 34);

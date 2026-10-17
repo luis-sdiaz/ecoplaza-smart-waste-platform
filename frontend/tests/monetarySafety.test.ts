@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  calculateSafeAverageMonetaryValue,
   calculateSafeAveragePricePerKg,
   calculateSafeEstimatedTotal,
   isSafeUnitPrice,
@@ -50,4 +51,12 @@ test("calculates safe average prices per kilogram without invalid divisions", ()
   assert.equal(calculateSafeAveragePricePerKg(1, 0), null);
   assert.equal(calculateSafeAveragePricePerKg(Number.NaN, 1), null);
   assert.equal(calculateSafeAveragePricePerKg(1, Number.POSITIVE_INFINITY), null);
+});
+
+test("calculates safe average monetary values without floating-point drift", () => {
+  assert.equal(calculateSafeAverageMonetaryValue(0.3, 2), 0.15);
+  assert.equal(calculateSafeAverageMonetaryValue(1, 3), 0.33333);
+  assert.equal(calculateSafeAverageMonetaryValue(0, 0), 0);
+  assert.equal(calculateSafeAverageMonetaryValue(1, 0), null);
+  assert.equal(calculateSafeAverageMonetaryValue(1, 1.5), null);
 });

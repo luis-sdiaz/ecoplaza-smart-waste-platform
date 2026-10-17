@@ -50,6 +50,7 @@ const report = {
   distribution: [{ category: "organic" as const, weightKg: 5, percentage: 100 }],
   salesByCategory: [],
   salesTrend: [],
+  monthlySales: [],
 };
 const salesLabels = {
   reference: "Reference", completedAt: "Date", category: "Category",

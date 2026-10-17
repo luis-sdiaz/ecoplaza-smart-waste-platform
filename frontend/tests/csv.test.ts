@@ -33,6 +33,7 @@ const report = {
   distribution: [{ category: "organic" as const, weightKg: 12.5, percentage: 100 }],
   salesByCategory: [],
   salesTrend: [],
+  monthlySales: [],
 };
 
 function translateFrom(

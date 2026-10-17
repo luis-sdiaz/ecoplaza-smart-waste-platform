@@ -41,6 +41,7 @@ function statistics(availableWeightKg: number, grossSalesValue: number) {
     ],
     salesByCategory: [],
     salesTrend: [],
+    monthlySales: [],
   };
 }
 

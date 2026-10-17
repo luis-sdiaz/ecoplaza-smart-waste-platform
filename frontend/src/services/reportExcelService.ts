@@ -17,6 +17,7 @@ export interface ReportExcelLabels {
   distributionSheet: string;
   performanceSheet: string;
   trendSheet: string;
+  monthlySheet: string;
   metric: string;
   value: string;
   unit: string;
@@ -27,6 +28,8 @@ export interface ReportExcelLabels {
   grossRevenue: string;
   averagePricePerKg: string;
   date: string;
+  month: string;
+  averagePerOperation: string;
   records: string;
   historicalWeight: string;
   availableWeight: string;
@@ -113,6 +116,27 @@ export async function createReportExcel(
   trend.getColumn(2).numFmt = "0";
   trend.getColumn(3).numFmt = '"COP" #,##0.00';
   styleExcelBody(trend);
+
+  const monthly = workbook.addWorksheet(safeExcelText(labels.monthlySheet));
+  styleExcelWorksheet(
+    monthly,
+    labels.monthlySheet,
+    [labels.month, labels.sales, labels.grossRevenue, labels.averagePerOperation],
+    [18, 14, 22, 24],
+  );
+  for (const item of statistics.monthlySales) {
+    monthly.addRow([
+      parseExcelDate(`${item.month}-01`),
+      validExcelNumber(item.salesCount, "Report"),
+      validExcelNumber(item.grossSalesValue, "Report"),
+      validExcelNumber(item.averageSaleValue, "Report"),
+    ]);
+  }
+  monthly.getColumn(1).numFmt = "mmmm yyyy";
+  monthly.getColumn(2).numFmt = "0";
+  monthly.getColumn(3).numFmt = '"COP" #,##0.00000';
+  monthly.getColumn(4).numFmt = '"COP" #,##0.00000';
+  styleExcelBody(monthly);
 
   const buffer = await workbook.xlsx.writeBuffer();
   return new Uint8Array(buffer);

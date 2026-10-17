@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   calculateReportStatistics,
+  calculateMonthlySales,
   calculateSalesTrend,
   getHighestRevenueDay,
   type ReportSaleInput,
@@ -65,6 +66,29 @@ test("groups sales by their real local completion date without rounding revenue"
   ]);
 });
 
+test("summarizes sales chronologically by month across years and fills empty months", () => {
+  assert.deepEqual(calculateMonthlySales([
+    { date: "2025-12-31", salesCount: 1, grossSalesValue: 10.1 },
+    { date: "2026-02-01", salesCount: 2, grossSalesValue: 20.2 },
+    { date: "2026-02-02", salesCount: 1, grossSalesValue: 0.1 },
+  ]), [
+    { month: "2025-12", salesCount: 1, grossSalesValue: 10.1, averageSaleValue: 10.1 },
+    { month: "2026-01", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
+    { month: "2026-02", salesCount: 3, grossSalesValue: 20.3, averageSaleValue: 6.76667 },
+  ]);
+});
+
+test("includes zero-sale months from the selected period", () => {
+  assert.deepEqual(calculateMonthlySales([], {
+    startDate: "2025-12-15",
+    endDate: "2026-02-03",
+  }), [
+    { month: "2025-12", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
+    { month: "2026-01", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
+    { month: "2026-02", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
+  ]);
+});
+
 test("sums fractional database totals without binary accumulation drift", () => {
   assert.deepEqual(calculateSalesTrend([
     { soldAt: "2026-10-13T05:00:00.000Z", totalValue: 0.1 },
@@ -104,6 +128,7 @@ test("returns valid zero statistics for an interval without records", () => {
       { category: "nonRecyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
     ],
     salesTrend: [],
+    monthlySales: [],
   });
 });
 

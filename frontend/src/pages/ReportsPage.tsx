@@ -9,6 +9,7 @@ import WasteDistributionChart from "../components/WasteDistributionChart";
 import SuccessToast from "../components/SuccessToast";
 import SalesTrendChart from "../components/SalesTrendChart";
 import SalesCategoryPerformance from "../components/SalesCategoryPerformance";
+import MonthlySalesSummary from "../components/MonthlySalesSummary";
 import {
   getReportStatistics,
   type ReportErrorCode,
@@ -222,9 +223,11 @@ function UserReportsPage({ userId }: { userId: string }) {
       distributionSheet: t("reports.excel.distributionSheet"),
       performanceSheet: t("reports.excel.performanceSheet"),
       trendSheet: t("reports.excel.trendSheet"),
+      monthlySheet: t("reports.excel.monthlySheet"),
       metric: t("reports.csv.metric"), value: t("reports.csv.value"), unit: t("reports.csv.unit"),
       category: t("reports.csv.category"), weight: t("reports.csv.weight"), percentage: t("reports.csv.percentage"),
       sales: t("reports.salesCount"), grossRevenue: t("reports.grossSales"), averagePricePerKg: t("reports.csv.averagePricePerKg"), date: t("reports.csv.date"),
+      month: t("reports.month"), averagePerOperation: t("reports.averagePerOperation"),
       records: t("reports.wasteRecords"), historicalWeight: t("reports.historicalWeight"),
       availableWeight: t("reports.availableWeight"), soldWeight: t("reports.soldWeight"),
       period: t("reports.csv.period"), from: t("reports.csv.from"), to: t("reports.csv.to"), allTime: t("reports.csv.allTime"),
@@ -469,6 +472,7 @@ function UserReportsPage({ userId }: { userId: string }) {
         <div className="mt-8 space-y-8">
           <WasteDistributionChart data={statistics.distribution} isFiltered={isFiltered} />
           <SalesCategoryPerformance data={statistics.salesByCategory} isFiltered={isFiltered} />
+          <MonthlySalesSummary data={statistics.monthlySales} isFiltered={isFiltered} />
           <SalesTrendChart data={statistics.salesTrend} isFiltered={isFiltered} />
         </div>
       )}

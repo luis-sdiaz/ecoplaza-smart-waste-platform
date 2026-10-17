@@ -99,3 +99,23 @@ export function calculateSafeAveragePricePerKg(
   if (scaledAverage > MAX_SAFE_SCALED_VALUE) return null;
   return fromScaledInteger(scaledAverage, SALE_TOTAL_SCALE);
 }
+
+export function calculateSafeAverageMonetaryValue(
+  totalValue: number,
+  itemCount: number,
+): number | null {
+  const scaledTotal = toScaledInteger(String(totalValue), MAX_MONETARY_FRACTION_DIGITS);
+  if (
+    scaledTotal === null ||
+    scaledTotal < 0n ||
+    !Number.isSafeInteger(itemCount) ||
+    itemCount < 0
+  ) {
+    return null;
+  }
+  if (itemCount === 0) return scaledTotal === 0n ? 0 : null;
+
+  const divisor = BigInt(itemCount);
+  const scaledAverage = (scaledTotal + divisor / 2n) / divisor;
+  return fromScaledInteger(scaledAverage, SALE_TOTAL_SCALE);
+}

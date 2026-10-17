@@ -18,9 +18,11 @@ import {
 export {
   calculateReportStatistics,
   calculateSalesByCategory,
+  calculateMonthlySales,
   calculateSalesTrend,
   type ReportCategoryDistributionItem,
   type ReportSalesCategoryItem,
+  type ReportMonthlySalesItem,
   type ReportSalesTrendItem,
   type ReportStatistics,
   type ReportWasteCategory,
@@ -70,7 +72,7 @@ export async function getReportStatistics(dateRange?: ReportDateRange): Promise<
     return mapServiceError(salesResult.error.code, salesResult.error.retryable)
   }
 
-  const statistics = calculateReportStatistics(wasteResult.data, salesResult.data)
+  const statistics = calculateReportStatistics(wasteResult.data, salesResult.data, dateRange)
 
   if (statistics === null) {
     return {

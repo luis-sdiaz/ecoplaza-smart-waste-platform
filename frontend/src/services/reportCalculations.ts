@@ -1,7 +1,9 @@
 import {
+  calculateSafeAverageMonetaryValue,
   calculateSafeAveragePricePerKg,
   sumSafeMonetaryValues,
 } from "./monetarySafety.ts";
+import { isValidReportDateRange, type ReportDateRange } from "./reportDateRange.ts";
 
 export type ReportWasteCategory = "organic" | "recyclable" | "nonRecyclable";
 
@@ -15,6 +17,13 @@ export interface ReportSalesTrendItem {
   date: string;
   salesCount: number;
   grossSalesValue: number;
+}
+
+export interface ReportMonthlySalesItem {
+  month: string;
+  salesCount: number;
+  grossSalesValue: number;
+  averageSaleValue: number;
 }
 
 export function getHighestRevenueDay(
@@ -63,6 +72,7 @@ export interface ReportStatistics {
   distribution: ReportCategoryDistributionItem[];
   salesByCategory: ReportSalesCategoryItem[];
   salesTrend: ReportSalesTrendItem[];
+  monthlySales: ReportMonthlySalesItem[];
 }
 
 export interface ReportWasteInput {
@@ -147,6 +157,69 @@ export function calculateSalesTrend(
   return trend;
 }
 
+function toMonthOrdinal(month: string): number | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (match === null) return null;
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  return Number.isSafeInteger(year) && year >= 0 && monthIndex >= 0 && monthIndex < 12
+    ? year * 12 + monthIndex
+    : null;
+}
+
+function fromMonthOrdinal(ordinal: number): string {
+  const year = Math.floor(ordinal / 12);
+  const month = String((ordinal % 12) + 1).padStart(2, "0");
+  return `${String(year).padStart(4, "0")}-${month}`;
+}
+
+export function calculateMonthlySales(
+  salesTrend: ReadonlyArray<ReportSalesTrendItem>,
+  dateRange?: ReportDateRange,
+): ReportMonthlySalesItem[] | null {
+  if (dateRange !== undefined && !isValidReportDateRange(dateRange)) return null;
+
+  const buckets = new Map<string, { salesCount: number; revenues: number[] }>();
+  for (const item of salesTrend) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(item.date) ||
+      !Number.isSafeInteger(item.salesCount) ||
+      item.salesCount < 0 ||
+      !Number.isFinite(item.grossSalesValue) ||
+      item.grossSalesValue < 0
+    ) {
+      return null;
+    }
+    const month = item.date.slice(0, 7);
+    const bucket = buckets.get(month) ?? { salesCount: 0, revenues: [] };
+    bucket.salesCount += item.salesCount;
+    if (!Number.isSafeInteger(bucket.salesCount)) return null;
+    bucket.revenues.push(item.grossSalesValue);
+    buckets.set(month, bucket);
+  }
+
+  const populatedMonths = Array.from(buckets.keys()).sort();
+  if (dateRange === undefined && populatedMonths.length === 0) return [];
+  const startMonth = dateRange?.startDate.slice(0, 7) ?? populatedMonths[0];
+  const endMonth = dateRange?.endDate.slice(0, 7) ?? populatedMonths.at(-1);
+  const startOrdinal = toMonthOrdinal(startMonth);
+  const endOrdinal = endMonth === undefined ? null : toMonthOrdinal(endMonth);
+  if (startOrdinal === null || endOrdinal === null || startOrdinal > endOrdinal) return null;
+
+  const summary: ReportMonthlySalesItem[] = [];
+  for (let ordinal = startOrdinal; ordinal <= endOrdinal; ordinal += 1) {
+    const month = fromMonthOrdinal(ordinal);
+    const bucket = buckets.get(month);
+    const salesCount = bucket?.salesCount ?? 0;
+    const grossSalesValue = sumSafeMonetaryValues(bucket?.revenues ?? []);
+    if (grossSalesValue === null) return null;
+    const averageSaleValue = calculateSafeAverageMonetaryValue(grossSalesValue, salesCount);
+    if (averageSaleValue === null) return null;
+    summary.push({ month, salesCount, grossSalesValue, averageSaleValue });
+  }
+  return summary;
+}
+
 export function calculateSalesByCategory(
   sales: ReadonlyArray<Pick<ReportSaleInput, "category" | "weightKg" | "totalValue">>,
 ): ReportSalesCategoryItem[] | null {
@@ -179,6 +252,7 @@ export function calculateSalesByCategory(
 export function calculateReportStatistics(
   wasteRecords: ReadonlyArray<ReportWasteInput>,
   sales: ReadonlyArray<ReportSaleInput>,
+  dateRange?: ReportDateRange,
 ): ReportStatistics | null {
   if (
     hasDuplicateValues(wasteRecords.map((record) => record.id)) ||
@@ -198,6 +272,7 @@ export function calculateReportStatistics(
   const grossSalesValue = sumSafeMonetaryValues(sales.map((sale) => sale.totalValue));
   const salesByCategory = calculateSalesByCategory(sales);
   const salesTrend = calculateSalesTrend(sales);
+  const monthlySales = salesTrend === null ? null : calculateMonthlySales(salesTrend, dateRange);
 
   if (
     totalRegisteredWeightKg === null ||
@@ -205,7 +280,8 @@ export function calculateReportStatistics(
     soldWeightKg === null ||
     grossSalesValue === null ||
     salesByCategory === null ||
-    salesTrend === null
+    salesTrend === null ||
+    monthlySales === null
   ) {
     return null;
   }
@@ -238,5 +314,6 @@ export function calculateReportStatistics(
     distribution: distribution as ReportCategoryDistributionItem[],
     salesByCategory,
     salesTrend,
+    monthlySales,
   };
 }
