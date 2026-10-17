@@ -6,8 +6,9 @@ import {
 } from "./salesService";
 import { createSalesCsv, type SalesCsvLabels } from "./salesCsv";
 import type { TimestampRange } from "./reportDateRange";
-import { filterSalesHistory, sortSalesHistory, type SalesSortOption, type WasteCategoryFilter } from "./coreWorkflow";
-import { filterSalesByAmount, type SalesAmountRange } from "./salesAmountRange";
+import { type SalesSortOption, type WasteCategoryFilter } from "./coreWorkflow";
+import { type SalesAmountRange } from "./salesAmountRange";
+import { prepareSalesForExport } from "./salesExportData";
 
 export { createSalesCsv, type SalesCsvLabels } from "./salesCsv";
 
@@ -32,13 +33,7 @@ export async function exportSalesHistory(
   try {
     const status = await saveCsvFile(
       createSalesCsv(
-        sortSalesHistory(
-          filterSalesByAmount(
-            filterSalesHistory(salesResult.data, undefined, undefined, category, saleSearch),
-            amountRange,
-          ),
-          sortOption,
-        ),
+        prepareSalesForExport(salesResult.data, category, sortOption, saleSearch, amountRange),
         labels,
         language,
       ),

@@ -48,6 +48,7 @@ import {
 import { getSalesEmptyState } from "../services/salesEmptyState";
 import { calculateAverageSellingPricePerKg } from "../services/salesMetrics";
 import { filterSalesByAmount, parseSalesAmountRange } from "../services/salesAmountRange";
+import { exportSalesExcel, type SalesExcelLabels } from "../services/salesExcelService";
 
 const demoSales: DemoSale[] = [
   { id: "SAL-001", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 80, total: 640000, date: "03/10/2026", status: "Completada" },
@@ -109,7 +110,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleHistoryItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
   const [notification, setNotification] = useState<SalesNotification | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -331,7 +332,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const servedBuyers = new Set(visibleSales.map((sale) => sale.buyerId)).size;
   const metricsUnavailable = isLoading || loadError !== null || !amountRangeResult.valid;
   const registrationUnavailable = isLoading || loadError !== null || buyers.length === 0 || wasteRecords.length === 0;
-  const exportUnavailable = metricsUnavailable || visibleSales.length === 0 || isExporting;
+  const exportUnavailable = metricsUnavailable || visibleSales.length === 0 || exportKind !== null;
   const isFiltered = activeDateRange !== null || buyerFilter !== "" || categoryFilter !== "all" || saleSearch.trim() !== "" || minimumAmount.trim() !== "" || maximumAmount.trim() !== "";
   const emptyState = getSalesEmptyState(
     buyerFilter !== "",
@@ -387,7 +388,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const handleExportSales = async (): Promise<void> => {
     if (exportUnavailable) return;
 
-    setIsExporting(true);
+    setExportKind("csv");
     setNotification(null);
     const labels: SalesCsvLabels = {
       reference: t("sales.csv.reference"),
@@ -431,7 +432,56 @@ function UserSalesPage({ userId }: { userId: string }) {
     } catch {
       showNotification("error", "sales.exportErrorTitle", "sales.exportFileError");
     } finally {
-      setIsExporting(false);
+      setExportKind(null);
+    }
+  };
+
+  const handleExportSalesExcel = async (): Promise<void> => {
+    if (exportUnavailable) return;
+
+    setExportKind("excel");
+    setNotification(null);
+    const labels: SalesExcelLabels = {
+      workbookTitle: t("sales.excel.workbookTitle"),
+      sheetName: t("sales.excel.sheetName"),
+      saleId: t("sales.csv.reference"),
+      buyer: t("buyers.buyer"),
+      date: t("sales.csv.completedAt"),
+      category: t("sales.csv.category"),
+      weightKg: t("sales.csv.weightKg"),
+      unitPriceCop: t("sales.csv.unitPriceCop"),
+      totalValueCop: t("sales.csv.totalValueCop"),
+      categories: getCsvCategoryLabels(t),
+    };
+
+    try {
+      const result = await exportSalesExcel(
+        labels,
+        activeDateRange === null
+          ? `ecoplaza-sales-${new Date().toISOString().slice(0, 10)}.xlsx`
+          : `ecoplaza-sales-${activeDateRange.startDate}-${activeDateRange.endDate}.xlsx`,
+        activeTimestampRange,
+        buyerFilter || undefined,
+        categoryFilter,
+        sortOption,
+        saleSearch,
+        amountRangeResult.range,
+      );
+      if (result.ok) {
+        if (result.status === "saved") {
+          showNotification("success", "sales.excelExportSuccessTitle", "sales.excelExportSuccessDescription");
+        }
+        return;
+      }
+      showNotification(
+        "error",
+        "sales.exportErrorTitle",
+        result.error === "file_error" ? "sales.exportFileError" : getSalesErrorKey(result.error),
+      );
+    } catch {
+      showNotification("error", "sales.exportErrorTitle", "sales.exportFileError");
+    } finally {
+      setExportKind(null);
     }
   };
 
@@ -463,8 +513,17 @@ function UserSalesPage({ userId }: { userId: string }) {
               onClick={() => void handleExportSales()}
               className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isExporting ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
-              {isExporting ? t("sales.exporting") : t("sales.exportCsv")}
+              {exportKind === "csv" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+              {exportKind === "csv" ? t("sales.exporting") : t("sales.exportCsv")}
+            </button>
+            <button
+              type="button"
+              disabled={exportUnavailable}
+              onClick={() => void handleExportSalesExcel()}
+              className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exportKind === "excel" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+              {exportKind === "excel" ? t("sales.exportingExcel") : t("sales.exportExcel")}
             </button>
             <button
               type="button"

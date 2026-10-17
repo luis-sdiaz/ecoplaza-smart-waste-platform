@@ -43,6 +43,7 @@ const salesMocks = vi.hoisted(() => ({
 const nativeMocks = vi.hoisted(() => ({
   save: vi.fn(),
   writeTextFile: vi.fn(),
+  writeFile: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -70,7 +71,10 @@ vi.mock("../src/services/salesService", () => ({
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: nativeMocks.save }));
-vi.mock("@tauri-apps/plugin-fs", () => ({ writeTextFile: nativeMocks.writeTextFile }));
+vi.mock("@tauri-apps/plugin-fs", () => ({
+  writeTextFile: nativeMocks.writeTextFile,
+  writeFile: nativeMocks.writeFile,
+}));
 vi.mock("../src/components/DemoSalesTable", () => ({ default: () => null }));
 vi.mock("../src/components/SaleRegistrationModal", () => ({ default: () => null }));
 vi.mock("../src/components/SaleDetailsModal", () => ({ default: () => null }));
@@ -189,9 +193,11 @@ beforeEach(() => {
   salesMocks.createSale.mockReset();
   nativeMocks.save.mockReset();
   nativeMocks.writeTextFile.mockReset();
+  nativeMocks.writeFile.mockReset();
   mockSuccessfulServices();
   nativeMocks.save.mockResolvedValue("C:\\exports\\sales.csv");
   nativeMocks.writeTextFile.mockResolvedValue(undefined);
+  nativeMocks.writeFile.mockResolvedValue(undefined);
 });
 
 describe("filtered sales history and CSV integration", () => {
@@ -321,6 +327,38 @@ describe("filtered sales history and CSV integration", () => {
     fireEvent.change(screen.getByLabelText("sales.minimumAmount"), { target: { value: "10000" } });
     expect(await screen.findByText("sales.emptyTitle")).toBeTruthy();
   });
+
+  test("exports the visible filtered and sorted sales to a formatted native Excel workbook", async () => {
+    nativeMocks.save.mockResolvedValueOnce("C:\\exports\\sales.xlsx");
+    render(<SalesPage />);
+    await screen.findByTitle(saleAlphaLate.id);
+
+    fireEvent.change(screen.getByLabelText("sales.buyerFilter"), { target: { value: buyerAlpha.id } });
+    await waitFor(() => expectVisible([saleAlphaLate.id, saleAlphaEarly.id]));
+    fireEvent.change(screen.getByLabelText("sales.minimumAmount"), { target: { value: "1000" } });
+    fireEvent.change(screen.getByLabelText("sales.maximumAmount"), { target: { value: "9000" } });
+    fireEvent.change(screen.getByLabelText("sales.saleSearchLabel"), { target: { value: "1000000" } });
+    fireEvent.change(screen.getByLabelText("sales.sortBy"), { target: { value: "valueAsc" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "sales.exportExcel" }));
+    await waitFor(() => expect(nativeMocks.writeFile).toHaveBeenCalledOnce(), { timeout: 15_000 });
+    const [path, bytes] = nativeMocks.writeFile.mock.calls[0] as [string, Uint8Array];
+    expect(path).toBe("C:\\exports\\sales.xlsx");
+
+    const excelModule = await import("exceljs");
+    const Workbook = excelModule.Workbook ??
+      (excelModule as unknown as { default: typeof excelModule }).default.Workbook;
+    const workbook = new Workbook();
+    await workbook.xlsx.load(bytes);
+    const worksheet = workbook.getWorksheet("sales.excel.sheetName")!;
+    expect(worksheet.getColumn(1).values.slice(4)).toEqual([saleAlphaEarly.id, saleAlphaLate.id]);
+    expect(worksheet.getCell("B4").value).toBe(buyerAlpha.name);
+    expect(worksheet.getCell("C4").value).toBeInstanceOf(Date);
+    expect(worksheet.getCell("E4").numFmt).toContain("kg");
+    expect(worksheet.getCell("G4").numFmt).toContain("COP");
+    expect(worksheet.views[0]?.state).toBe("frozen");
+    expect(worksheet.autoFilter).toBeTruthy();
+  }, 20_000);
 
   test("shows the combined-filter empty state and prevents an empty export", async () => {
     render(<SalesPage />);
