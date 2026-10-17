@@ -1,6 +1,6 @@
 import type { TimestampRange } from "./reportDateRange.ts";
 import type { WasteCategory } from "./wasteService.ts";
-import { listSales, type SaleHistoryItem, type SalesErrorCode } from "./salesService.ts";
+import type { SaleHistoryItem, SalesErrorCode } from "./salesService.ts";
 import type { SalesSortOption, WasteCategoryFilter } from "./coreWorkflow.ts";
 import type { SalesAmountRange } from "./salesAmountRange.ts";
 import { prepareSalesForExport } from "./salesExportData.ts";
@@ -34,6 +34,7 @@ export type SalesExcelExportResult =
 export async function createSalesExcel(
   sales: readonly SaleHistoryItem[],
   labels: SalesExcelLabels,
+  timeZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): Promise<Uint8Array> {
   const workbook = await createExcelWorkbook(labels.workbookTitle);
   const worksheet = workbook.addWorksheet(safeExcelText(labels.sheetName));
@@ -48,7 +49,7 @@ export async function createSalesExcel(
     worksheet.addRow([
       safeExcelText(sale.id),
       safeExcelText(sale.buyerName),
-      parseExcelTimestamp(sale.soldAt),
+      parseExcelTimestamp(sale.soldAt, timeZone),
       safeExcelText(labels.categories[sale.category]),
       validExcelNumber(sale.weightKg, "Sale"),
       validExcelNumber(sale.unitPrice, "Sale"),
@@ -75,6 +76,7 @@ export async function exportSalesExcel(
   saleSearch = "",
   amountRange: SalesAmountRange = {},
 ): Promise<SalesExcelExportResult> {
+  const { listSales } = await import("./salesService.ts");
   const salesResult = await listSales(dateRange, buyerId);
   if (!salesResult.ok) return { ok: false, error: salesResult.error.code };
 

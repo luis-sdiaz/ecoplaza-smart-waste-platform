@@ -50,10 +50,40 @@ export function parseExcelDate(value: string): Date {
   return date;
 }
 
-export function parseExcelTimestamp(value: string): Date {
+export function parseExcelTimestamp(
+  value: string,
+  timeZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): Date {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) throw new Error("Excel data contains an invalid timestamp.");
-  return date;
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes): number => {
+    const parsed = Number(parts.find((item) => item.type === type)?.value);
+    if (!Number.isInteger(parsed)) throw new Error("Excel data contains an invalid timestamp.");
+    return parsed;
+  };
+
+  // Excel dates do not carry a time zone. Store the same wall-clock fields shown
+  // by the application so Excel does not display the original UTC hour instead.
+  return new Date(Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+    part("second"),
+    date.getUTCMilliseconds(),
+  ));
 }
 
 export function styleExcelWorksheet(

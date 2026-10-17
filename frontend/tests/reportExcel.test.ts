@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createReportExcel, type ReportExcelLabels } from "../src/services/reportExcelService.ts";
+import { createSalesExcel, type SalesExcelLabels } from "../src/services/salesExcelService.ts";
 
 const excelModule = await import("exceljs");
 const Workbook = excelModule.Workbook ??
@@ -44,6 +45,19 @@ const statistics = {
     { date: "2026-10-13", salesCount: 1, grossSalesValue: 1000.25 },
     { date: "2026-10-14", salesCount: 1, grossSalesValue: 2000.5 },
   ],
+};
+
+const salesLabels: SalesExcelLabels = {
+  workbookTitle: "EcoPlaza completed sales",
+  sheetName: "Completed sales",
+  saleId: "Sale ID",
+  buyer: "Buyer",
+  date: "Completion date",
+  category: "Category",
+  weightKg: "Weight (kg)",
+  unitPriceCop: "Unit price (COP)",
+  totalValueCop: "Total value (COP)",
+  categories: { organic: "Organic", recyclable: "Recyclable", nonRecyclable: "Other" },
 };
 
 test("creates a valid formatted analytics workbook with real Excel value types", async () => {
@@ -112,4 +126,38 @@ test("rejects invalid report values instead of emitting a misleading workbook", 
     ...statistics,
     salesTrend: [{ date: "2026-02-30", salesCount: 1, grossSalesValue: 1 }],
   }, labels));
+});
+
+test("exports sale timestamps as Bogota wall-clock dates without a duplicate conversion", async () => {
+  const baseSale = {
+    id: "11111111-1111-4111-8111-111111111111",
+    buyerId: "22222222-2222-4222-8222-222222222222",
+    wasteRecordId: "33333333-3333-4333-8333-333333333333",
+    weightKg: 2.5,
+    unitPrice: 1200,
+    totalValue: 3000,
+    buyerName: "Buyer",
+    wasteRecordNumber: "1",
+    category: "organic" as const,
+  };
+  const bytes = await createSalesExcel([
+    { ...baseSale, soldAt: "2026-10-18T02:30:00.000Z" },
+    {
+      ...baseSale,
+      id: "44444444-4444-4444-8444-444444444444",
+      soldAt: "2026-10-17T21:30:00.000-05:00",
+    },
+  ], salesLabels, "America/Bogota");
+
+  const reopened = new Workbook();
+  await reopened.xlsx.load(Buffer.from(bytes));
+  const worksheet = reopened.getWorksheet("Completed sales")!;
+  const utcSourceCell = worksheet.getCell("C4");
+  const offsetSourceCell = worksheet.getCell("C5");
+
+  assert.ok(utcSourceCell.value instanceof Date);
+  assert.ok(offsetSourceCell.value instanceof Date);
+  assert.equal(utcSourceCell.value.toISOString(), "2026-10-17T21:30:00.000Z");
+  assert.equal(offsetSourceCell.value.toISOString(), "2026-10-17T21:30:00.000Z");
+  assert.equal(utcSourceCell.numFmt, "yyyy-mm-dd hh:mm");
 });
