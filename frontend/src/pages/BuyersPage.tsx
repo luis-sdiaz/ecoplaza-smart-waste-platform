@@ -23,6 +23,7 @@ import {
   type BuyerSortOption,
 } from "../services/buyerFilters";
 import { saveBuyerCsv, type BuyerCsvLabels } from "../services/buyerCsv";
+import { saveBuyerExcel, type BuyerExcelLabels } from "../services/buyerExcelService";
 import {
   listSales,
   type SaleHistoryItem,
@@ -82,7 +83,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const [purchaseHistory, setPurchaseHistory] = useState<SaleHistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
 
   const applyLoadResult = useCallback((
     result: Awaited<ReturnType<typeof listBuyers>>,
@@ -240,9 +241,9 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const hasActiveFilters = hasActiveSearch || contactFilter !== "all";
 
   const exportBuyers = async (): Promise<void> => {
-    if (visibleBuyers.length === 0 || isExporting) return;
+    if (visibleBuyers.length === 0 || exportKind !== null) return;
 
-    setIsExporting(true);
+    setExportKind("csv");
     setNotification(null);
     const labels: BuyerCsvLabels = {
       id: t("buyers.csv.id"),
@@ -264,7 +265,38 @@ function UserBuyersPage({ userId }: { userId: string }) {
     } catch {
       showNotification("error", "buyers.exportErrorTitle", "buyers.exportErrorDescription");
     } finally {
-      setIsExporting(false);
+      setExportKind(null);
+    }
+  };
+
+  const exportBuyersExcel = async (): Promise<void> => {
+    if (visibleBuyers.length === 0 || exportKind !== null) return;
+
+    setExportKind("excel");
+    setNotification(null);
+    const labels: BuyerExcelLabels = {
+      workbookTitle: t("buyers.excel.workbookTitle"),
+      sheetName: t("buyers.excel.sheetName"),
+      id: t("buyers.excel.id"),
+      name: t("buyers.excel.name"),
+      email: t("buyers.excel.email"),
+      phone: t("buyers.excel.phone"),
+      updatedAt: t("buyers.excel.updatedAt"),
+    };
+
+    try {
+      const result = await saveBuyerExcel(
+        visibleBuyers,
+        labels,
+        `ecoplaza-buyers-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      );
+      if (result === "saved") {
+        showNotification("success", "buyers.excelExportSuccessTitle", "buyers.excelExportSuccessDescription");
+      }
+    } catch {
+      showNotification("error", "buyers.exportErrorTitle", "buyers.exportErrorDescription");
+    } finally {
+      setExportKind(null);
     }
   };
 
@@ -311,14 +343,25 @@ function UserBuyersPage({ userId }: { userId: string }) {
           <div className="flex shrink-0 gap-2">
             <button
               type="button"
-              disabled={isLoading || loadError !== null || visibleBuyers.length === 0 || isExporting}
+              disabled={isLoading || loadError !== null || visibleBuyers.length === 0 || exportKind !== null}
               onClick={() => void exportBuyers()}
               className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isExporting
+              {exportKind === "csv"
                 ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
                 : <Download size={17} aria-hidden="true" />}
-              {isExporting ? t("buyers.exporting") : t("buyers.exportCsv")}
+              {exportKind === "csv" ? t("buyers.exporting") : t("buyers.exportCsv")}
+            </button>
+            <button
+              type="button"
+              disabled={isLoading || loadError !== null || visibleBuyers.length === 0 || exportKind !== null}
+              onClick={() => void exportBuyersExcel()}
+              className="flex items-center gap-2 rounded-xl border border-ecoplaza-primary px-4 py-3 text-sm font-semibold text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exportKind === "excel"
+                ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
+                : <Download size={17} aria-hidden="true" />}
+              {exportKind === "excel" ? t("buyers.exportingExcel") : t("buyers.exportExcel")}
             </button>
             <button
               type="button"
