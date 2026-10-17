@@ -2,11 +2,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const purchaseCsvMocks = vi.hoisted(() => ({ save: vi.fn() }));
+const purchaseExcelMocks = vi.hoisted(() => ({ save: vi.fn() }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { resolvedLanguage: "en" } }),
 }));
 vi.mock("../src/services/buyerPurchaseCsv", () => ({ saveBuyerPurchaseCsv: purchaseCsvMocks.save }));
+vi.mock("../src/services/buyerPurchaseExcelService", () => ({ saveBuyerPurchaseExcel: purchaseExcelMocks.save }));
 
 import BuyerPurchaseHistoryModal from "../src/components/BuyerPurchaseHistoryModal";
 
@@ -14,6 +16,8 @@ afterEach(cleanup);
 beforeEach(() => {
   purchaseCsvMocks.save.mockReset();
   purchaseCsvMocks.save.mockResolvedValue("saved");
+  purchaseExcelMocks.save.mockReset();
+  purchaseExcelMocks.save.mockResolvedValue("saved");
 });
 
 const buyer = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", name: "Buyer", email: null, phone: null, createdAt: "2026-10-01", updatedAt: "2026-10-01" };
@@ -95,5 +99,35 @@ describe("buyer commercial summary", () => {
     await waitFor(() => expect(purchaseCsvMocks.save).toHaveBeenCalledTimes(1));
     expect(purchaseCsvMocks.save.mock.calls[0][0].map((sale: { id: string }) => sale.id)).toEqual(["sale-1", "sale-2"]);
     expect(purchases.map(({ id }) => id)).toEqual(["sale-1", "sale-2"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "buyers.exportPurchasesExcel" }));
+    await waitFor(() => expect(purchaseExcelMocks.save).toHaveBeenCalledTimes(1));
+    expect(purchaseExcelMocks.save.mock.calls[0][0].map((sale: { id: string }) => sale.id)).toEqual(["sale-1", "sale-2"]);
+    expect(purchaseExcelMocks.save.mock.calls[0][1]).toBe(buyer.id);
+  });
+
+  test("handles Excel cancellation and write failures without false success", async () => {
+    purchaseExcelMocks.save.mockResolvedValueOnce("cancelled");
+    renderHistory();
+
+    fireEvent.click(screen.getByRole("button", { name: "buyers.exportPurchasesExcel" }));
+    await waitFor(() => expect(purchaseExcelMocks.save).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("buyers.purchaseExcelExportSuccess")).toBeNull();
+
+    purchaseExcelMocks.save.mockRejectedValueOnce(new Error("write failed"));
+    fireEvent.click(screen.getByRole("button", { name: "buyers.exportPurchasesExcel" }));
+    expect(await screen.findByText("buyers.purchaseExportError")).toBeTruthy();
+  });
+
+  test("disables Excel export while loading, on errors, and for empty history", () => {
+    const commonProps = { buyer, onRetry: vi.fn(), onClose: vi.fn() };
+    const view = render(<BuyerPurchaseHistoryModal {...commonProps} sales={[]} isLoading error={null} />);
+    expect((screen.getByRole("button", { name: "buyers.exportPurchasesExcel" }) as HTMLButtonElement).disabled).toBe(true);
+
+    view.rerender(<BuyerPurchaseHistoryModal {...commonProps} sales={purchases} isLoading={false} error="buyers.purchaseHistoryError" />);
+    expect((screen.getByRole("button", { name: "buyers.exportPurchasesExcel" }) as HTMLButtonElement).disabled).toBe(true);
+
+    view.rerender(<BuyerPurchaseHistoryModal {...commonProps} sales={[]} isLoading={false} error={null} />);
+    expect((screen.getByRole("button", { name: "buyers.exportPurchasesExcel" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

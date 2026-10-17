@@ -11,6 +11,10 @@ import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import { summarizeBuyerPurchases } from "../services/buyerPurchaseSummary";
 import { filterBuyerPurchasesByDate } from "../services/buyerPurchaseFilters";
 import { sortSalesHistory, type SalesSortOption } from "../services/coreWorkflow";
+import {
+  saveBuyerPurchaseExcel,
+  type BuyerPurchaseExcelLabels,
+} from "../services/buyerPurchaseExcelService";
 
 interface BuyerPurchaseHistoryModalProps {
   buyer: Buyer;
@@ -30,8 +34,8 @@ function BuyerPurchaseHistoryModal({
   onClose,
 }: BuyerPurchaseHistoryModalProps) {
   const { t, i18n } = useTranslation();
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportStatus, setExportStatus] = useState<"success" | "error" | null>(null);
+  const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
+  const [exportStatus, setExportStatus] = useState<"csvSuccess" | "excelSuccess" | "error" | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sortOption, setSortOption] = useState<SalesSortOption>("newest");
@@ -50,9 +54,9 @@ function BuyerPurchaseHistoryModal({
   const hasDateFilter = startDate !== "" || endDate !== "";
 
   const exportPurchases = async (): Promise<void> => {
-    if (isExporting || isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0) return;
+    if (exportKind !== null || isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0) return;
 
-    setIsExporting(true);
+    setExportKind("csv");
     setExportStatus(null);
     const labels: SalesCsvLabels = {
       reference: t("buyers.purchaseCsv.saleId"),
@@ -72,11 +76,43 @@ function BuyerPurchaseHistoryModal({
         i18n.resolvedLanguage === "en" ? "en" : "es",
         `ecoplaza-buyer-purchases-${buyer.id}-${new Date().toISOString().slice(0, 10)}.csv`,
       );
-      if (result === "saved") setExportStatus("success");
+      if (result === "saved") setExportStatus("csvSuccess");
     } catch {
       setExportStatus("error");
     } finally {
-      setIsExporting(false);
+      setExportKind(null);
+    }
+  };
+
+  const exportPurchasesExcel = async (): Promise<void> => {
+    if (exportKind !== null || isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0) return;
+
+    setExportKind("excel");
+    setExportStatus(null);
+    const labels: BuyerPurchaseExcelLabels = {
+      workbookTitle: t("buyers.purchaseExcel.workbookTitle", { name: buyer.name }),
+      sheetName: t("buyers.purchaseExcel.sheetName"),
+      saleId: t("buyers.purchaseExcel.saleId"),
+      soldAt: t("buyers.purchaseExcel.soldAt"),
+      category: t("buyers.purchaseExcel.category"),
+      weightKg: t("buyers.purchaseExcel.weightKg"),
+      unitPriceCop: t("buyers.purchaseExcel.unitPrice"),
+      totalValueCop: t("buyers.purchaseExcel.totalValue"),
+      categories: getCsvCategoryLabels(t),
+    };
+
+    try {
+      const result = await saveBuyerPurchaseExcel(
+        visibleSales,
+        buyer.id,
+        labels,
+        `ecoplaza-buyer-purchases-${buyer.id}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      );
+      if (result === "saved") setExportStatus("excelSuccess");
+    } catch {
+      setExportStatus("error");
+    } finally {
+      setExportKind(null);
     }
   };
 
@@ -91,14 +127,25 @@ function BuyerPurchaseHistoryModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0 || isExporting}
+              disabled={isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0 || exportKind !== null}
               onClick={() => void exportPurchases()}
               className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-border px-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isExporting
+              {exportKind === "csv"
                 ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
                 : <Download size={16} aria-hidden="true" />}
-              {isExporting ? t("buyers.exportingPurchases") : t("buyers.exportPurchases")}
+              {exportKind === "csv" ? t("buyers.exportingPurchases") : t("buyers.exportPurchases")}
+            </button>
+            <button
+              type="button"
+              disabled={isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0 || exportKind !== null}
+              onClick={() => void exportPurchasesExcel()}
+              className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-primary px-3 text-sm font-semibold text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exportKind === "excel"
+                ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
+                : <Download size={16} aria-hidden="true" />}
+              {exportKind === "excel" ? t("buyers.exportingPurchasesExcel") : t("buyers.exportPurchasesExcel")}
             </button>
             <button type="button" onClick={onClose} aria-label={t("buyers.closePurchaseHistory")} className="rounded-lg p-2 text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text">
               <X size={19} aria-hidden="true" />
@@ -109,7 +156,7 @@ function BuyerPurchaseHistoryModal({
         <div className="max-h-[calc(85vh-92px)] overflow-auto p-5">
           {exportStatus !== null && (
             <p role={exportStatus === "error" ? "alert" : "status"} className={`mb-4 rounded-xl border px-4 py-3 text-sm ${exportStatus === "error" ? "border-ecoplaza-danger/30 bg-ecoplaza-danger/10 text-ecoplaza-danger" : "border-ecoplaza-primary/30 bg-ecoplaza-primary/10 text-ecoplaza-primary"}`}>
-              {t(exportStatus === "success" ? "buyers.purchaseExportSuccess" : "buyers.purchaseExportError")}
+              {t(exportStatus === "csvSuccess" ? "buyers.purchaseExportSuccess" : exportStatus === "excelSuccess" ? "buyers.purchaseExcelExportSuccess" : "buyers.purchaseExportError")}
             </p>
           )}
           {isLoading ? (
