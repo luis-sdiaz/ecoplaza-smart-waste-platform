@@ -394,6 +394,8 @@ const es = {
     dateRange: "Período de ventas", dateRangeDescription: "Filtra el historial por la fecha real de realización de cada venta.",
     quickRanges: "Períodos rápidos de ventas", last7Days: "Últimos 7 días", last30Days: "Últimos 30 días", currentMonth: "Mes actual",
     startDate: "Fecha inicial", endDate: "Fecha final", applyDateRange: "Aplicar filtro",
+    minimumAmount: "Valor mínimo (COP)", maximumAmount: "Valor máximo (COP)",
+    invalidAmountRange: "Ingresa valores finitos no negativos y asegúrate de que el mínimo no supere el máximo.",
     clearDateRange: "Ver todo", clearFilters: "Limpiar filtros", buyerFilter: "Comprador",
     categoryFilter: "Categoría", allCategories: "Todas las categorías",
     sortBy: "Ordenar por", sortNewest: "Más recientes primero", sortOldest: "Más antiguas primero",

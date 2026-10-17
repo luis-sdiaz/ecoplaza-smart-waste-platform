@@ -7,6 +7,7 @@ import {
 import { createSalesCsv, type SalesCsvLabels } from "./salesCsv";
 import type { TimestampRange } from "./reportDateRange";
 import { filterSalesHistory, sortSalesHistory, type SalesSortOption, type WasteCategoryFilter } from "./coreWorkflow";
+import { filterSalesByAmount, type SalesAmountRange } from "./salesAmountRange";
 
 export { createSalesCsv, type SalesCsvLabels } from "./salesCsv";
 
@@ -23,13 +24,24 @@ export async function exportSalesHistory(
   category: WasteCategoryFilter = "all",
   sortOption: SalesSortOption = "newest",
   saleSearch = "",
+  amountRange: SalesAmountRange = {},
 ): Promise<SalesCsvExportResult> {
   const salesResult = await listSales(dateRange, buyerId);
   if (!salesResult.ok) return { ok: false, error: salesResult.error.code };
 
   try {
     const status = await saveCsvFile(
-      createSalesCsv(sortSalesHistory(filterSalesHistory(salesResult.data, undefined, undefined, category, saleSearch), sortOption), labels, language),
+      createSalesCsv(
+        sortSalesHistory(
+          filterSalesByAmount(
+            filterSalesHistory(salesResult.data, undefined, undefined, category, saleSearch),
+            amountRange,
+          ),
+          sortOption,
+        ),
+        labels,
+        language,
+      ),
       defaultFileName,
     );
     return { ok: true, status };

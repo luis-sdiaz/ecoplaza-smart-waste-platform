@@ -47,6 +47,7 @@ import {
 } from "../services/monetarySafety";
 import { getSalesEmptyState } from "../services/salesEmptyState";
 import { calculateAverageSellingPricePerKg } from "../services/salesMetrics";
+import { filterSalesByAmount, parseSalesAmountRange } from "../services/salesAmountRange";
 
 const demoSales: DemoSale[] = [
   { id: "SAL-001", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 80, total: 640000, date: "03/10/2026", status: "Completada" },
@@ -118,6 +119,8 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [categoryFilter, setCategoryFilter] = useState<WasteCategoryFilter>("all");
   const [saleSearch, setSaleSearch] = useState("");
   const [sortOption, setSortOption] = useState<SalesSortOption>("newest");
+  const [minimumAmount, setMinimumAmount] = useState("");
+  const [maximumAmount, setMaximumAmount] = useState("");
 
   const applyLoadResults = useCallback((
     salesResult: SalesListResult,
@@ -317,15 +320,19 @@ function UserSalesPage({ userId }: { userId: string }) {
     maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
   const weightFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const visibleSales = filterSalesHistory(sales, undefined, undefined, categoryFilter, saleSearch);
+  const amountRangeResult = parseSalesAmountRange(minimumAmount, maximumAmount);
+  const salesMatchingTextFilters = filterSalesHistory(sales, undefined, undefined, categoryFilter, saleSearch);
+  const visibleSales = amountRangeResult.valid
+    ? filterSalesByAmount(salesMatchingTextFilters, amountRangeResult.range)
+    : [];
   const totalRevenue = sumSafeMonetaryValues(visibleSales.map((sale) => sale.totalValue));
   const averageSellingPrice = calculateAverageSellingPricePerKg(visibleSales);
   const totalWeight = visibleSales.reduce((total, sale) => total + sale.weightKg, 0);
   const servedBuyers = new Set(visibleSales.map((sale) => sale.buyerId)).size;
-  const metricsUnavailable = isLoading || loadError !== null;
-  const registrationUnavailable = metricsUnavailable || buyers.length === 0 || wasteRecords.length === 0;
+  const metricsUnavailable = isLoading || loadError !== null || !amountRangeResult.valid;
+  const registrationUnavailable = isLoading || loadError !== null || buyers.length === 0 || wasteRecords.length === 0;
   const exportUnavailable = metricsUnavailable || visibleSales.length === 0 || isExporting;
-  const isFiltered = activeDateRange !== null || buyerFilter !== "" || categoryFilter !== "all" || saleSearch.trim() !== "";
+  const isFiltered = activeDateRange !== null || buyerFilter !== "" || categoryFilter !== "all" || saleSearch.trim() !== "" || minimumAmount.trim() !== "" || maximumAmount.trim() !== "";
   const emptyState = getSalesEmptyState(
     buyerFilter !== "",
     activeDateRange !== null,
@@ -367,6 +374,8 @@ function UserSalesPage({ userId }: { userId: string }) {
     setBuyerFilter("");
     setCategoryFilter("all");
     setSaleSearch("");
+    setMinimumAmount("");
+    setMaximumAmount("");
     void loadSalesData();
   };
 
@@ -402,6 +411,7 @@ function UserSalesPage({ userId }: { userId: string }) {
         categoryFilter,
         sortOption,
         saleSearch,
+        amountRangeResult.range,
       );
 
       if (result.ok) {
@@ -488,7 +498,7 @@ function UserSalesPage({ userId }: { userId: string }) {
               </button>
             ))}
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1fr_1fr_1fr_1fr_auto_auto] xl:items-end">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5 xl:items-end">
             <label className="text-xs font-medium text-ecoplaza-text-muted">
               {t("sales.saleSearchLabel")}
               <span className="relative mt-1 block">
@@ -543,6 +553,14 @@ function UserSalesPage({ userId }: { userId: string }) {
               {t("sales.endDate")}
               <input type="date" value={endDate} min={startDate || undefined} required disabled={isLoading} onChange={(event) => setEndDate(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
             </label>
+            <label className="text-xs font-medium text-ecoplaza-text-muted">
+              {t("sales.minimumAmount")}
+              <input type="number" min="0" step="any" value={minimumAmount} disabled={isLoading} onChange={(event) => setMinimumAmount(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
+            </label>
+            <label className="text-xs font-medium text-ecoplaza-text-muted">
+              {t("sales.maximumAmount")}
+              <input type="number" min="0" step="any" value={maximumAmount} disabled={isLoading} onChange={(event) => setMaximumAmount(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
+            </label>
             <button type="submit" disabled={isLoading} className="rounded-lg bg-ecoplaza-secondary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
               {t("sales.applyDateRange")}
             </button>
@@ -580,6 +598,11 @@ function UserSalesPage({ userId }: { userId: string }) {
                 <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" />
                 {t("sales.retry")}
               </button>
+            </div>
+          ) : !amountRangeResult.valid ? (
+            <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">
+              <AlertTriangle size={24} strokeWidth={1.8} className="text-ecoplaza-danger" aria-hidden="true" />
+              <p className="mt-3 text-sm text-ecoplaza-text-muted">{t("sales.invalidAmountRange")}</p>
             </div>
           ) : visibleSales.length === 0 ? (
             <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5 text-center">

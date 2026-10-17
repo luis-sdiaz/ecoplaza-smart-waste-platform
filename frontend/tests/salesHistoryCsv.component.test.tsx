@@ -297,6 +297,31 @@ describe("filtered sales history and CSV integration", () => {
     expect(csv).not.toContain(saleAlphaLate.id);
   });
 
+  test("keeps table, metrics, and CSV aligned with inclusive amount limits", async () => {
+    render(<SalesPage />);
+    await screen.findByTitle(saleAlphaLate.id);
+
+    fireEvent.change(screen.getByLabelText("sales.minimumAmount"), { target: { value: "4000" } });
+    fireEvent.change(screen.getByLabelText("sales.maximumAmount"), { target: { value: "4000.00" } });
+    expectVisible([saleBeta.id]);
+    expect(screen.getAllByText(/4,000/).length).toBeGreaterThanOrEqual(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "sales.exportCsv" }));
+    await waitFor(() => expect(nativeMocks.writeTextFile).toHaveBeenCalledOnce());
+    const csv = nativeMocks.writeTextFile.mock.calls[0][1] as string;
+    expect(csv).toContain(saleBeta.id);
+    expect(csv).not.toContain(saleAlphaEarly.id);
+    expect(csv).not.toContain(saleAlphaLate.id);
+
+    fireEvent.change(screen.getByLabelText("sales.minimumAmount"), { target: { value: "5000" } });
+    expect(screen.getByText("sales.invalidAmountRange")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "sales.exportCsv" }).hasAttribute("disabled")).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("sales.maximumAmount"), { target: { value: "10000" } });
+    fireEvent.change(screen.getByLabelText("sales.minimumAmount"), { target: { value: "10000" } });
+    expect(await screen.findByText("sales.emptyTitle")).toBeTruthy();
+  });
+
   test("shows the combined-filter empty state and prevents an empty export", async () => {
     render(<SalesPage />);
     await screen.findByTitle(saleAlphaLate.id);

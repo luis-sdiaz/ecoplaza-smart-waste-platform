@@ -394,6 +394,8 @@ const en = {
     dateRange: "Sales period", dateRangeDescription: "Filter history by each sale's actual completion date.",
     quickRanges: "Quick sales periods", last7Days: "Last 7 days", last30Days: "Last 30 days", currentMonth: "Current month",
     startDate: "Start date", endDate: "End date", applyDateRange: "Apply filter",
+    minimumAmount: "Minimum amount (COP)", maximumAmount: "Maximum amount (COP)",
+    invalidAmountRange: "Enter non-negative finite amounts and make sure the minimum does not exceed the maximum.",
     clearDateRange: "View all", clearFilters: "Clear filters", buyerFilter: "Buyer",
     categoryFilter: "Category", allCategories: "All categories",
     sortBy: "Sort by", sortNewest: "Newest first", sortOldest: "Oldest first",
