@@ -74,3 +74,28 @@ export function sumSafeMonetaryValues(values: ReadonlyArray<number>): number | n
 
   return fromScaledInteger(scaledTotal, SALE_TOTAL_SCALE);
 }
+
+export function calculateSafeAveragePricePerKg(
+  totalValue: number,
+  weightKg: number,
+): number | null {
+  const scaledTotal = toScaledInteger(String(totalValue), MAX_MONETARY_FRACTION_DIGITS);
+  if (scaledTotal === null || scaledTotal < 0n || !Number.isFinite(weightKg) || weightKg < 0) {
+    return null;
+  }
+  if (weightKg === 0) return scaledTotal === 0n ? 0 : null;
+
+  const weightGrams = Math.round(weightKg * 1000);
+  if (
+    !Number.isSafeInteger(weightGrams) ||
+    weightGrams <= 0 ||
+    Math.abs(weightKg - weightGrams / 1000) > Number.EPSILON * Math.max(1, weightKg)
+  ) {
+    return null;
+  }
+
+  const divisor = BigInt(weightGrams);
+  const scaledAverage = (scaledTotal * 1000n + divisor / 2n) / divisor;
+  if (scaledAverage > MAX_SAFE_SCALED_VALUE) return null;
+  return fromScaledInteger(scaledAverage, SALE_TOTAL_SCALE);
+}

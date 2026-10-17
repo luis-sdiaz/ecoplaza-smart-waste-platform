@@ -29,6 +29,7 @@ export interface ReportCsvLabels {
   soldWeight: string;
   sales: string;
   grossRevenue: string;
+  averagePricePerKg: string;
   countUnit: string;
   kilogramsUnit: string;
   copUnit: string;
@@ -85,6 +86,7 @@ export function createReportCsv(
       labels.sales,
       labels.soldWeight,
       labels.grossRevenue,
+      labels.averagePricePerKg,
     ], language),
     ...statistics.salesByCategory.map((item) => createCsvRow([
       labels.salesPerformance,
@@ -92,6 +94,7 @@ export function createReportCsv(
       validNumber(item.salesCount),
       validNumber(item.soldWeightKg),
       validNumber(item.grossSalesValue),
+      validNumber(item.averagePricePerKg),
     ], language)),
     "",
     createCsvRow([labels.salesTrend, labels.date, labels.sales, labels.grossRevenue], language),

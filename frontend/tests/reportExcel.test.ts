@@ -18,6 +18,7 @@ const labels: ReportExcelLabels = {
   metric: "Metric", value: "Value", unit: "Unit", category: "Category",
   weight: "Weight", percentage: "Percentage", sales: "Sales",
   grossRevenue: "Gross revenue", date: "Date", records: "Records",
+  averagePricePerKg: "Average price (COP/kg)",
   historicalWeight: "Historical weight", availableWeight: "Available weight",
   soldWeight: "Sold weight", period: "Period", from: "From", to: "To",
   allTime: "All history", countUnit: "records", kilogramsUnit: "kg", copUnit: "COP",
@@ -37,9 +38,9 @@ const statistics = {
     { category: "nonRecyclable" as const, weightKg: 4.625, percentage: 12.857143 },
   ],
   salesByCategory: [
-    { category: "organic" as const, salesCount: 1, soldWeightKg: 4.625, grossSalesValue: 1000.25 },
-    { category: "recyclable" as const, salesCount: 1, soldWeightKg: 20, grossSalesValue: 2000.5 },
-    { category: "nonRecyclable" as const, salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
+    { category: "organic" as const, salesCount: 1, soldWeightKg: 4.625, grossSalesValue: 1000.25, averagePricePerKg: 216.27027 },
+    { category: "recyclable" as const, salesCount: 1, soldWeightKg: 20, grossSalesValue: 2000.5, averagePricePerKg: 100.025 },
+    { category: "nonRecyclable" as const, salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
   ],
   salesTrend: [
     { date: "2026-10-13", salesCount: 1, grossSalesValue: 1000.25 },
@@ -103,6 +104,8 @@ test("creates a valid formatted analytics workbook with real Excel value types",
   const performance = reopened.getWorksheet("Sales performance")!;
   assert.equal(performance.getCell("D4").value, 1000.25);
   assert.match(performance.getCell("D4").numFmt, /COP/);
+  assert.equal(performance.getCell("E4").value, 216.27027);
+  assert.match(performance.getCell("E4").numFmt, /COP/);
   assert.ok((performance.getColumn(3).width ?? 0) >= 20);
 
   const trend = reopened.getWorksheet("Daily sales")!;

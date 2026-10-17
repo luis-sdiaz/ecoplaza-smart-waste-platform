@@ -18,6 +18,7 @@ const reportLabels = {
   weight: "Weight (kg)", percentage: "Percentage (%)", records: "Records",
   historicalWeight: "Historical", availableWeight: "Available", soldWeight: "Sold",
   sales: "Sales", grossRevenue: "Revenue", countUnit: "records", kilogramsUnit: "kg",
+  averagePricePerKg: "Average price (COP/kg)",
   copUnit: "COP", period: "Period", from: "From", to: "To", allTime: "All history",
   categories: { organic: "Organic", recyclable: "Recyclable", nonRecyclable: "Other" },
 };
@@ -118,7 +119,7 @@ test("creates a Spanish Excel-compatible report without losing numeric precision
 test("uses English CSV separators and decimal points", () => {
   const csv = createReportCsv({
     ...report,
-    salesByCategory: [{ category: "organic", salesCount: 2, soldWeightKg: 2.5, grossSalesValue: 9000.125 }],
+    salesByCategory: [{ category: "organic", salesCount: 2, soldWeightKg: 2.5, grossSalesValue: 9000.125, averagePricePerKg: 3600.05 }],
     salesTrend: [{ date: "2026-10-12", salesCount: 2, grossSalesValue: 9000.125 }],
   }, reportLabels, "en", {
     startDate: "2026-10-01", endDate: "2026-10-13",
@@ -129,8 +130,8 @@ test("uses English CSV separators and decimal points", () => {
   assert.ok(csv.includes("Period,To,2026-10-13,"));
   assert.ok(csv.includes("Summary,Revenue,11000.25,COP"));
   assert.ok(csv.includes("Distribution,Organic,12.5,100"));
-  assert.ok(csv.includes("Sales performance,Category,Sales,Sold,Revenue"));
-  assert.ok(csv.includes("Sales performance,Organic,2,2.5,9000.125"));
+  assert.ok(csv.includes("Sales performance,Category,Sales,Sold,Revenue,Average price (COP/kg)"));
+  assert.ok(csv.includes("Sales performance,Organic,2,2.5,9000.125,3600.05"));
   assert.ok(csv.includes("Daily sales trend,Date,Sales,Revenue"));
   assert.ok(csv.includes("Daily sales trend,2026-10-12,2,9000.125"));
 });

@@ -36,7 +36,7 @@ const reportLabels = {
   summary: "Summary", distribution: "Distribution", salesPerformance: "Sales performance", salesTrend: "Daily sales trend", date: "Date", category: "Category",
   weight: "Weight", percentage: "Percentage", records: "Records",
   historicalWeight: "Historical", availableWeight: "Available", soldWeight: "Sold",
-  sales: "Sales", grossRevenue: "Revenue", countUnit: "records", kilogramsUnit: "kg",
+  sales: "Sales", grossRevenue: "Revenue", averagePricePerKg: "Average price", countUnit: "records", kilogramsUnit: "kg",
   copUnit: "COP", period: "Period", from: "From", to: "To", allTime: "All",
   categories,
 };

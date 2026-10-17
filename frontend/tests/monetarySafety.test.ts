@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  calculateSafeAveragePricePerKg,
   calculateSafeEstimatedTotal,
   isSafeUnitPrice,
   parseSafeSaleTotal,
@@ -40,4 +41,13 @@ test("sums monetary values without floating-point accumulation errors", () => {
   assert.equal(sumSafeMonetaryValues([]), 0);
   assert.equal(sumSafeMonetaryValues([Number.NaN]), null);
   assert.equal(sumSafeMonetaryValues([90_071_992_547.40991, 0.00001]), null);
+});
+
+test("calculates safe average prices per kilogram without invalid divisions", () => {
+  assert.equal(calculateSafeAveragePricePerKg(1000.25, 20), 50.0125);
+  assert.equal(calculateSafeAveragePricePerKg(1, 3), 0.33333);
+  assert.equal(calculateSafeAveragePricePerKg(0, 0), 0);
+  assert.equal(calculateSafeAveragePricePerKg(1, 0), null);
+  assert.equal(calculateSafeAveragePricePerKg(Number.NaN, 1), null);
+  assert.equal(calculateSafeAveragePricePerKg(1, Number.POSITIVE_INFINITY), null);
 });

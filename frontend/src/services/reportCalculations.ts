@@ -1,4 +1,7 @@
-import { sumSafeMonetaryValues } from "./monetarySafety.ts";
+import {
+  calculateSafeAveragePricePerKg,
+  sumSafeMonetaryValues,
+} from "./monetarySafety.ts";
 
 export type ReportWasteCategory = "organic" | "recyclable" | "nonRecyclable";
 
@@ -47,6 +50,7 @@ export interface ReportSalesCategoryItem {
   salesCount: number;
   soldWeightKg: number;
   grossSalesValue: number;
+  averagePricePerKg: number;
 }
 
 export interface ReportStatistics {
@@ -158,11 +162,14 @@ export function calculateSalesByCategory(
     );
 
     if (soldWeightKg === null || grossSalesValue === null) return null;
+    const averagePricePerKg = calculateSafeAveragePricePerKg(grossSalesValue, soldWeightKg);
+    if (averagePricePerKg === null) return null;
     performance.push({
       category,
       salesCount: categorySales.length,
       soldWeightKg,
       grossSalesValue,
+      averagePricePerKg,
     });
   }
 

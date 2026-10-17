@@ -43,9 +43,9 @@ test("calculates historical, available, sold, revenue, and category values", () 
   ]);
   assert.equal(result?.distribution.reduce((sum, item) => sum + item.percentage, 0), 100);
   assert.deepEqual(result?.salesByCategory, [
-    { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
-    { category: "recyclable", salesCount: 1, soldWeightKg: 20, grossSalesValue: 1000.25 },
-    { category: "nonRecyclable", salesCount: 1, soldWeightKg: 5, grossSalesValue: 2000.5 },
+    { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
+    { category: "recyclable", salesCount: 1, soldWeightKg: 20, grossSalesValue: 1000.25, averagePricePerKg: 50.0125 },
+    { category: "nonRecyclable", salesCount: 1, soldWeightKg: 5, grossSalesValue: 2000.5, averagePricePerKg: 400.1 },
   ]);
 });
 
@@ -53,9 +53,9 @@ test("uses sale categories even when their waste records are outside the report 
   const result = calculateReportStatistics([], [sales[0]]);
 
   assert.deepEqual(result?.salesByCategory, [
-    { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
-    { category: "recyclable", salesCount: 1, soldWeightKg: 20, grossSalesValue: 1000.25 },
-    { category: "nonRecyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
+    { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
+    { category: "recyclable", salesCount: 1, soldWeightKg: 20, grossSalesValue: 1000.25, averagePricePerKg: 50.0125 },
+    { category: "nonRecyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
   ]);
 });
 
@@ -99,9 +99,9 @@ test("returns valid zero statistics for an interval without records", () => {
       { category: "nonRecyclable", weightKg: 0, percentage: 0 },
     ],
     salesByCategory: [
-      { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
-      { category: "recyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
-      { category: "nonRecyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0 },
+      { category: "organic", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
+      { category: "recyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
+      { category: "nonRecyclable", salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
     ],
     salesTrend: [],
   });

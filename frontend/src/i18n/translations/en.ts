@@ -541,7 +541,7 @@ const en = {
     salesByCategory: "Commercial performance by category",
     salesByCategoryDescription: "Sales, sold weight, and gross revenue by the category recorded for each operation.",
     categorySalesCount: "Sales", categorySoldWeight: "Sold weight",
-    categoryGrossRevenue: "Gross revenue",
+    categoryGrossRevenue: "Gross revenue", categoryAveragePrice: "Average price per kg",
     emptySalesByCategory: "There are no sales yet; every category shows zero values.",
     emptySalesByCategoryPeriod: "There were no sales in this period; every category shows zero values.",
     salesTrend: "Sales trend",
@@ -566,7 +566,7 @@ const en = {
     csv: {
       section: "Section", metric: "Metric", value: "Value", unit: "Unit",
       summary: "Summary", distribution: "Historical distribution", salesPerformance: "Sales performance", salesTrend: "Daily sales trend", date: "Date", category: "Category",
-      weight: "Weight (kg)", percentage: "Percentage (%)", countUnit: "records",
+      weight: "Weight (kg)", percentage: "Percentage (%)", averagePricePerKg: "Average price (COP/kg)", countUnit: "records",
       copUnit: "COP", period: "Period", from: "From", to: "To", allTime: "All history",
     },
     excel: { workbookTitle: "EcoPlaza analytics report", summarySheet: "Summary", distributionSheet: "Waste distribution", performanceSheet: "Sales performance", trendSheet: "Daily sales" },

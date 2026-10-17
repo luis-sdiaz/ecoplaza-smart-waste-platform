@@ -541,7 +541,7 @@ const es = {
     salesByCategory: "Rendimiento comercial por categoría",
     salesByCategoryDescription: "Ventas, peso vendido e ingresos brutos según la categoría registrada en cada operación.",
     categorySalesCount: "Ventas", categorySoldWeight: "Peso vendido",
-    categoryGrossRevenue: "Ingresos brutos",
+    categoryGrossRevenue: "Ingresos brutos", categoryAveragePrice: "Precio promedio por kg",
     emptySalesByCategory: "Aún no hay ventas; todas las categorías muestran valores en cero.",
     emptySalesByCategoryPeriod: "No se realizaron ventas en este período; todas las categorías muestran valores en cero.",
     salesTrend: "Evolución de ventas",
@@ -566,7 +566,7 @@ const es = {
     csv: {
       section: "Sección", metric: "Indicador", value: "Valor", unit: "Unidad",
       summary: "Resumen", distribution: "Distribución histórica", salesPerformance: "Rendimiento comercial", salesTrend: "Evolución diaria de ventas", date: "Fecha", category: "Categoría",
-      weight: "Peso (kg)", percentage: "Porcentaje (%)", countUnit: "registros",
+      weight: "Peso (kg)", percentage: "Porcentaje (%)", averagePricePerKg: "Precio promedio (COP/kg)", countUnit: "registros",
       copUnit: "COP", period: "Período", from: "Desde", to: "Hasta", allTime: "Todo el historial",
     },
     excel: { workbookTitle: "Informe analítico de EcoPlaza", summarySheet: "Resumen", distributionSheet: "Distribución residuos", performanceSheet: "Rendimiento comercial", trendSheet: "Ventas diarias" },

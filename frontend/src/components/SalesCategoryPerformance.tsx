@@ -54,6 +54,10 @@ function SalesCategoryPerformance({ data, isFiltered }: SalesCategoryPerformance
                 <dt className="text-ecoplaza-text-muted">{t("reports.categoryGrossRevenue")}</dt>
                 <dd className="text-right font-semibold text-ecoplaza-primary">{currencyFormatter.format(item.grossSalesValue)}</dd>
               </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-ecoplaza-text-muted">{t("reports.categoryAveragePrice")}</dt>
+                <dd className="text-right font-semibold text-ecoplaza-primary">{currencyFormatter.format(item.averagePricePerKg)} / {t("common.kg")}</dd>
+              </div>
             </dl>
           </section>
         ))}

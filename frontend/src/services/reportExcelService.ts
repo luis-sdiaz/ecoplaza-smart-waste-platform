@@ -25,6 +25,7 @@ export interface ReportExcelLabels {
   percentage: string;
   sales: string;
   grossRevenue: string;
+  averagePricePerKg: string;
   date: string;
   records: string;
   historicalWeight: string;
@@ -83,18 +84,20 @@ export async function createReportExcel(
   styleExcelBody(distribution);
 
   const performance = workbook.addWorksheet(safeExcelText(labels.performanceSheet));
-  styleExcelWorksheet(performance, labels.performanceSheet, [labels.category, labels.sales, labels.soldWeight, labels.grossRevenue], [25, 14, 20, 22]);
+  styleExcelWorksheet(performance, labels.performanceSheet, [labels.category, labels.sales, labels.soldWeight, labels.grossRevenue, labels.averagePricePerKg], [25, 14, 20, 22, 24]);
   for (const item of statistics.salesByCategory) {
     performance.addRow([
       safeExcelText(labels.categories[item.category]),
       validExcelNumber(item.salesCount, "Report"),
       validExcelNumber(item.soldWeightKg, "Report"),
       validExcelNumber(item.grossSalesValue, "Report"),
+      validExcelNumber(item.averagePricePerKg, "Report"),
     ]);
   }
   performance.getColumn(2).numFmt = "0";
   performance.getColumn(3).numFmt = '0.000 "kg"';
   performance.getColumn(4).numFmt = '"COP" #,##0.00';
+  performance.getColumn(5).numFmt = '"COP" #,##0.00000';
   styleExcelBody(performance);
 
   const trend = workbook.addWorksheet(safeExcelText(labels.trendSheet));
