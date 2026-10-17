@@ -21,6 +21,7 @@ type ContainerSortRecord = {
 };
 
 export type ContainerSortOption = "codeAsc" | "codeDesc" | "newest" | "oldest";
+export type ContainerStockFilter = "all" | "withStock" | "withoutStock";
 
 export type SalesSortOption = "newest" | "oldest" | "valueDesc" | "valueAsc";
 
@@ -45,6 +46,19 @@ export function sortContainers<T extends ContainerSortRecord>(
     if (option === "newest" && dateComparison !== 0) return -dateComparison;
     if (option === "oldest" && dateComparison !== 0) return dateComparison;
     return left.id.localeCompare(right.id);
+  });
+}
+
+export function filterContainersByStock<T extends { id: string }>(
+  containers: readonly T[],
+  stockByContainer: ReadonlyMap<string, Pick<ContainerStockSummary, "availableRecordCount">>,
+  filter: ContainerStockFilter,
+): T[] {
+  if (filter === "all") return [...containers];
+
+  return containers.filter((container) => {
+    const hasStock = (stockByContainer.get(container.id)?.availableRecordCount ?? 0) > 0;
+    return filter === "withStock" ? hasStock : !hasStock;
   });
 }
 

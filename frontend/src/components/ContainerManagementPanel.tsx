@@ -20,9 +20,11 @@ import {
   type ContainerErrorCode,
 } from "../services/containerService";
 import {
+  filterContainersByStock,
   sortContainers,
   summarizeAvailableStockByContainer,
   type ContainerSortOption,
+  type ContainerStockFilter,
   type ContainerStockSummary,
 } from "../services/coreWorkflow";
 import { listAvailableWasteRecords } from "../services/wasteService";
@@ -53,6 +55,7 @@ function ContainerManagementPanel() {
   const [code, setCode] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<ContainerSortOption>("codeAsc");
+  const [stockFilter, setStockFilter] = useState<ContainerStockFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
@@ -174,8 +177,13 @@ function ContainerManagementPanel() {
     : containers.filter((container) =>
         container.code.toLocaleLowerCase(locale).includes(normalizedSearch)
       );
-  const visibleContainers = sortContainers(filteredContainers, sortOption, locale);
+  const stockFilteredContainers = !isStockLoading && !stockLoadError
+    ? filterContainersByStock(filteredContainers, stockByContainer, stockFilter)
+    : filteredContainers;
+  const visibleContainers = sortContainers(stockFilteredContainers, sortOption, locale);
   const hasActiveSearch = normalizedSearch !== "";
+  const hasActiveStockFilter = stockFilter !== "all";
+  const hasAppliedStockFilter = hasActiveStockFilter && !isStockLoading && !stockLoadError;
   const feedbackClass = feedback?.tone === "success"
     ? "border-ecoplaza-primary/30 bg-ecoplaza-primary/10 text-ecoplaza-primary"
     : "border-ecoplaza-danger/30 bg-ecoplaza-danger/10 text-ecoplaza-danger";
@@ -288,7 +296,7 @@ function ContainerManagementPanel() {
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-4">
         <div className="min-h-48 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
           {!isLoading && !loadError && containers.length > 0 && (
-            <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_190px_190px]">
               <div className="relative">
                 <label htmlFor="container-search" className="sr-only">{t("containers.searchLabel")}</label>
                 <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted" size={17} strokeWidth={1.8} aria-hidden="true" />
@@ -310,6 +318,20 @@ function ContainerManagementPanel() {
                     <X size={16} strokeWidth={1.8} aria-hidden="true" />
                   </button>
                 )}
+              </div>
+              <div>
+                <label htmlFor="container-stock-filter" className="sr-only">{t("containers.stockFilterLabel")}</label>
+                <select
+                  id="container-stock-filter"
+                  value={stockFilter}
+                  disabled={isStockLoading || stockLoadError}
+                  onChange={(event) => setStockFilter(event.target.value as ContainerStockFilter)}
+                  className="h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 px-3 text-sm text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                >
+                  <option value="all">{t("containers.allStock")}</option>
+                  <option value="withStock">{t("containers.withStock")}</option>
+                  <option value="withoutStock">{t("containers.withoutStock")}</option>
+                </select>
               </div>
               <div>
                 <label htmlFor="container-sort" className="sr-only">{t("containers.sortLabel")}</label>
@@ -358,8 +380,12 @@ function ContainerManagementPanel() {
           ) : visibleContainers.length === 0 ? (
             <div className="flex min-h-38 flex-col items-center justify-center text-center">
               <Search size={22} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("containers.noSearchResultsTitle")}</h3>
-              <p className="mt-1 max-w-md text-xs leading-5 text-ecoplaza-text-muted">{t("containers.noSearchResultsDescription")}</p>
+              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">
+                {t(hasAppliedStockFilter ? "containers.noFilteredResultsTitle" : "containers.noSearchResultsTitle")}
+              </h3>
+              <p className="mt-1 max-w-md text-xs leading-5 text-ecoplaza-text-muted">
+                {t(hasAppliedStockFilter ? "containers.noFilteredResultsDescription" : "containers.noSearchResultsDescription")}
+              </p>
             </div>
           ) : (
             <div>

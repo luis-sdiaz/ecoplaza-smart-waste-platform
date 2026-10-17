@@ -1,10 +1,12 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   listContainers: vi.fn(),
   listAvailableWasteRecords: vi.fn(),
   createContainer: vi.fn(),
+  saveContainerCsv: vi.fn(),
+  saveContainerExcel: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -24,11 +26,11 @@ vi.mock("../src/services/wasteService", () => ({
 }));
 
 vi.mock("../src/services/containerCsv", () => ({
-  saveContainerCsv: vi.fn(),
+  saveContainerCsv: mocks.saveContainerCsv,
 }));
 
 vi.mock("../src/services/containerExcelService", () => ({
-  saveContainerExcel: vi.fn(),
+  saveContainerExcel: mocks.saveContainerExcel,
 }));
 
 import ContainerManagementPanel from "../src/components/ContainerManagementPanel";
@@ -53,6 +55,8 @@ beforeEach(() => {
   mocks.listContainers.mockReset();
   mocks.listAvailableWasteRecords.mockReset();
   mocks.createContainer.mockReset();
+  mocks.saveContainerCsv.mockReset();
+  mocks.saveContainerExcel.mockReset();
 });
 
 describe("container stock visibility", () => {
@@ -77,7 +81,33 @@ describe("container stock visibility", () => {
     expect(await screen.findByText("CTR-A")).toBeTruthy();
     expect(screen.getByText("containers.stockLoadError")).toBeTruthy();
     expect(screen.getAllByText("—")).toHaveLength(2);
+    expect((screen.getByLabelText("containers.stockFilterLabel") as HTMLSelectElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: "containers.register" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  test("combines stock and search filters and exports only visible containers", async () => {
+    mocks.listContainers.mockResolvedValue(success([containerA, containerB]));
+    mocks.listAvailableWasteRecords.mockResolvedValue(success([availableRecord]));
+    mocks.saveContainerCsv.mockResolvedValue("saved");
+    mocks.saveContainerExcel.mockResolvedValue("saved");
+
+    render(<ContainerManagementPanel />);
+
+    const stockFilter = await screen.findByLabelText("containers.stockFilterLabel");
+    fireEvent.change(stockFilter, { target: { value: "withoutStock" } });
+    expect(screen.queryByText("CTR-A")).toBeNull();
+    expect(screen.getByText("CTR-B")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("containers.searchLabel"), { target: { value: "CTR-B" } });
+    fireEvent.click(screen.getByRole("button", { name: "containers.exportCsv" }));
+    await vi.waitFor(() => expect(mocks.saveContainerCsv).toHaveBeenCalledTimes(1));
+    expect(mocks.saveContainerCsv.mock.calls[0][0]).toEqual([containerB]);
+
+    const excelButton = screen.getByRole("button", { name: "containers.exportExcel" }) as HTMLButtonElement;
+    await vi.waitFor(() => expect(excelButton.disabled).toBe(false));
+    fireEvent.click(excelButton);
+    await vi.waitFor(() => expect(mocks.saveContainerExcel).toHaveBeenCalledTimes(1));
+    expect(mocks.saveContainerExcel.mock.calls[0][0]).toEqual([containerB]);
   });
 
   test("discards the previous account stock when the keyed panel is remounted", async () => {

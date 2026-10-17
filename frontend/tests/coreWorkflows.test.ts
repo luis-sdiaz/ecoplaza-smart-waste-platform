@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   collectPaginatedData,
+  filterContainersByStock,
   filterAvailableInventory,
   filterSalesHistory,
   filterWasteHistory,
@@ -47,6 +48,22 @@ test("sorts containers by localized code and creation date with deterministic ti
   assert.deepEqual(sortContainers(containers, "newest", "es-CO").map(({ id }) => id), ["container-a", "container-b", "container-c"]);
   assert.deepEqual(sortContainers(containers, "oldest", "es-CO").map(({ id }) => id), ["container-c", "container-a", "container-b"]);
   assert.deepEqual(containers.map(({ id }) => id), ["container-c", "container-b", "container-a"]);
+});
+
+test("filters containers by available stock without mutating the directory", () => {
+  const containers = [
+    { id: "container-b", code: "CTR-B", createdAt: "2026-10-02" },
+    { id: "container-a", code: "CTR-A", createdAt: "2026-10-01" },
+  ];
+  const stock = new Map([
+    ["container-a", { availableRecordCount: 2 }],
+    ["container-b", { availableRecordCount: 0 }],
+  ]);
+
+  assert.deepEqual(filterContainersByStock(containers, stock, "withStock").map(({ id }) => id), ["container-a"]);
+  assert.deepEqual(filterContainersByStock(containers, stock, "withoutStock").map(({ id }) => id), ["container-b"]);
+  assert.deepEqual(filterContainersByStock(containers, stock, "all").map(({ id }) => id), ["container-b", "container-a"]);
+  assert.deepEqual(containers.map(({ id }) => id), ["container-b", "container-a"]);
 });
 
 test("filters buyers by available contact together with search and sorting", () => {
