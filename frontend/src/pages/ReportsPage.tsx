@@ -26,6 +26,7 @@ import {
   type ReportDateRangePreset,
 } from "../services/reportDateRange";
 import { getHighestRevenueDay } from "../services/reportCalculations";
+import { saveReportExcel, type ReportExcelLabels } from "../services/reportExcelService";
 
 function getReportErrorKey(code: ReportErrorCode): string {
   if (code === "unauthorized") return "reports.unauthorized";
@@ -40,8 +41,8 @@ function UserReportsPage({ userId }: { userId: string }) {
   const [statistics, setStatistics] = useState<ReportStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
+  const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
+  const [exportNotice, setExportNotice] = useState<"csvSuccess" | "excelSuccess" | "error" | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
@@ -157,9 +158,9 @@ function UserReportsPage({ userId }: { userId: string }) {
   };
 
   const exportReport = async (): Promise<void> => {
-    if (statistics === null || isExporting) return;
+    if (statistics === null || exportKind !== null) return;
 
-    setIsExporting(true);
+    setExportKind("csv");
     setExportNotice(null);
 
     const labels: ReportCsvLabels = {
@@ -201,11 +202,49 @@ function UserReportsPage({ userId }: { userId: string }) {
         i18n.resolvedLanguage === "en" ? "en" : "es",
         activeDateRange ?? undefined,
       );
-      if (result === "saved") setExportNotice("success");
+      if (result === "saved") setExportNotice("csvSuccess");
     } catch {
       setExportNotice("error");
     } finally {
-      setIsExporting(false);
+      setExportKind(null);
+    }
+  };
+
+  const exportReportExcel = async (): Promise<void> => {
+    if (statistics === null || exportKind !== null) return;
+
+    setExportKind("excel");
+    setExportNotice(null);
+    const labels: ReportExcelLabels = {
+      workbookTitle: t("reports.excel.workbookTitle"),
+      summarySheet: t("reports.excel.summarySheet"),
+      distributionSheet: t("reports.excel.distributionSheet"),
+      performanceSheet: t("reports.excel.performanceSheet"),
+      trendSheet: t("reports.excel.trendSheet"),
+      metric: t("reports.csv.metric"), value: t("reports.csv.value"), unit: t("reports.csv.unit"),
+      category: t("reports.csv.category"), weight: t("reports.csv.weight"), percentage: t("reports.csv.percentage"),
+      sales: t("reports.salesCount"), grossRevenue: t("reports.grossSales"), date: t("reports.csv.date"),
+      records: t("reports.wasteRecords"), historicalWeight: t("reports.historicalWeight"),
+      availableWeight: t("reports.availableWeight"), soldWeight: t("reports.soldWeight"),
+      period: t("reports.csv.period"), from: t("reports.csv.from"), to: t("reports.csv.to"), allTime: t("reports.csv.allTime"),
+      countUnit: t("reports.csv.countUnit"), kilogramsUnit: t("common.kg"), copUnit: t("reports.csv.copUnit"),
+      categories: getCsvCategoryLabels(t),
+    };
+
+    try {
+      const result = await saveReportExcel(
+        statistics,
+        labels,
+        activeDateRange === null
+          ? `ecoplaza-report-${new Date().toISOString().slice(0, 10)}.xlsx`
+          : `ecoplaza-report-${activeDateRange.startDate}-${activeDateRange.endDate}.xlsx`,
+        activeDateRange ?? undefined,
+      );
+      if (result === "saved") setExportNotice("excelSuccess");
+    } catch {
+      setExportNotice("error");
+    } finally {
+      setExportKind(null);
     }
   };
 
@@ -217,19 +256,32 @@ function UserReportsPage({ userId }: { userId: string }) {
         description={t("reports.description")}
       />
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex flex-wrap justify-end gap-2">
         <button
           type="button"
           onClick={() => void exportReport()}
-          disabled={metricsUnavailable || isExporting}
+          disabled={metricsUnavailable || exportKind !== null}
           className="flex items-center gap-2 rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isExporting ? (
+          {exportKind === "csv" ? (
             <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
           ) : (
             <Download size={17} aria-hidden="true" />
           )}
-          {isExporting ? t("reports.exporting") : t("reports.exportCsv")}
+          {exportKind === "csv" ? t("reports.exporting") : t("reports.exportCsv")}
+        </button>
+        <button
+          type="button"
+          onClick={() => void exportReportExcel()}
+          disabled={metricsUnavailable || exportKind !== null}
+          className="flex items-center gap-2 rounded-xl bg-ecoplaza-secondary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {exportKind === "excel" ? (
+            <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
+          ) : (
+            <Download size={17} aria-hidden="true" />
+          )}
+          {exportKind === "excel" ? t("reports.exportingExcel") : t("reports.exportExcel")}
         </button>
       </div>
 
@@ -422,8 +474,16 @@ function UserReportsPage({ userId }: { userId: string }) {
 
       {exportNotice !== null && (
         <SuccessToast
-          title={t(exportNotice === "success" ? "reports.exportSuccessTitle" : "reports.exportErrorTitle")}
-          description={t(exportNotice === "success" ? "reports.exportSuccessDescription" : "reports.exportErrorDescription")}
+          title={t(exportNotice === "csvSuccess"
+            ? "reports.exportSuccessTitle"
+            : exportNotice === "excelSuccess"
+              ? "reports.excelExportSuccessTitle"
+              : "reports.exportErrorTitle")}
+          description={t(exportNotice === "csvSuccess"
+            ? "reports.exportSuccessDescription"
+            : exportNotice === "excelSuccess"
+              ? "reports.excelExportSuccessDescription"
+              : "reports.exportErrorDescription")}
           closeLabel={t("reports.dismissNotification")}
           variant={exportNotice === "error" ? "error" : "success"}
           onClose={() => setExportNotice(null)}

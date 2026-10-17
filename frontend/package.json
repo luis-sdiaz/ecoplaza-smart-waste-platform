@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "npm run test:node && npm run test:components",
-    "test:node": "node --test --experimental-strip-types tests/reportCalculations.test.ts tests/reportDateRange.test.ts tests/csv.test.ts tests/coreWorkflows.test.ts tests/wasteWeight.test.ts tests/monetarySafety.test.ts tests/salesEmptyState.test.ts tests/inventoryAge.test.ts tests/buyerPurchaseFilters.test.ts tests/salesAmountRange.test.ts",
+    "test:node": "node --test --experimental-strip-types tests/reportCalculations.test.ts tests/reportDateRange.test.ts tests/csv.test.ts tests/coreWorkflows.test.ts tests/wasteWeight.test.ts tests/monetarySafety.test.ts tests/salesEmptyState.test.ts tests/inventoryAge.test.ts tests/buyerPurchaseFilters.test.ts tests/salesAmountRange.test.ts tests/reportExcel.test.ts",
     "test:components": "vitest run",
     "preview": "vite preview"
   },
@@ -20,6 +20,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/plugin-dialog": "^2.8.2",
     "@tauri-apps/plugin-fs": "^2.7.0",
+    "exceljs": "^4.4.0",
     "i18next": "^26.4.2",
     "lucide-react": "^1.49.0",
     "react": "^19.2.8",
@@ -47,5 +48,8 @@
     "typescript-eslint": "^8.69.0",
     "vite": "^8.3.0",
     "vitest": "5.0.4"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
   }
 }

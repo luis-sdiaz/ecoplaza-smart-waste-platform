@@ -525,10 +525,13 @@ const es = {
     salesTrendPoint: "{{date}}: {{count}} ventas, {{revenue}} de ingresos brutos",
     exportCsv: "Exportar CSV",
     exporting: "Exportando...",
+    exportExcel: "Exportar Excel", exportingExcel: "Creando Excel...",
     exportSuccessTitle: "Informe exportado",
     exportSuccessDescription: "El archivo CSV se guardó correctamente.",
+    excelExportSuccessTitle: "Informe Excel exportado",
+    excelExportSuccessDescription: "El libro de Excel con formato profesional se guardó correctamente.",
     exportErrorTitle: "No fue posible exportar",
-    exportErrorDescription: "No se pudo guardar el archivo CSV. Inténtalo nuevamente.",
+    exportErrorDescription: "No se pudo guardar el archivo del informe. Inténtalo nuevamente.",
     dismissNotification: "Cerrar notificación",
     csv: {
       section: "Sección", metric: "Indicador", value: "Valor", unit: "Unidad",
@@ -536,6 +539,7 @@ const es = {
       weight: "Peso (kg)", percentage: "Porcentaje (%)", countUnit: "registros",
       copUnit: "COP", period: "Período", from: "Desde", to: "Hasta", allTime: "Todo el historial",
     },
+    excel: { workbookTitle: "Informe analítico de EcoPlaza", summarySheet: "Resumen", distributionSheet: "Distribución residuos", performanceSheet: "Rendimiento comercial", trendSheet: "Ventas diarias" },
   },
   assistant: {
     eyebrow: "Inteligencia artificial", title: "Asistente IA",

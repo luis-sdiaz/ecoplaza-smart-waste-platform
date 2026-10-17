@@ -525,10 +525,13 @@ const en = {
     salesTrendPoint: "{{date}}: {{count}} sales, {{revenue}} in gross revenue",
     exportCsv: "Export CSV",
     exporting: "Exporting...",
+    exportExcel: "Export Excel", exportingExcel: "Creating Excel...",
     exportSuccessTitle: "Report exported",
     exportSuccessDescription: "The CSV file was saved successfully.",
+    excelExportSuccessTitle: "Excel report exported",
+    excelExportSuccessDescription: "The formatted Excel workbook was saved successfully.",
     exportErrorTitle: "Export failed",
-    exportErrorDescription: "The CSV file could not be saved. Please try again.",
+    exportErrorDescription: "The report file could not be saved. Please try again.",
     dismissNotification: "Dismiss notification",
     csv: {
       section: "Section", metric: "Metric", value: "Value", unit: "Unit",
@@ -536,6 +539,7 @@ const en = {
       weight: "Weight (kg)", percentage: "Percentage (%)", countUnit: "records",
       copUnit: "COP", period: "Period", from: "From", to: "To", allTime: "All history",
     },
+    excel: { workbookTitle: "EcoPlaza analytics report", summarySheet: "Summary", distributionSheet: "Waste distribution", performanceSheet: "Sales performance", trendSheet: "Daily sales" },
   },
   assistant: {
     eyebrow: "Artificial intelligence", title: "AI Assistant",
