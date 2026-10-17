@@ -23,7 +23,12 @@ import {
   type WasteErrorCode,
   type WasteStatus,
 } from "../services/wasteService";
-import { filterWasteHistory, sortWasteHistory, type WasteSortOption } from "../services/coreWorkflow";
+import {
+  filterWasteHistory,
+  sortWasteHistory,
+  summarizeFilteredWaste,
+  type WasteSortOption,
+} from "../services/coreWorkflow";
 import { saveWasteCsv, type WasteCsvLabels } from "../services/wasteCsv";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import {
@@ -255,6 +260,7 @@ function UserWastePage({ userId }: { userId: string }) {
     recordSearch,
   );
   const visibleRemoteRecords = sortWasteHistory(filteredRemoteRecords, sortOption);
+  const filteredSummary = summarizeFilteredWaste(visibleRemoteRecords);
   const hasActiveFilters = statusFilter !== "all" || categoryFilter !== "all" ||
     containerFilter !== "all" || activeDateRange !== null || recordSearch.trim() !== "";
   const tableRecords: WasteRecord[] = visibleRemoteRecords.map((record) => ({
@@ -467,6 +473,27 @@ function UserWastePage({ userId }: { userId: string }) {
           <p className="mt-2 text-right text-xs font-medium text-ecoplaza-primary">
             {t("waste.activeDateRange", { start: activeDateRange.startDate, end: activeDateRange.endDate })}
           </p>
+        )}
+
+        {!isLoading && loadError === null && (
+          <div className="mt-4 rounded-2xl border border-ecoplaza-primary/20 bg-ecoplaza-primary/5 p-4" aria-label={t("waste.filteredSummaryTitle")}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-ecoplaza-text">{t("waste.filteredSummaryTitle")}</h3>
+                <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("waste.filteredSummaryDescription")}</p>
+              </div>
+              <dl className="flex gap-6 text-right">
+                <div>
+                  <dt className="text-xs text-ecoplaza-text-muted">{t("waste.filteredRecordCount")}</dt>
+                  <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{filteredSummary.recordCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-ecoplaza-text-muted">{t("waste.filteredTotalWeight")}</dt>
+                  <dd className="mt-1 text-lg font-semibold text-ecoplaza-primary">{formatWeight(filteredSummary.totalWeightKg)}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
         )}
 
         <div className="mt-4">

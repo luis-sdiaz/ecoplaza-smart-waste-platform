@@ -11,6 +11,7 @@ import {
   sortSalesHistory,
   sortWasteHistory,
   summarizeAvailableStockByContainer,
+  summarizeFilteredWaste,
 } from "../src/services/coreWorkflow.ts";
 import { filterAndSortBuyers } from "../src/services/buyerFilters.ts";
 import { calculateMaterialStatusBreakdown } from "../src/services/dashboardMaterialStatus.ts";
@@ -133,10 +134,10 @@ test("sorts the complete result after combining sales filters", () => {
 });
 
 const wasteRecords = [
-  { id: "waste-1", recordNumber: "1", status: "available", category: "organic", containerId: "container-a", registeredAt: "2026-10-01T05:00:00.000Z" },
-  { id: "waste-2", recordNumber: "AB-2", status: "sold", category: "organic", containerId: "container-a", registeredAt: "2026-10-05T12:00:00.000Z" },
-  { id: "waste-3", recordNumber: "3", status: "available", category: "recyclable", containerId: "container-b", registeredAt: "2026-10-11T04:59:59.999Z" },
-  { id: "waste-4", recordNumber: "4", status: "registered", category: "nonRecyclable", containerId: "container-b", registeredAt: "2026-10-11T05:00:00.000Z" },
+  { id: "waste-1", recordNumber: "1", status: "available", category: "organic", containerId: "container-a", weightKg: 5, registeredAt: "2026-10-01T05:00:00.000Z" },
+  { id: "waste-2", recordNumber: "AB-2", status: "sold", category: "organic", containerId: "container-a", weightKg: 7, registeredAt: "2026-10-05T12:00:00.000Z" },
+  { id: "waste-3", recordNumber: "3", status: "available", category: "recyclable", containerId: "container-b", weightKg: 11, registeredAt: "2026-10-11T04:59:59.999Z" },
+  { id: "waste-4", recordNumber: "4", status: "registered", category: "nonRecyclable", containerId: "container-b", weightKg: 13, registeredAt: "2026-10-11T05:00:00.000Z" },
 ] as const;
 
 test("keeps only available inventory and combines category and container filters", () => {
@@ -236,6 +237,31 @@ test("searches waste history by record number with spaces and case normalization
   assert.deepEqual(filterWasteHistory(wasteRecords, "all", "all", "all", undefined, " res - 001 ").map(({ id }) => id), ["waste-1"]);
   assert.deepEqual(filterWasteHistory(wasteRecords, "sold", "organic", "container-a", dateRange, " ab-2 ").map(({ id }) => id), ["waste-2"]);
   assert.deepEqual(filterWasteHistory(wasteRecords, "all", "all", "all", undefined, "missing"), []);
+});
+
+test("summarizes the exact waste result after combined filters and avoids NaN weights", () => {
+  const visibleRecords = filterWasteHistory(
+    wasteRecords,
+    "sold",
+    "organic",
+    "container-a",
+    dateRange,
+    "ab-2",
+  );
+
+  assert.deepEqual(summarizeFilteredWaste(visibleRecords), {
+    recordCount: 1,
+    totalWeightKg: 7,
+  });
+  assert.deepEqual(summarizeFilteredWaste([
+    { weightKg: Number.NaN },
+    { weightKg: Number.POSITIVE_INFINITY },
+    { weightKg: 2.5 },
+  ]), {
+    recordCount: 3,
+    totalWeightKg: 2.5,
+  });
+  assert.deepEqual(summarizeFilteredWaste([]), { recordCount: 0, totalWeightKg: 0 });
 });
 
 test("collects every page using inclusive database ranges", async () => {

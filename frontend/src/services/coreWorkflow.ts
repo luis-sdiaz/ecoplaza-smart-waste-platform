@@ -85,6 +85,23 @@ export type WasteCategoryFilter = WasteFilterRecord["category"] | "all";
 export type InventorySortOption = "newest" | "oldest" | "weightDesc" | "weightAsc";
 export type WasteSortOption = "newest" | "oldest" | "weightDesc" | "weightAsc";
 
+export type FilteredWasteSummary = {
+  recordCount: number;
+  totalWeightKg: number;
+};
+
+export function summarizeFilteredWaste(
+  records: ReadonlyArray<{ weightKg: number }>,
+): FilteredWasteSummary {
+  return {
+    recordCount: records.length,
+    totalWeightKg: records.reduce(
+      (total, record) => total + (Number.isFinite(record.weightKg) && record.weightKg > 0 ? record.weightKg : 0),
+      0,
+    ),
+  };
+}
+
 type InventorySortRecord = { id: string; registeredAt: string; weightKg: number };
 
 export function sortWasteHistory<T extends InventorySortRecord>(records: readonly T[], option: WasteSortOption): T[] {
