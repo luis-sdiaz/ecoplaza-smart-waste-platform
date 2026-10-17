@@ -9,6 +9,7 @@ import { saveBuyerPurchaseCsv } from "../services/buyerPurchaseCsv";
 import type { SalesCsvLabels } from "../services/salesCsv";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import { summarizeBuyerPurchases } from "../services/buyerPurchaseSummary";
+import { filterBuyerPurchasesByDate } from "../services/buyerPurchaseFilters";
 
 interface BuyerPurchaseHistoryModalProps {
   buyer: Buyer;
@@ -30,6 +31,8 @@ function BuyerPurchaseHistoryModal({
   const { t, i18n } = useTranslation();
   const [isExporting, setIsExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState<"success" | "error" | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const dialogRef = useDialogFocus(onClose);
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
@@ -39,10 +42,13 @@ function BuyerPurchaseHistoryModal({
     currency: "COP",
     maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
-  const purchaseSummary = summarizeBuyerPurchases(sales);
+  const filteredResult = filterBuyerPurchasesByDate(sales, { startDate, endDate });
+  const visibleSales = filteredResult.data;
+  const purchaseSummary = filteredResult.valid ? summarizeBuyerPurchases(visibleSales) : null;
+  const hasDateFilter = startDate !== "" || endDate !== "";
 
   const exportPurchases = async (): Promise<void> => {
-    if (isExporting || isLoading || error !== null || sales.length === 0) return;
+    if (isExporting || isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0) return;
 
     setIsExporting(true);
     setExportStatus(null);
@@ -58,7 +64,7 @@ function BuyerPurchaseHistoryModal({
 
     try {
       const result = await saveBuyerPurchaseCsv(
-        sales,
+        visibleSales,
         buyer.id,
         labels,
         i18n.resolvedLanguage === "en" ? "en" : "es",
@@ -83,7 +89,7 @@ function BuyerPurchaseHistoryModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={isLoading || error !== null || sales.length === 0 || isExporting}
+              disabled={isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0 || isExporting}
               onClick={() => void exportPurchases()}
               className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-border px-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -123,13 +129,55 @@ function BuyerPurchaseHistoryModal({
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("buyers.noPurchasesTitle")}</h3>
               <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.noPurchasesDescription")}</p>
             </div>
-          ) : purchaseSummary === null ? (
+          ) : (
+            <>
+              <div className="mb-4 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/45 p-4">
+                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                  <label className="text-xs font-medium text-ecoplaza-text-muted">
+                    <span>{t("buyers.purchaseStartDate")}</span>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(event) => { setStartDate(event.target.value); setExportStatus(null); }}
+                      className="mt-1.5 h-10 w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text"
+                    />
+                  </label>
+                  <label className="text-xs font-medium text-ecoplaza-text-muted">
+                    <span>{t("buyers.purchaseEndDate")}</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(event) => { setEndDate(event.target.value); setExportStatus(null); }}
+                      className="mt-1.5 h-10 w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={!hasDateFilter}
+                    onClick={() => { setStartDate(""); setEndDate(""); setExportStatus(null); }}
+                    className="h-10 rounded-lg border border-ecoplaza-border px-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t("buyers.clearPurchaseDates")}
+                  </button>
+                </div>
+                {!filteredResult.valid && (
+                  <p role="alert" className="mt-3 text-sm text-ecoplaza-danger">{t("buyers.invalidPurchaseDateRange")}</p>
+                )}
+              </div>
+
+              {!filteredResult.valid ? null : visibleSales.length === 0 ? (
+                <div className="flex min-h-48 flex-col items-center justify-center text-center">
+                  <Database className="text-ecoplaza-primary" size={24} aria-hidden="true" />
+                  <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("buyers.noFilteredPurchasesTitle")}</h3>
+                  <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.noFilteredPurchasesDescription")}</p>
+                </div>
+              ) : purchaseSummary === null ? (
             <div role="alert" className="flex min-h-48 flex-col items-center justify-center text-center">
               <AlertTriangle className="text-ecoplaza-danger" size={24} aria-hidden="true" />
               <p className="mt-3 max-w-md text-sm text-ecoplaza-text-muted">{t("buyers.purchaseSummaryError")}</p>
             </div>
           ) : (
-            <>
+            <div>
               <dl className="mb-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background/60 p-4">
                   <dt className="text-xs font-medium text-ecoplaza-text-muted">{t("buyers.purchaseCount")}</dt>
@@ -155,7 +203,7 @@ function BuyerPurchaseHistoryModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.map((sale) => (
+                  {visibleSales.map((sale) => (
                     <tr key={sale.id} className="border-t border-ecoplaza-border">
                       <td className="px-4 py-3 text-sm text-ecoplaza-text-muted">{dateFormatter.format(new Date(sale.soldAt))}</td>
                       <td className="px-4 py-3 text-sm text-ecoplaza-text">{t(`common.${sale.category}`)}</td>
@@ -166,6 +214,8 @@ function BuyerPurchaseHistoryModal({
                 </tbody>
               </table>
               </div>
+            </div>
+          )}
             </>
           )}
         </div>
