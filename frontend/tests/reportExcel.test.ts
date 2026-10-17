@@ -65,8 +65,13 @@ test("creates a valid formatted analytics workbook with real Excel value types",
   assert.ok(summary.getCell("B5").value instanceof Date);
   assert.equal(summary.getCell("B6").value, 3);
   assert.equal(summary.getCell("B7").value, 35.125);
+  assert.equal(summary.getCell("B7").numFmt, "0.000");
+  assert.equal(summary.getCell("C7").value, "kg");
   assert.equal(summary.getCell("B11").value, 3000.75);
-  assert.match(summary.getCell("B11").numFmt, /COP/);
+  assert.equal(summary.getCell("B11").numFmt, "#,##0.00");
+  assert.equal(summary.getCell("C11").value, "COP");
+  assert.doesNotMatch(summary.getCell("B7").numFmt, /kg/i);
+  assert.doesNotMatch(summary.getCell("B11").numFmt, /COP/i);
   assert.equal(summary.views[0]?.state, "frozen");
   assert.ok(summary.autoFilter);
   assert.equal(summary.getCell("A3").fill.type, "pattern");

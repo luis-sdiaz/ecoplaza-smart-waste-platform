@@ -63,10 +63,10 @@ export async function createReportExcel(
   const soldRow = summary.addRow([safeExcelText(labels.soldWeight), validExcelNumber(statistics.soldWeightKg, "Report"), safeExcelText(labels.kilogramsUnit)]);
   summary.addRow([safeExcelText(labels.sales), validExcelNumber(statistics.salesCount, "Report"), safeExcelText(labels.countUnit)]);
   const revenueRow = summary.addRow([safeExcelText(labels.grossRevenue), validExcelNumber(statistics.grossSalesValue, "Report"), safeExcelText(labels.copUnit)]);
-  historicalRow.getCell(2).numFmt = '0.000 "kg"';
-  availableRow.getCell(2).numFmt = '0.000 "kg"';
-  soldRow.getCell(2).numFmt = '0.000 "kg"';
-  revenueRow.getCell(2).numFmt = '"COP" #,##0.00';
+  historicalRow.getCell(2).numFmt = "0.000";
+  availableRow.getCell(2).numFmt = "0.000";
+  soldRow.getCell(2).numFmt = "0.000";
+  revenueRow.getCell(2).numFmt = "#,##0.00";
   styleExcelBody(summary);
 
   const distribution = workbook.addWorksheet(safeExcelText(labels.distributionSheet));
