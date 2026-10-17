@@ -46,7 +46,7 @@ import {
   sumSafeMonetaryValues,
 } from "../services/monetarySafety";
 import { getSalesEmptyState } from "../services/salesEmptyState";
-import { calculateAverageSellingPricePerKg } from "../services/salesMetrics";
+import { calculateAverageSellingPricePerKg, summarizeSalesByCategory } from "../services/salesMetrics";
 import { filterSalesByAmount, parseSalesAmountRange } from "../services/salesAmountRange";
 import { exportSalesExcel, type SalesExcelLabels } from "../services/salesExcelService";
 
@@ -328,6 +328,7 @@ function UserSalesPage({ userId }: { userId: string }) {
     : [];
   const totalRevenue = sumSafeMonetaryValues(visibleSales.map((sale) => sale.totalValue));
   const averageSellingPrice = calculateAverageSellingPricePerKg(visibleSales);
+  const categorySummary = summarizeSalesByCategory(visibleSales);
   const totalWeight = visibleSales.reduce((total, sale) => total + sale.weightKg, 0);
   const servedBuyers = new Set(visibleSales.map((sale) => sale.buyerId)).size;
   const metricsUnavailable = isLoading || loadError !== null || !amountRangeResult.valid;
@@ -639,6 +640,31 @@ function UserSalesPage({ userId }: { userId: string }) {
           <div className="mt-4 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-text-muted">
             {t(buyers.length === 0 ? "sales.noBuyers" : "sales.noAvailableWaste")}
           </div>
+        )}
+
+        {!metricsUnavailable && visibleSales.length > 0 && (
+          <section className="mt-4 rounded-2xl border border-ecoplaza-primary/20 bg-ecoplaza-primary/5 p-4" aria-labelledby="sales-category-summary-title">
+            <div>
+              <h3 id="sales-category-summary-title" className="text-sm font-semibold text-ecoplaza-text">{t("sales.categorySummaryTitle")}</h3>
+              <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.categorySummaryDescription")}</p>
+            </div>
+            {categorySummary === null ? (
+              <p role="alert" className="mt-3 text-sm text-ecoplaza-danger">{t("sales.categorySummaryError")}</p>
+            ) : (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {categorySummary.map((summary) => (
+                  <article key={summary.category} className="rounded-xl bg-ecoplaza-surface/80 p-3">
+                    <h4 className="text-xs font-semibold text-ecoplaza-text">{t(`common.${summary.category}`)}</h4>
+                    <dl className="mt-2 grid grid-cols-3 gap-2">
+                      <div><dt className="text-[10px] text-ecoplaza-text-muted">{t("sales.summarySales")}</dt><dd className="mt-1 text-sm font-semibold text-ecoplaza-text">{summary.saleCount}</dd></div>
+                      <div><dt className="text-[10px] text-ecoplaza-text-muted">{t("sales.summaryWeight")}</dt><dd className="mt-1 text-sm font-semibold text-ecoplaza-text">{weightFormatter.format(summary.totalWeightKg)} {t("common.kg")}</dd></div>
+                      <div><dt className="text-[10px] text-ecoplaza-text-muted">{t("sales.summaryRevenue")}</dt><dd className="mt-1 text-sm font-semibold text-ecoplaza-primary">{currencyFormatter.format(summary.grossRevenue)}</dd></div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         )}
 
         <div className="mt-4">

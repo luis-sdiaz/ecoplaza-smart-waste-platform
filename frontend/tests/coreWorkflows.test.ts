@@ -17,7 +17,7 @@ import {
 import { filterAndSortBuyers } from "../src/services/buyerFilters.ts";
 import { calculateMaterialStatusBreakdown } from "../src/services/dashboardMaterialStatus.ts";
 import { summarizeBuyerPurchases } from "../src/services/buyerPurchaseSummary.ts";
-import { calculateAverageSellingPricePerKg } from "../src/services/salesMetrics.ts";
+import { calculateAverageSellingPricePerKg, summarizeSalesByCategory } from "../src/services/salesMetrics.ts";
 
 process.env.TZ = "America/Bogota";
 
@@ -120,6 +120,27 @@ test("calculates average selling price from filtered sale revenue and weight", (
     { weightKg: 0.2, totalValue: 200.2 },
   ]), 1001);
   assert.equal(calculateAverageSellingPricePerKg([{ weightKg: 1, totalValue: Number.NaN }]), null);
+});
+
+test("summarizes the visible sales by category with safe weight and revenue arithmetic", () => {
+  const categorizedSales = [
+    { category: "organic" as const, weightKg: 0.1, totalValue: 0.1 },
+    { category: "organic" as const, weightKg: 0.2, totalValue: 0.2 },
+    { category: "recyclable" as const, weightKg: 2.5, totalValue: 3000.75 },
+  ];
+
+  assert.deepEqual(summarizeSalesByCategory(categorizedSales), [
+    { category: "organic", saleCount: 2, totalWeightKg: 0.3, grossRevenue: 0.3 },
+    { category: "recyclable", saleCount: 1, totalWeightKg: 2.5, grossRevenue: 3000.75 },
+    { category: "nonRecyclable", saleCount: 0, totalWeightKg: 0, grossRevenue: 0 },
+  ]);
+  assert.equal(summarizeSalesByCategory([{ ...categorizedSales[0], totalValue: Number.NaN }]), null);
+  assert.equal(summarizeSalesByCategory([{ ...categorizedSales[0], weightKg: Number.POSITIVE_INFINITY }]), null);
+  assert.deepEqual(summarizeSalesByCategory([]), [
+    { category: "organic", saleCount: 0, totalWeightKg: 0, grossRevenue: 0 },
+    { category: "recyclable", saleCount: 0, totalWeightKg: 0, grossRevenue: 0 },
+    { category: "nonRecyclable", saleCount: 0, totalWeightKg: 0, grossRevenue: 0 },
+  ]);
 });
 
 test("filters sales by date, buyer, and both filters without including the end boundary", () => {

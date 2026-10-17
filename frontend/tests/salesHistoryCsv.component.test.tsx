@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 type TimestampRange = {
@@ -293,7 +293,10 @@ describe("filtered sales history and CSV integration", () => {
 
     fireEvent.change(screen.getByLabelText("sales.categoryFilter"), { target: { value: "organic" } });
     expectVisible([saleBeta.id]);
-    expect(screen.getAllByText("20 common.kg")).toHaveLength(2);
+    expect(screen.getAllByText("20 common.kg")).toHaveLength(3);
+    const categorySummary = screen.getByRole("region", { name: "sales.categorySummaryTitle" });
+    expect(within(categorySummary).getByText("20 common.kg")).toBeTruthy();
+    expect(within(categorySummary).getByText(/COP\s4,000/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "sales.exportCsv" }));
     await waitFor(() => expect(nativeMocks.writeTextFile).toHaveBeenCalledOnce());

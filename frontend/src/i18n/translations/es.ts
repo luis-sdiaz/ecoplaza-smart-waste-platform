@@ -422,6 +422,8 @@ const es = {
     servedBuyers: "Compradores atendidos", buyersWithSales: "Compradores reales con ventas",
     averagePrice: "Precio promedio por kg", averagePriceDescription: "Ingresos divididos por peso vendido",
     realData: "Datos reales", filteredData: "Período filtrado", realRevenueDescription: "Total generado por PostgreSQL",
+    categorySummaryTitle: "Rendimiento por categoría", categorySummaryDescription: "Resumen operativo de las ventas visibles con los filtros actuales.",
+    categorySummaryError: "No fue posible calcular este resumen de forma segura.", summarySales: "Ventas", summaryWeight: "Peso", summaryRevenue: "Ingresos",
     records: "Ventas registradas", realRecordsDescription: "Historial real de ventas confirmado por PostgreSQL.",
     dateRange: "Período de ventas", dateRangeDescription: "Filtra el historial por la fecha real de realización de cada venta.",
     quickRanges: "Períodos rápidos de ventas", last7Days: "Últimos 7 días", last30Days: "Últimos 30 días", currentMonth: "Mes actual",
