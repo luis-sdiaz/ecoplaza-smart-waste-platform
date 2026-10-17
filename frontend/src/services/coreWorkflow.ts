@@ -103,17 +103,37 @@ export type WasteSortOption = "newest" | "oldest" | "weightDesc" | "weightAsc";
 export type FilteredWasteSummary = {
   recordCount: number;
   totalWeightKg: number;
+  byStatus: Record<WasteFilterRecord["status"], {
+    recordCount: number;
+    totalWeightKg: number;
+  }>;
 };
 
 export function summarizeFilteredWaste(
-  records: ReadonlyArray<{ weightKg: number }>,
+  records: ReadonlyArray<{ weightKg: number; status?: WasteFilterRecord["status"] }>,
 ): FilteredWasteSummary {
+  const weightGramsByStatus = { registered: 0, available: 0, sold: 0 };
+  const recordCountByStatus = { registered: 0, available: 0, sold: 0 };
+  let totalWeightGrams = 0;
+
+  for (const record of records) {
+    const candidateWeightGrams = isSafeWasteWeightKg(record.weightKg) ? Math.round(record.weightKg * 1000) : 0;
+    const weightGrams = Number.isSafeInteger(totalWeightGrams + candidateWeightGrams) ? candidateWeightGrams : 0;
+    totalWeightGrams += weightGrams;
+    if (record.status !== undefined) {
+      recordCountByStatus[record.status] += 1;
+      weightGramsByStatus[record.status] += weightGrams;
+    }
+  }
+
   return {
     recordCount: records.length,
-    totalWeightKg: records.reduce(
-      (total, record) => total + (Number.isFinite(record.weightKg) && record.weightKg > 0 ? record.weightKg : 0),
-      0,
-    ),
+    totalWeightKg: totalWeightGrams / 1000,
+    byStatus: {
+      available: { recordCount: recordCountByStatus.available, totalWeightKg: weightGramsByStatus.available / 1000 },
+      sold: { recordCount: recordCountByStatus.sold, totalWeightKg: weightGramsByStatus.sold / 1000 },
+      registered: { recordCount: recordCountByStatus.registered, totalWeightKg: weightGramsByStatus.registered / 1000 },
+    },
   };
 }
 

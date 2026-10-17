@@ -289,16 +289,43 @@ test("summarizes the exact waste result after combined filters and avoids NaN we
   assert.deepEqual(summarizeFilteredWaste(visibleRecords), {
     recordCount: 1,
     totalWeightKg: 7,
+    byStatus: {
+      available: { recordCount: 0, totalWeightKg: 0 },
+      sold: { recordCount: 1, totalWeightKg: 7 },
+      registered: { recordCount: 0, totalWeightKg: 0 },
+    },
   });
   assert.deepEqual(summarizeFilteredWaste([
-    { weightKg: Number.NaN },
-    { weightKg: Number.POSITIVE_INFINITY },
-    { weightKg: 2.5 },
+    { weightKg: Number.NaN, status: "available" },
+    { weightKg: Number.POSITIVE_INFINITY, status: "sold" },
+    { weightKg: 2.5, status: "registered" },
   ]), {
     recordCount: 3,
     totalWeightKg: 2.5,
+    byStatus: {
+      available: { recordCount: 1, totalWeightKg: 0 },
+      sold: { recordCount: 1, totalWeightKg: 0 },
+      registered: { recordCount: 1, totalWeightKg: 2.5 },
+    },
   });
-  assert.deepEqual(summarizeFilteredWaste([]), { recordCount: 0, totalWeightKg: 0 });
+  assert.deepEqual(summarizeFilteredWaste(filterWasteHistory(wasteRecords, "all", "organic", "container-a", dateRange)), {
+    recordCount: 2,
+    totalWeightKg: 12,
+    byStatus: {
+      available: { recordCount: 1, totalWeightKg: 5 },
+      sold: { recordCount: 1, totalWeightKg: 7 },
+      registered: { recordCount: 0, totalWeightKg: 0 },
+    },
+  });
+  assert.deepEqual(summarizeFilteredWaste([]), {
+    recordCount: 0,
+    totalWeightKg: 0,
+    byStatus: {
+      available: { recordCount: 0, totalWeightKg: 0 },
+      sold: { recordCount: 0, totalWeightKg: 0 },
+      registered: { recordCount: 0, totalWeightKg: 0 },
+    },
+  });
 });
 
 test("collects every page using inclusive database ranges", async () => {

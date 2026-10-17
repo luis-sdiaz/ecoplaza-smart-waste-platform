@@ -267,6 +267,7 @@ const en = {
     filteredSummaryDescription: "Summary of the waste records matching the current filters.",
     filteredRecordCount: "Records",
     filteredTotalWeight: "Filtered weight",
+    filteredStatusRecords_one: "{{count}} record", filteredStatusRecords_other: "{{count}} records",
     emptyFilteredTitle: "No waste records match these filters",
     emptyFilteredDescription: "There are no historical records matching the selected filters.",
     noContainersTitle: "You need a real container",

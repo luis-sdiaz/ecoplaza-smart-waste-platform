@@ -267,6 +267,7 @@ const es = {
     filteredSummaryDescription: "Resumen de los residuos que coinciden con los filtros actuales.",
     filteredRecordCount: "Registros",
     filteredTotalWeight: "Peso filtrado",
+    filteredStatusRecords_one: "{{count}} registro", filteredStatusRecords_other: "{{count}} registros",
     emptyFilteredTitle: "No hay residuos con estos filtros",
     emptyFilteredDescription: "No existen registros históricos que coincidan con los filtros seleccionados.",
     noContainersTitle: "Necesitas un contenedor real",
