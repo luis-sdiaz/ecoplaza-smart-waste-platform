@@ -79,4 +79,21 @@ describe("buyer commercial summary", () => {
     expect(endInput.value).toBe("");
     expect(screen.getByText("3.75 common.kg")).toBeTruthy();
   });
+
+  test("sorts the filtered purchase table and preserves that order in CSV", async () => {
+    renderHistory();
+
+    fireEvent.change(screen.getByLabelText("buyers.purchaseStartDate"), { target: { value: "2026-10-14" } });
+    fireEvent.change(screen.getByLabelText("buyers.purchaseEndDate"), { target: { value: "2026-10-15" } });
+    fireEvent.change(screen.getByLabelText("buyers.purchaseSortLabel"), { target: { value: "valueAsc" } });
+
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows[0].textContent).toContain("common.organic");
+    expect(rows[1].textContent).toContain("common.recyclable");
+
+    fireEvent.click(screen.getByRole("button", { name: "buyers.exportPurchases" }));
+    await waitFor(() => expect(purchaseCsvMocks.save).toHaveBeenCalledTimes(1));
+    expect(purchaseCsvMocks.save.mock.calls[0][0].map((sale: { id: string }) => sale.id)).toEqual(["sale-1", "sale-2"]);
+    expect(purchases.map(({ id }) => id)).toEqual(["sale-1", "sale-2"]);
+  });
 });

@@ -10,6 +10,7 @@ import type { SalesCsvLabels } from "../services/salesCsv";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import { summarizeBuyerPurchases } from "../services/buyerPurchaseSummary";
 import { filterBuyerPurchasesByDate } from "../services/buyerPurchaseFilters";
+import { sortSalesHistory, type SalesSortOption } from "../services/coreWorkflow";
 
 interface BuyerPurchaseHistoryModalProps {
   buyer: Buyer;
@@ -33,6 +34,7 @@ function BuyerPurchaseHistoryModal({
   const [exportStatus, setExportStatus] = useState<"success" | "error" | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [sortOption, setSortOption] = useState<SalesSortOption>("newest");
   const dialogRef = useDialogFocus(onClose);
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
@@ -43,7 +45,7 @@ function BuyerPurchaseHistoryModal({
     maximumFractionDigits: MAX_MONETARY_FRACTION_DIGITS,
   });
   const filteredResult = filterBuyerPurchasesByDate(sales, { startDate, endDate });
-  const visibleSales = filteredResult.data;
+  const visibleSales = sortSalesHistory(filteredResult.data, sortOption);
   const purchaseSummary = filteredResult.valid ? summarizeBuyerPurchases(visibleSales) : null;
   const hasDateFilter = startDate !== "" || endDate !== "";
 
@@ -132,7 +134,7 @@ function BuyerPurchaseHistoryModal({
           ) : (
             <>
               <div className="mb-4 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/45 p-4">
-                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
                   <label className="text-xs font-medium text-ecoplaza-text-muted">
                     <span>{t("buyers.purchaseStartDate")}</span>
                     <input
@@ -150,6 +152,19 @@ function BuyerPurchaseHistoryModal({
                       onChange={(event) => { setEndDate(event.target.value); setExportStatus(null); }}
                       className="mt-1.5 h-10 w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text"
                     />
+                  </label>
+                  <label className="text-xs font-medium text-ecoplaza-text-muted">
+                    <span>{t("buyers.purchaseSortLabel")}</span>
+                    <select
+                      value={sortOption}
+                      onChange={(event) => { setSortOption(event.target.value as SalesSortOption); setExportStatus(null); }}
+                      className="mt-1.5 h-10 w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text"
+                    >
+                      <option value="newest">{t("buyers.purchaseSortNewest")}</option>
+                      <option value="oldest">{t("buyers.purchaseSortOldest")}</option>
+                      <option value="valueDesc">{t("buyers.purchaseSortValueDesc")}</option>
+                      <option value="valueAsc">{t("buyers.purchaseSortValueAsc")}</option>
+                    </select>
                   </label>
                   <button
                     type="button"

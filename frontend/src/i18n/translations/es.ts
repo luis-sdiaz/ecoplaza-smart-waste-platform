@@ -341,6 +341,8 @@ const es = {
     totalPurchasedValue: "Valor total comprado",
     purchaseSummaryError: "No fue posible calcular el resumen comercial de forma segura.",
     purchaseStartDate: "Fecha inicial", purchaseEndDate: "Fecha final", clearPurchaseDates: "Limpiar fechas",
+    purchaseSortLabel: "Ordenar compras", purchaseSortNewest: "Fecha más reciente", purchaseSortOldest: "Fecha más antigua",
+    purchaseSortValueDesc: "Mayor valor", purchaseSortValueAsc: "Menor valor",
     invalidPurchaseDateRange: "Selecciona ambas fechas y asegúrate de que la fecha inicial no sea posterior a la final.",
     noFilteredPurchasesTitle: "No hay compras en este período",
     noFilteredPurchasesDescription: "Cambia las fechas o limpia el filtro para consultar todo el historial.",

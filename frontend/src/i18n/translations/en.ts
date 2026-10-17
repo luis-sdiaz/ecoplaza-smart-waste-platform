@@ -341,6 +341,8 @@ const en = {
     totalPurchasedValue: "Total value purchased",
     purchaseSummaryError: "The commercial summary could not be calculated safely.",
     purchaseStartDate: "Start date", purchaseEndDate: "End date", clearPurchaseDates: "Clear dates",
+    purchaseSortLabel: "Sort purchases", purchaseSortNewest: "Newest date", purchaseSortOldest: "Oldest date",
+    purchaseSortValueDesc: "Highest value", purchaseSortValueAsc: "Lowest value",
     invalidPurchaseDateRange: "Select both dates and make sure the start date is not after the end date.",
     noFilteredPurchasesTitle: "No purchases in this period",
     noFilteredPurchasesDescription: "Change the dates or clear the filter to view the full history.",
