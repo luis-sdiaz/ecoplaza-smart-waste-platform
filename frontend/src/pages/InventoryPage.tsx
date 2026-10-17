@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw } from "lucide-react";
+import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import ContainerStockSummaryTable from "../components/ContainerStockSummaryTable";
@@ -56,6 +56,7 @@ function InventoryPageContent() {
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
   const [containerFilter, setContainerFilter] = useState("all");
   const [ageFilter, setAgeFilter] = useState<InventoryAgeFilter>("all");
+  const [recordSearch, setRecordSearch] = useState("");
   const [sortOption, setSortOption] = useState<InventorySortOption>("newest");
   const [ageReferenceDate, setAgeReferenceDate] = useState(() => new Date());
   const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
@@ -134,11 +135,11 @@ function InventoryPageContent() {
   const metricValue = (weightKg: number): string =>
     realValueUnavailable ? "—" : formatWeight(weightKg);
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
-  const filteredRecords = filterAvailableInventory(records, categoryFilter, containerFilter);
+  const filteredRecords = filterAvailableInventory(records, categoryFilter, containerFilter, recordSearch);
   const ageFilteredRecords = filterInventoryByStorageAge(filteredRecords, ageFilter, ageReferenceDate);
   const visibleRecords = sortAvailableInventory(ageFilteredRecords, sortOption);
   const containerSummaries = summarizeAvailableStockByContainer(containers, records);
-  const hasActiveFilters = categoryFilter !== "all" || containerFilter !== "all" || ageFilter !== "all";
+  const hasActiveFilters = categoryFilter !== "all" || containerFilter !== "all" || ageFilter !== "all" || recordSearch.trim() !== "";
   const tableItems: InventoryItem[] = visibleRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
@@ -284,7 +285,7 @@ function InventoryPageContent() {
               </h2>
               {!realValueUnavailable && (
                 <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-                  {t("inventory.recordCount", { count: ageFilteredRecords.length })}
+                  {t("inventory.recordCount", { count: visibleRecords.length })}
                 </span>
               )}
             </div>
@@ -309,6 +310,24 @@ function InventoryPageContent() {
         </div>
 
         <div className="mt-4 flex flex-wrap justify-end gap-3">
+          <label className="relative min-w-64 flex-1">
+            <span className="sr-only">{t("inventory.recordSearchLabel")}</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted" size={17} aria-hidden="true" />
+            <input
+              type="search"
+              value={recordSearch}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setRecordSearch(event.target.value)}
+              placeholder={t("inventory.recordSearchPlaceholder")}
+              className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface pl-10 pr-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted/75"
+            />
+            {recordSearch.trim() !== "" && (
+              <button type="button" onClick={() => setRecordSearch("")} aria-label={t("inventory.clearSearch")}
+                className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-ecoplaza-text-muted">
+                <X size={16} aria-hidden="true" />
+              </button>
+            )}
+          </label>
           <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("inventory.ageFilter")}</span>
             <select
@@ -363,7 +382,7 @@ function InventoryPageContent() {
           <button
             type="button"
             disabled={!hasActiveFilters || isLoading}
-            onClick={() => { setCategoryFilter("all"); setContainerFilter("all"); setAgeFilter("all"); }}
+            onClick={() => { setCategoryFilter("all"); setContainerFilter("all"); setAgeFilter("all"); setRecordSearch(""); }}
             className="rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t("inventory.clearFilters")}

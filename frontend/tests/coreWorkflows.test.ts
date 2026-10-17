@@ -176,6 +176,13 @@ test("keeps only available inventory and combines category and container filters
   assert.deepEqual(filterAvailableInventory(wasteRecords, "organic", "container-b"), []);
 });
 
+test("searches available inventory by formatted record number with other filters", () => {
+  assert.deepEqual(filterAvailableInventory(wasteRecords, "all", "all", " res - 001 ").map(({ id }) => id), ["waste-1"]);
+  assert.deepEqual(filterAvailableInventory(wasteRecords, "recyclable", "container-b", "ReS-003").map(({ id }) => id), ["waste-3"]);
+  assert.deepEqual(filterAvailableInventory(wasteRecords, "all", "all", "RES-002"), []);
+  assert.deepEqual(filterAvailableInventory(wasteRecords, "all", "all", "missing"), []);
+});
+
 test("sorts filtered inventory by date and weight with deterministic ties", () => {
   const records = [
     { id: "b", registeredAt: "2026-10-02T12:00:00.000Z", weightKg: 5 },

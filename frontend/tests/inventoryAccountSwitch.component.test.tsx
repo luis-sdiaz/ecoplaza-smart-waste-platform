@@ -208,11 +208,24 @@ describe("Inventory account isolation", () => {
     fireEvent.change(screen.getByLabelText("inventory.ageFilter"), { target: { value: "from8To30" } });
     fireEvent.change(screen.getByLabelText("inventory.categoryFilter"), { target: { value: "organic" } });
     fireEvent.change(screen.getByLabelText("inventory.containerFilter"), { target: { value: containerA.id } });
+    fireEvent.change(screen.getByLabelText("inventory.recordSearchLabel"), { target: { value: " res - 003 " } });
     fireEvent.change(screen.getByLabelText("inventory.sortBy"), { target: { value: "weightAsc" } });
     fireEvent.click(screen.getByRole("button", { name: "inventory.exportExcel" }));
 
     await waitFor(() => expect(inventoryMocks.saveExcel).toHaveBeenCalledTimes(1));
     const exportedRecords = inventoryMocks.saveExcel.mock.calls[0]?.[0] as Array<{ id: string }>;
-    expect(exportedRecords.map(({ id }) => id)).toEqual([organicLight.id, organicHeavy.id]);
+    expect(exportedRecords.map(({ id }) => id)).toEqual([organicLight.id]);
+  });
+
+  test("shows the filtered empty state for an unmatched record number", async () => {
+    inventoryMocks.listWaste.mockResolvedValueOnce(success([wasteA]));
+    inventoryMocks.listContainers.mockResolvedValueOnce(success([containerA]));
+
+    render(<InventoryPage />);
+    expect(await screen.findByText("RES-001")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("inventory.recordSearchLabel"), { target: { value: "RES-999" } });
+    expect(screen.queryByText("RES-001")).toBeNull();
+    expect(screen.getByText("inventory.emptyFilteredTitle")).toBeTruthy();
   });
 });

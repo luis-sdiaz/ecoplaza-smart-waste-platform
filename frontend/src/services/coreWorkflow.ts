@@ -87,6 +87,7 @@ type WasteFilterRecord = {
   status: "registered" | "available" | "sold";
   category: "organic" | "recyclable" | "nonRecyclable";
   containerId: string;
+  recordNumber?: string;
 };
 
 type WasteHistoryFilterRecord = WasteFilterRecord & {
@@ -233,11 +234,19 @@ export function filterAvailableInventory<T extends WasteFilterRecord>(
   records: readonly T[],
   category: WasteCategoryFilter = "all",
   containerId = "all",
+  recordSearch = "",
 ): T[] {
+  const normalizedSearch = recordSearch.replace(/\s+/g, "").toLocaleLowerCase();
   return records.filter((record) =>
     record.status === "available" &&
     (category === "all" || record.category === category) &&
-    (containerId === "all" || record.containerId === containerId)
+    (containerId === "all" || record.containerId === containerId) &&
+    (normalizedSearch === "" || (() => {
+      const recordNumber = record.recordNumber ?? "";
+      const normalizedNumber = recordNumber.replace(/\s+/g, "").toLocaleLowerCase();
+      const visibleNumber = `res-${recordNumber.padStart(3, "0")}`.toLocaleLowerCase();
+      return normalizedNumber.includes(normalizedSearch) || visibleNumber.includes(normalizedSearch);
+    })())
   );
 }
 
