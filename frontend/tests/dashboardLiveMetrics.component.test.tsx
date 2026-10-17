@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 const authState = vi.hoisted(() => ({ current: { user: null } as { user: TestUser | null } }));
 const reportMocks = vi.hoisted(() => ({ getReportStatistics: vi.fn() }));
 const salesMocks = vi.hoisted(() => ({ listSales: vi.fn() }));
+const inventoryMocks = vi.hoisted(() => ({
+  listAvailableWasteRecords: vi.fn(),
+  listContainers: vi.fn(),
+}));
 
 type TestUser = { id: string };
 
@@ -61,6 +65,14 @@ vi.mock("../src/services/salesService", () => ({
   listSales: salesMocks.listSales,
 }));
 
+vi.mock("../src/services/wasteService", () => ({
+  listAvailableWasteRecords: inventoryMocks.listAvailableWasteRecords,
+}));
+
+vi.mock("../src/services/containerService", () => ({
+  listContainers: inventoryMocks.listContainers,
+}));
+
 import DashboardPage from "../src/pages/DashboardPage";
 
 afterEach(cleanup);
@@ -70,6 +82,10 @@ beforeEach(() => {
   reportMocks.getReportStatistics.mockReset();
   salesMocks.listSales.mockReset();
   salesMocks.listSales.mockResolvedValue({ ok: true, data: [] });
+  inventoryMocks.listAvailableWasteRecords.mockReset();
+  inventoryMocks.listContainers.mockReset();
+  inventoryMocks.listAvailableWasteRecords.mockResolvedValue({ ok: true, data: [] });
+  inventoryMocks.listContainers.mockResolvedValue({ ok: true, data: [] });
 });
 
 function metric(title: string): HTMLElement {
@@ -110,6 +126,52 @@ describe("Dashboard live commercial metrics", () => {
     expect(await screen.findByText("dashboard.recentSalesError")).toBeTruthy();
     expect(within(metric("dashboard.availableInventory")).getByText("25 kg")).toBeTruthy();
     expect(within(metric("dashboard.revenue")).getByText(/COP.*1,250\.5/)).toBeTruthy();
+  });
+
+  test("isolates aging-inventory failures from metrics and recent sales", async () => {
+    reportMocks.getReportStatistics.mockResolvedValueOnce(success(statistics(25, 1250.5)));
+    salesMocks.listSales.mockResolvedValueOnce({ ok: true, data: [{
+      id: "sale-visible", buyerId: userA.id, wasteRecordId: "waste-sold", weightKg: 2,
+      unitPrice: 100, totalValue: 200, soldAt: "2026-10-16T12:00:00.000Z",
+      buyerName: "Visible buyer", wasteRecordNumber: "2", category: "recyclable" as const,
+    }] });
+    inventoryMocks.listAvailableWasteRecords.mockResolvedValueOnce({
+      ok: false, error: { code: "network_error", retryable: true },
+    });
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("dashboard.oldestInventoryError")).toBeTruthy();
+    expect(within(metric("dashboard.availableInventory")).getByText("25 kg")).toBeTruthy();
+    expect(screen.getByTitle("sale-visible")).toBeTruthy();
+  });
+
+  test("discards delayed aging inventory after switching accounts", async () => {
+    const pendingWasteA = deferred<{ ok: true; data: Array<Record<string, unknown>> }>();
+    const recordB = {
+      id: "waste-b", recordNumber: "2", containerId: "container-b", category: "organic" as const,
+      weightKg: 8, registeredAt: "2025-01-01T12:00:00.000Z", status: "available" as const,
+    };
+    const recordA = { ...recordB, id: "waste-a", recordNumber: "1", containerId: "container-a" };
+    inventoryMocks.listAvailableWasteRecords
+      .mockReturnValueOnce(pendingWasteA.promise)
+      .mockResolvedValueOnce({ ok: true, data: [recordB] });
+    inventoryMocks.listContainers
+      .mockResolvedValueOnce({ ok: true, data: [{ id: "container-a", code: "CTR-A" }] })
+      .mockResolvedValueOnce({ ok: true, data: [{ id: "container-b", code: "CTR-B" }] });
+    reportMocks.getReportStatistics.mockResolvedValue(success(statistics(8, 0)));
+
+    const view = render(<DashboardPage />);
+    authState.current = { user: userB };
+    view.rerender(<DashboardPage />);
+
+    expect(await screen.findByTitle("waste-b")).toBeTruthy();
+    await act(async () => {
+      pendingWasteA.resolve({ ok: true, data: [recordA] });
+      await pendingWasteA.promise;
+    });
+    expect(screen.queryByTitle("waste-a")).toBeNull();
+    expect(screen.getByTitle("waste-b")).toBeTruthy();
   });
 
   test("does not show stale recent sales after an account switch", async () => {

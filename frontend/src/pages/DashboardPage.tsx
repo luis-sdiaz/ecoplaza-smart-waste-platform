@@ -16,8 +16,16 @@ import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
 import { calculateMaterialStatusBreakdown } from "../services/dashboardMaterialStatus";
 import { listSales, type SaleHistoryItem } from "../services/salesService";
 import { sortSalesHistory } from "../services/coreWorkflow";
+import { listAvailableWasteRecords } from "../services/wasteService";
+import { listContainers } from "../services/containerService";
+import {
+  selectOldestAvailableInventory,
+  type AgingInventoryItem,
+} from "../services/dashboardAgingInventory";
 
 type StatisticsResult = Awaited<ReturnType<typeof getReportStatistics>>;
+type AvailableWasteResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
+type ContainersResult = Awaited<ReturnType<typeof listContainers>>;
 
 function getStatisticsErrorKey(code: ReportErrorCode): string {
   if (code === "unauthorized") return "dashboard.unauthorized";
@@ -30,12 +38,16 @@ function UserDashboardPage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
   const salesRevisionRef = useRef(0);
+  const inventoryRevisionRef = useRef(0);
   const [statistics, setStatistics] = useState<ReportStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [recentSales, setRecentSales] = useState<SaleHistoryItem[]>([]);
   const [areRecentSalesLoading, setAreRecentSalesLoading] = useState(true);
   const [recentSalesError, setRecentSalesError] = useState(false);
+  const [oldestInventory, setOldestInventory] = useState<AgingInventoryItem[]>([]);
+  const [isOldestInventoryLoading, setIsOldestInventoryLoading] = useState(true);
+  const [oldestInventoryError, setOldestInventoryError] = useState(false);
 
   const applyStatisticsResult = useCallback((
     result: StatisticsResult,
@@ -94,6 +106,41 @@ function UserDashboardPage({ userId }: { userId: string }) {
     }
   }, []);
 
+  const applyOldestInventoryResults = useCallback((
+    wasteResult: AvailableWasteResult,
+    containersResult: ContainersResult,
+    requestRevision: number,
+  ): void => {
+    if (requestRevision !== inventoryRevisionRef.current) return;
+    if (!wasteResult.ok || !containersResult.ok) {
+      setOldestInventory([]);
+      setOldestInventoryError(true);
+    } else {
+      setOldestInventory(selectOldestAvailableInventory(wasteResult.data, containersResult.data));
+      setOldestInventoryError(false);
+    }
+    setIsOldestInventoryLoading(false);
+  }, []);
+
+  const loadOldestInventory = useCallback(async (): Promise<void> => {
+    const requestRevision = ++inventoryRevisionRef.current;
+    setIsOldestInventoryLoading(true);
+    setOldestInventoryError(false);
+
+    try {
+      const [wasteResult, containersResult] = await Promise.all([
+        listAvailableWasteRecords(),
+        listContainers(),
+      ]);
+      applyOldestInventoryResults(wasteResult, containersResult, requestRevision);
+    } catch {
+      if (requestRevision !== inventoryRevisionRef.current) return;
+      setOldestInventory([]);
+      setOldestInventoryError(true);
+      setIsOldestInventoryLoading(false);
+    }
+  }, [applyOldestInventoryResults]);
+
   useEffect(() => {
     const requestRevision = ++requestRevisionRef.current;
 
@@ -136,6 +183,23 @@ function UserDashboardPage({ userId }: { userId: string }) {
       salesRevisionRef.current += 1;
     };
   }, [userId]);
+
+  useEffect(() => {
+    const requestRevision = ++inventoryRevisionRef.current;
+    void Promise.all([listAvailableWasteRecords(), listContainers()])
+      .then(([wasteResult, containersResult]) => {
+        applyOldestInventoryResults(wasteResult, containersResult, requestRevision);
+      })
+      .catch(() => {
+        if (requestRevision !== inventoryRevisionRef.current) return;
+        setOldestInventory([]);
+        setOldestInventoryError(true);
+        setIsOldestInventoryLoading(false);
+      });
+    return () => {
+      inventoryRevisionRef.current += 1;
+    };
+  }, [applyOldestInventoryResults, userId]);
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const formatWeight = (weightKg: number): string =>
@@ -315,6 +379,61 @@ function UserDashboardPage({ userId }: { userId: string }) {
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.oldestInventory")}</h2>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.oldestInventoryDescription")}</p>
+          </div>
+          <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{realBadge}</span>
+        </div>
+        {isOldestInventoryLoading ? (
+          <div role="status" className="mt-4 flex min-h-24 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
+            <LoaderCircle className="animate-spin text-ecoplaza-primary" size={18} aria-hidden="true" />
+            {t("dashboard.loadingOldestInventory")}
+          </div>
+        ) : oldestInventoryError ? (
+          <div role="alert" className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-ecoplaza-danger/10 px-4 py-3 text-sm text-ecoplaza-danger">
+            <span>{t("dashboard.oldestInventoryError")}</span>
+            <button type="button" onClick={() => void loadOldestInventory()} className="flex items-center gap-2 rounded-lg border border-ecoplaza-danger/30 px-3 py-2 font-medium">
+              <RefreshCw size={15} aria-hidden="true" />{t("dashboard.retry")}
+            </button>
+          </div>
+        ) : oldestInventory.length === 0 ? (
+          <p className="mt-4 rounded-xl bg-ecoplaza-background px-4 py-6 text-center text-sm text-ecoplaza-text-muted">{t("dashboard.oldestInventoryEmpty")}</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[680px]">
+              <thead><tr className="text-left text-xs text-ecoplaza-text-muted">
+                <th className="px-3 py-2 font-semibold">{t("waste.record")}</th>
+                <th className="px-3 py-2 font-semibold">{t("common.category")}</th>
+                <th className="px-3 py-2 font-semibold">{t("inventory.weight")}</th>
+                <th className="px-3 py-2 font-semibold">{t("inventory.container")}</th>
+                <th className="px-3 py-2 text-right font-semibold">{t("inventory.storageAge")}</th>
+              </tr></thead>
+              <tbody>
+                {oldestInventory.map((item) => (
+                  <tr key={item.id} data-testid="aging-inventory-row" className="border-t border-ecoplaza-border" title={item.id}>
+                    <td className="px-3 py-3 text-sm font-medium text-ecoplaza-text">{item.reference}</td>
+                    <td className="px-3 py-3 text-sm text-ecoplaza-text">{t(`common.${item.category}`)}</td>
+                    <td className="px-3 py-3 text-sm text-ecoplaza-text">{formatWeight(item.weightKg)}</td>
+                    <td className="px-3 py-3 text-sm text-ecoplaza-text">{item.containerCode ?? t("inventory.unknownContainer")}</td>
+                    <td className="px-3 py-3 text-right text-sm">
+                      <span className={item.ageDays > 30 ? "rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-800" : "text-ecoplaza-text"}>
+                        {t("inventory.storageAgeDays", { count: item.ageDays })}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!isOldestInventoryLoading && !oldestInventoryError && oldestInventory.some((item) => item.ageDays > 30) && (
+          <p className="mt-3 text-xs text-ecoplaza-text-muted">{t("dashboard.olderThanThirtyNote")}</p>
         )}
       </div>
 
