@@ -36,6 +36,7 @@ import {
   toTimestampRange,
   type ReportDateRange,
 } from "../services/reportDateRange";
+import { saveWasteExcel, type WasteExcelLabels } from "../services/wasteExcelService";
 
 const WASTE_RECORDS_STORAGE_PREFIX = "ecoplaza-waste-records:";
 
@@ -126,7 +127,7 @@ function UserWastePage({ userId }: { userId: string }) {
   const [activeDateRange, setActiveDateRange] = useState<ReportDateRange | null>(null);
   const [dateRangeError, setDateRangeError] = useState(false);
   const [notification, setNotification] = useState<WasteRegistrationNotification | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
   const requestRevisionRef = useRef(0);
   const isSubmittingRef = useRef(false);
   const notificationSequenceRef = useRef(0);
@@ -300,8 +301,8 @@ function UserWastePage({ userId }: { userId: string }) {
   };
 
   const exportWasteHistory = async (): Promise<void> => {
-    if (visibleRemoteRecords.length === 0 || isExporting) return;
-    setIsExporting(true);
+    if (visibleRemoteRecords.length === 0 || exportKind !== null) return;
+    setExportKind("csv");
     setNotification(null);
     const labels: WasteCsvLabels = {
       recordNumber: t("waste.csv.recordNumber"), id: t("waste.csv.id"),
@@ -318,7 +319,41 @@ function UserWastePage({ userId }: { userId: string }) {
     } catch {
       showNotification("error", "waste.exportErrorTitle", "waste.exportErrorDescription");
     } finally {
-      setIsExporting(false);
+      setExportKind(null);
+    }
+  };
+
+  const exportWasteHistoryExcel = async (): Promise<void> => {
+    if (visibleRemoteRecords.length === 0 || exportKind !== null) return;
+    setExportKind("excel");
+    setNotification(null);
+    const labels: WasteExcelLabels = {
+      workbookTitle: t("waste.excel.workbookTitle"),
+      sheetName: t("waste.excel.sheetName"),
+      id: t("waste.excel.id"),
+      recordNumber: t("waste.excel.recordNumber"),
+      category: t("waste.excel.category"),
+      weightKg: t("waste.excel.weightKg"),
+      container: t("waste.excel.container"),
+      registeredAt: t("waste.excel.registeredAt"),
+      status: t("waste.excel.status"),
+      categories: getCsvCategoryLabels(t),
+      statuses: { registered: t("common.registered"), available: t("common.available"), sold: t("common.sold") },
+    };
+    try {
+      const result = await saveWasteExcel(
+        visibleRemoteRecords,
+        containerCodes,
+        labels,
+        `ecoplaza-waste-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      );
+      if (result === "saved") {
+        showNotification("success", "waste.excelExportSuccessTitle", "waste.excelExportSuccessDescription");
+      }
+    } catch {
+      showNotification("error", "waste.exportErrorTitle", "waste.exportErrorDescription");
+    } finally {
+      setExportKind(null);
     }
   };
 
@@ -347,11 +382,17 @@ function UserWastePage({ userId }: { userId: string }) {
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("waste.remoteDescription")}</p>
           </div>
           <div className="flex shrink-0 gap-2">
-            <button type="button" disabled={visibleRemoteRecords.length === 0 || isExporting || loadError !== null}
+            <button type="button" disabled={visibleRemoteRecords.length === 0 || exportKind !== null || loadError !== null}
               onClick={() => void exportWasteHistory()}
               className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60">
-              {isExporting ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
-              {isExporting ? t("waste.exporting") : t("waste.exportCsv")}
+              {exportKind === "csv" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+              {exportKind === "csv" ? t("waste.exporting") : t("waste.exportCsv")}
+            </button>
+            <button type="button" disabled={visibleRemoteRecords.length === 0 || exportKind !== null || loadError !== null}
+              onClick={() => void exportWasteHistoryExcel()}
+              className="flex items-center gap-2 rounded-xl border border-ecoplaza-primary px-4 py-3 text-sm font-semibold text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60">
+              {exportKind === "excel" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+              {exportKind === "excel" ? t("waste.exportingExcel") : t("waste.exportExcel")}
             </button>
             <button type="button" disabled={registrationUnavailable}
               onClick={() => { setNotification(null); setIsModalOpen(true); }}
