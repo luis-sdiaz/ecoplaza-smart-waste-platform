@@ -1,10 +1,11 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const authState = vi.hoisted(() => ({ current: { user: null } as { user: TestUser | null } }));
 const inventoryMocks = vi.hoisted(() => ({
   listWaste: vi.fn(),
   listContainers: vi.fn(),
+  saveExcel: vi.fn(),
 }));
 
 type TestUser = {
@@ -100,6 +101,10 @@ vi.mock("../src/services/wasteService", () => ({
   }),
 }));
 
+vi.mock("../src/services/inventoryExcelService", () => ({
+  saveInventoryExcel: inventoryMocks.saveExcel,
+}));
+
 import InventoryPage from "../src/pages/InventoryPage";
 
 afterEach(cleanup);
@@ -108,6 +113,8 @@ beforeEach(() => {
   authState.current = { user: userA };
   inventoryMocks.listWaste.mockReset();
   inventoryMocks.listContainers.mockReset();
+  inventoryMocks.saveExcel.mockReset();
+  inventoryMocks.saveExcel.mockResolvedValue("cancelled");
 });
 
 describe("Inventory account isolation", () => {
@@ -177,5 +184,35 @@ describe("Inventory account isolation", () => {
     view.rerender(<InventoryPage />);
 
     expect(view.container.childElementCount).toBe(0);
+  });
+
+  test("exports only inventory matching every active filter in the selected order", async () => {
+    const now = new Date();
+    const registeredDaysAgo = (days: number): string =>
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 12).toISOString();
+    const organicHeavy = { ...wasteA, registeredAt: registeredDaysAgo(10), weightKg: 10 };
+    const organicLight = {
+      ...wasteA,
+      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      recordNumber: "3",
+      registeredAt: registeredDaysAgo(15),
+      weightKg: 5,
+    };
+    const recyclable = { ...wasteB, registeredAt: registeredDaysAgo(12) };
+    inventoryMocks.listWaste.mockResolvedValueOnce(success([organicHeavy, organicLight, recyclable]));
+    inventoryMocks.listContainers.mockResolvedValueOnce(success([containerA, containerB]));
+
+    render(<InventoryPage />);
+    expect(await screen.findByText("RES-003")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("inventory.ageFilter"), { target: { value: "from8To30" } });
+    fireEvent.change(screen.getByLabelText("inventory.categoryFilter"), { target: { value: "organic" } });
+    fireEvent.change(screen.getByLabelText("inventory.containerFilter"), { target: { value: containerA.id } });
+    fireEvent.change(screen.getByLabelText("inventory.sortBy"), { target: { value: "weightAsc" } });
+    fireEvent.click(screen.getByRole("button", { name: "inventory.exportExcel" }));
+
+    await waitFor(() => expect(inventoryMocks.saveExcel).toHaveBeenCalledTimes(1));
+    const exportedRecords = inventoryMocks.saveExcel.mock.calls[0]?.[0] as Array<{ id: string }>;
+    expect(exportedRecords.map(({ id }) => id)).toEqual([organicLight.id, organicHeavy.id]);
   });
 });

@@ -31,6 +31,10 @@ import {
   filterInventoryByStorageAge,
   type InventoryAgeFilter,
 } from "../services/inventoryAge";
+import {
+  saveInventoryExcel,
+  type InventoryExcelLabels,
+} from "../services/inventoryExcelService";
 
 type InventoryResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
 type ContainersResult = Awaited<ReturnType<typeof listContainers>>;
@@ -54,8 +58,8 @@ function InventoryPageContent() {
   const [ageFilter, setAgeFilter] = useState<InventoryAgeFilter>("all");
   const [sortOption, setSortOption] = useState<InventorySortOption>("newest");
   const [ageReferenceDate, setAgeReferenceDate] = useState(() => new Date());
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
+  const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
+  const [exportNotice, setExportNotice] = useState<"csvSuccess" | "excelSuccess" | "error" | null>(null);
 
   const applyResults = useCallback((
     inventoryResult: InventoryResult,
@@ -144,8 +148,8 @@ function InventoryPageContent() {
   }));
 
   const exportInventory = async (): Promise<void> => {
-    if (visibleRecords.length === 0 || isExporting) return;
-    setIsExporting(true);
+    if (visibleRecords.length === 0 || exportKind !== null) return;
+    setExportKind("csv");
     setExportNotice(null);
     const labels: InventoryCsvLabels = {
       recordNumber: t("inventory.csv.recordNumber"), container: t("inventory.csv.container"),
@@ -156,11 +160,42 @@ function InventoryPageContent() {
       const result = await saveInventoryCsv(visibleRecords, containerCodes, labels,
         i18n.resolvedLanguage === "en" ? "en" : "es",
         `ecoplaza-inventory-${new Date().toISOString().slice(0, 10)}.csv`);
-      if (result === "saved") setExportNotice("success");
+      if (result === "saved") setExportNotice("csvSuccess");
     } catch {
       setExportNotice("error");
     } finally {
-      setIsExporting(false);
+      setExportKind(null);
+    }
+  };
+
+  const exportInventoryExcel = async (): Promise<void> => {
+    if (visibleRecords.length === 0 || exportKind !== null) return;
+    setExportKind("excel");
+    setExportNotice(null);
+    const labels: InventoryExcelLabels = {
+      workbookTitle: t("inventory.excel.workbookTitle"),
+      sheetName: t("inventory.excel.sheetName"),
+      recordNumber: t("inventory.excel.recordNumber"),
+      container: t("inventory.excel.container"),
+      category: t("inventory.excel.category"),
+      weightKg: t("inventory.excel.weightKg"),
+      registeredAt: t("inventory.excel.registeredAt"),
+      storageAgeDays: t("inventory.excel.storageAgeDays"),
+      categories: getCsvCategoryLabels(t),
+    };
+    try {
+      const result = await saveInventoryExcel(
+        visibleRecords,
+        containerCodes,
+        labels,
+        ageReferenceDate,
+        `ecoplaza-inventory-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      );
+      if (result === "saved") setExportNotice("excelSuccess");
+    } catch {
+      setExportNotice("error");
+    } finally {
+      setExportKind(null);
     }
   };
 
@@ -257,12 +292,20 @@ function InventoryPageContent() {
               {t("inventory.availableMaterialsDescription")}
             </p>
           </div>
-          <button type="button" disabled={visibleRecords.length === 0 || isExporting || loadError !== null}
-            onClick={() => void exportInventory()}
-            className="flex shrink-0 items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60">
-            {isExporting ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
-            {isExporting ? t("inventory.exporting") : t("inventory.exportCsv")}
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button type="button" disabled={visibleRecords.length === 0 || exportKind !== null || loadError !== null}
+              onClick={() => void exportInventory()}
+              className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60">
+              {exportKind === "csv" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+              {exportKind === "csv" ? t("inventory.exporting") : t("inventory.exportCsv")}
+            </button>
+            <button type="button" disabled={visibleRecords.length === 0 || exportKind !== null || loadError !== null}
+              onClick={() => void exportInventoryExcel()}
+              className="flex items-center gap-2 rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
+              {exportKind === "excel" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
+              {exportKind === "excel" ? t("inventory.exportingExcel") : t("inventory.exportExcel")}
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap justify-end gap-3">
@@ -344,8 +387,8 @@ function InventoryPageContent() {
         </div>
       </div>
       {exportNotice !== null && (
-        <SuccessToast title={t(exportNotice === "success" ? "inventory.exportSuccessTitle" : "inventory.exportErrorTitle")}
-          description={t(exportNotice === "success" ? "inventory.exportSuccessDescription" : "inventory.exportErrorDescription")}
+        <SuccessToast title={t(exportNotice === "csvSuccess" ? "inventory.exportSuccessTitle" : exportNotice === "excelSuccess" ? "inventory.excelExportSuccessTitle" : "inventory.exportErrorTitle")}
+          description={t(exportNotice === "csvSuccess" ? "inventory.exportSuccessDescription" : exportNotice === "excelSuccess" ? "inventory.excelExportSuccessDescription" : "inventory.exportErrorDescription")}
           closeLabel={t("inventory.dismissNotification")} variant={exportNotice === "error" ? "error" : "success"}
           onClose={() => setExportNotice(null)} />
       )}
