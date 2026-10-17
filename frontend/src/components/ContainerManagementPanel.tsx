@@ -19,7 +19,13 @@ import {
   type Container,
   type ContainerErrorCode,
 } from "../services/containerService";
-import { sortContainers, type ContainerSortOption } from "../services/coreWorkflow";
+import {
+  sortContainers,
+  summarizeAvailableStockByContainer,
+  type ContainerSortOption,
+  type ContainerStockSummary,
+} from "../services/coreWorkflow";
+import { listAvailableWasteRecords } from "../services/wasteService";
 import { saveContainerCsv, type ContainerCsvLabels } from "../services/containerCsv";
 import SuccessToast from "./SuccessToast";
 
@@ -42,6 +48,7 @@ function ContainerManagementPanel() {
   const requestRevisionRef = useRef(0);
   const isCreatingRef = useRef(false);
   const [containers, setContainers] = useState<Container[]>([]);
+  const [stockByContainer, setStockByContainer] = useState<Map<string, ContainerStockSummary>>(new Map());
   const [code, setCode] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<ContainerSortOption>("codeAsc");
@@ -50,23 +57,38 @@ function ContainerManagementPanel() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isStockLoading, setIsStockLoading] = useState(true);
+  const [stockLoadError, setStockLoadError] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const isFormUnavailable = isCreating || isLoading || loadError !== null;
 
-  const applyLoadResult = useCallback((
-    result: Awaited<ReturnType<typeof listContainers>>,
+  const applyLoadResults = useCallback((
+    containersResult: Awaited<ReturnType<typeof listContainers>>,
+    stockResult: Awaited<ReturnType<typeof listAvailableWasteRecords>>,
     requestRevision: number,
   ) => {
     if (requestRevision !== requestRevisionRef.current) return;
 
-    if (!result.ok) {
+    if (!containersResult.ok) {
       setContainers([]);
-      setLoadError(getContainerErrorKey(result.error.code));
+      setStockByContainer(new Map());
+      setLoadError(getContainerErrorKey(containersResult.error.code));
+      setStockLoadError(false);
+      setIsStockLoading(false);
       setIsLoading(false);
       return;
     }
 
-    setContainers(result.data);
+    setContainers(containersResult.data);
+    if (stockResult.ok) {
+      const summaries = summarizeAvailableStockByContainer(containersResult.data, stockResult.data);
+      setStockByContainer(new Map(summaries.map((summary) => [summary.containerId, summary])));
+      setStockLoadError(false);
+    } else {
+      setStockByContainer(new Map());
+      setStockLoadError(true);
+    }
+    setIsStockLoading(false);
     setLoadError(null);
     setIsLoading(false);
   }, []);
@@ -74,23 +96,30 @@ function ContainerManagementPanel() {
   const loadUserContainers = useCallback(async () => {
     const requestRevision = ++requestRevisionRef.current;
     setIsLoading(true);
+    setIsStockLoading(true);
     setLoadError(null);
+    setStockLoadError(false);
 
-    const result = await listContainers();
-    applyLoadResult(result, requestRevision);
-  }, [applyLoadResult]);
+    const [containersResult, stockResult] = await Promise.all([
+      listContainers(),
+      listAvailableWasteRecords(),
+    ]);
+    applyLoadResults(containersResult, stockResult, requestRevision);
+  }, [applyLoadResults]);
 
   useEffect(() => {
     const requestRevision = ++requestRevisionRef.current;
 
-    void listContainers().then((result) => {
-      applyLoadResult(result, requestRevision);
-    });
+    void Promise.all([listContainers(), listAvailableWasteRecords()]).then(
+      ([containersResult, stockResult]) => {
+        applyLoadResults(containersResult, stockResult, requestRevision);
+      },
+    );
 
     return () => {
       requestRevisionRef.current += 1;
     };
-  }, [applyLoadResult]);
+  }, [applyLoadResults]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -111,6 +140,18 @@ function ContainerManagementPanel() {
       }
 
       setContainers((current) => [...current, result.data]);
+      if (!isStockLoading && !stockLoadError) {
+        setStockByContainer((current) => {
+          const next = new Map(current);
+          next.set(result.data.id, {
+            containerId: result.data.id,
+            containerCode: result.data.code,
+            availableWeightKg: 0,
+            availableRecordCount: 0,
+          });
+          return next;
+        });
+      }
       setCode("");
       setFeedback({ tone: "success", key: "containers.createSuccess" });
     } catch {
@@ -137,6 +178,8 @@ function ContainerManagementPanel() {
   const feedbackClass = feedback?.tone === "success"
     ? "border-ecoplaza-primary/30 bg-ecoplaza-primary/10 text-ecoplaza-primary"
     : "border-ecoplaza-danger/30 bg-ecoplaza-danger/10 text-ecoplaza-danger";
+  const formatWeight = (weightKg: number): string =>
+    `${new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(weightKg)} ${t("common.kg")}`;
 
   const exportContainers = async (): Promise<void> => {
     if (visibleContainers.length === 0 || isExporting) return;
@@ -277,7 +320,14 @@ function ContainerManagementPanel() {
               <p className="mt-1 max-w-md text-xs leading-5 text-ecoplaza-text-muted">{t("containers.noSearchResultsDescription")}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div>
+              {stockLoadError && (
+                <div role="status" className="mb-4 flex items-start gap-2 rounded-xl border border-ecoplaza-warning/30 bg-ecoplaza-warning/10 px-3 py-2 text-xs leading-5 text-ecoplaza-text">
+                  <AlertTriangle className="mt-0.5 shrink-0 text-ecoplaza-warning" size={15} strokeWidth={1.8} aria-hidden="true" />
+                  <span>{t("containers.stockLoadError")}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
               {visibleContainers.map((container) => (
                 <article key={container.id} className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background/55 p-4">
                   <div className="flex items-start gap-3">
@@ -296,8 +346,27 @@ function ContainerManagementPanel() {
                   <p className="mt-3 break-all font-mono text-[10px] leading-4 text-ecoplaza-text-muted" title={container.id}>
                     {container.id}
                   </p>
+                  <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-ecoplaza-border pt-3">
+                    <div>
+                      <dt className="text-[11px] text-ecoplaza-text-muted">{t("containers.availableRecords")}</dt>
+                      <dd className="mt-1 text-sm font-semibold text-ecoplaza-text">
+                        {isStockLoading || stockLoadError
+                          ? "—"
+                          : (stockByContainer.get(container.id)?.availableRecordCount ?? 0)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[11px] text-ecoplaza-text-muted">{t("containers.availableWeight")}</dt>
+                      <dd className="mt-1 text-sm font-semibold text-ecoplaza-text">
+                        {isStockLoading || stockLoadError
+                          ? "—"
+                          : formatWeight(stockByContainer.get(container.id)?.availableWeightKg ?? 0)}
+                      </dd>
+                    </div>
+                  </dl>
                 </article>
               ))}
+              </div>
             </div>
           )}
         </div>
