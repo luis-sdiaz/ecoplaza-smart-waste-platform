@@ -340,7 +340,7 @@ const en = {
     withPhone: "With phone", withPhoneDescription: "Buyers with a registered phone number",
     realData: "Database data", records: "Registered buyers",
     recordsDescription: "Buyers securely linked to your EcoPlaza account.",
-    searchLabel: "Search buyers", searchPlaceholder: "Search by name or email...",
+    searchLabel: "Search buyers", searchPlaceholder: "Search by name, email, or phone...",
     sortBy: "Sort by", sortRecentlyUpdated: "Recently updated",
     sortNameAsc: "Name A–Z", sortNameDesc: "Name Z–A",
     contactFilter: "Contact", allContacts: "All buyers", withEmailFilter: "With email", withPhoneFilter: "With phone",

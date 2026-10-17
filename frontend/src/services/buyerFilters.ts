@@ -11,6 +11,10 @@ function normalizeSearchValue(value: string): string {
     .trim();
 }
 
+function normalizePhoneNumber(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 export function filterAndSortBuyers(
   buyers: ReadonlyArray<Buyer>,
   searchQuery: string,
@@ -19,11 +23,14 @@ export function filterAndSortBuyers(
   contactFilter: BuyerContactFilter = "all",
 ): Buyer[] {
   const normalizedQuery = normalizeSearchValue(searchQuery);
+  const normalizedPhoneQuery = normalizePhoneNumber(searchQuery);
   const filtered = normalizedQuery === ""
     ? [...buyers]
     : buyers.filter((buyer) =>
       normalizeSearchValue(buyer.name).includes(normalizedQuery) ||
-      (buyer.email !== null && normalizeSearchValue(buyer.email).includes(normalizedQuery)),
+      (buyer.email !== null && normalizeSearchValue(buyer.email).includes(normalizedQuery)) ||
+      (normalizedPhoneQuery !== "" && buyer.phone !== null &&
+        normalizePhoneNumber(buyer.phone).includes(normalizedPhoneQuery)),
     );
   const withRequestedContact = filtered.filter((buyer) =>
     contactFilter === "all" ||

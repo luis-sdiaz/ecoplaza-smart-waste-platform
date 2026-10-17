@@ -59,6 +59,19 @@ test("filters buyers by available contact together with search and sorting", () 
   assert.deepEqual(filterAndSortBuyers(buyers, "", "updated_desc", "es-CO", "phone").map(({ id }) => id), ["buyer-c", "buyer-b"]);
 });
 
+test("searches buyers by phone across common formatting differences", () => {
+  const buyers = [
+    { id: "buyer-b", name: "Beta", email: null, phone: "+57 (300) 123-4567", createdAt: "2026-01-01", updatedAt: "2026-01-02" },
+    { id: "buyer-a", name: "Alpha", email: "alpha@example.test", phone: "310 987 6543", createdAt: "2026-01-01", updatedAt: "2026-01-03" },
+    { id: "buyer-c", name: "Gamma", email: null, phone: null, createdAt: "2026-01-01", updatedAt: "2026-01-04" },
+  ];
+
+  assert.deepEqual(filterAndSortBuyers(buyers, "300 123 4567", "name_asc", "es-CO").map(({ id }) => id), ["buyer-b"]);
+  assert.deepEqual(filterAndSortBuyers(buyers, "+57-300-123", "name_asc", "es-CO", "phone").map(({ id }) => id), ["buyer-b"]);
+  assert.deepEqual(filterAndSortBuyers(buyers, "310987", "updated_desc", "es-CO", "email").map(({ id }) => id), ["buyer-a"]);
+  assert.deepEqual(filterAndSortBuyers(buyers, "999 999", "name_asc", "es-CO"), []);
+});
+
 test("calculates honest material status shares including other and zero states", () => {
   assert.deepEqual(calculateMaterialStatusBreakdown(20, 8, 7), {
     totalWeightKg: 20, availableWeightKg: 8, soldWeightKg: 7, otherWeightKg: 5,
