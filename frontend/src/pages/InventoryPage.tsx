@@ -27,6 +27,10 @@ import {
 } from "../services/coreWorkflow";
 import { saveInventoryCsv, type InventoryCsvLabels } from "../services/inventoryCsv";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
+import {
+  filterInventoryByStorageAge,
+  type InventoryAgeFilter,
+} from "../services/inventoryAge";
 
 type InventoryResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
 type ContainersResult = Awaited<ReturnType<typeof listContainers>>;
@@ -47,7 +51,9 @@ function InventoryPageContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
   const [containerFilter, setContainerFilter] = useState("all");
+  const [ageFilter, setAgeFilter] = useState<InventoryAgeFilter>("all");
   const [sortOption, setSortOption] = useState<InventorySortOption>("newest");
+  const [ageReferenceDate, setAgeReferenceDate] = useState(() => new Date());
   const [isExporting, setIsExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
 
@@ -106,6 +112,16 @@ function InventoryPageContent() {
     };
   }, [applyResults]);
 
+  useEffect(() => {
+    const now = new Date();
+    const nextLocalDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timeout = window.setTimeout(
+      () => setAgeReferenceDate(new Date()),
+      Math.max(1, nextLocalDay.getTime() - now.getTime() + 50),
+    );
+    return () => window.clearTimeout(timeout);
+  }, [ageReferenceDate]);
+
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const statistics = calculateWasteStatistics(records);
   const formatWeight = (weightKg: number): string =>
@@ -115,9 +131,10 @@ function InventoryPageContent() {
     realValueUnavailable ? "—" : formatWeight(weightKg);
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
   const filteredRecords = filterAvailableInventory(records, categoryFilter, containerFilter);
-  const visibleRecords = sortAvailableInventory(filteredRecords, sortOption);
+  const ageFilteredRecords = filterInventoryByStorageAge(filteredRecords, ageFilter, ageReferenceDate);
+  const visibleRecords = sortAvailableInventory(ageFilteredRecords, sortOption);
   const containerSummaries = summarizeAvailableStockByContainer(containers, records);
-  const hasActiveFilters = categoryFilter !== "all" || containerFilter !== "all";
+  const hasActiveFilters = categoryFilter !== "all" || containerFilter !== "all" || ageFilter !== "all";
   const tableItems: InventoryItem[] = visibleRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
@@ -232,7 +249,7 @@ function InventoryPageContent() {
               </h2>
               {!realValueUnavailable && (
                 <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-                  {t("inventory.recordCount", { count: filteredRecords.length })}
+                  {t("inventory.recordCount", { count: ageFilteredRecords.length })}
                 </span>
               )}
             </div>
@@ -240,7 +257,7 @@ function InventoryPageContent() {
               {t("inventory.availableMaterialsDescription")}
             </p>
           </div>
-          <button type="button" disabled={filteredRecords.length === 0 || isExporting || loadError !== null}
+          <button type="button" disabled={visibleRecords.length === 0 || isExporting || loadError !== null}
             onClick={() => void exportInventory()}
             className="flex shrink-0 items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60">
             {isExporting ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
@@ -249,6 +266,20 @@ function InventoryPageContent() {
         </div>
 
         <div className="mt-4 flex flex-wrap justify-end gap-3">
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("inventory.ageFilter")}</span>
+            <select
+              value={ageFilter}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setAgeFilter(event.target.value as InventoryAgeFilter)}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
+            >
+              <option value="all">{t("inventory.allAges")}</option>
+              <option value="upTo7">{t("inventory.ageUpTo7")}</option>
+              <option value="from8To30">{t("inventory.ageFrom8To30")}</option>
+              <option value="over30">{t("inventory.ageOver30")}</option>
+            </select>
+          </label>
           <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("inventory.categoryFilter")}</span>
             <select
@@ -289,7 +320,7 @@ function InventoryPageContent() {
           <button
             type="button"
             disabled={!hasActiveFilters || isLoading}
-            onClick={() => { setCategoryFilter("all"); setContainerFilter("all"); }}
+            onClick={() => { setCategoryFilter("all"); setContainerFilter("all"); setAgeFilter("all"); }}
             className="rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t("inventory.clearFilters")}

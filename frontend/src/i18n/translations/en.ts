@@ -297,6 +297,8 @@ const en = {
     emptyTitle: "You don't have any available materials",
     emptyDescription: "Waste records with another status are not included in available inventory.",
     categoryFilter: "Category", allCategories: "All categories",
+    ageFilter: "Storage age", allAges: "All ages", ageUpTo7: "Up to 7 days",
+    ageFrom8To30: "8 to 30 days", ageOver30: "More than 30 days",
     saleSearchLabel: "Sale identifier", saleSearchPlaceholder: "UUID or SAL- reference...",
     containerFilter: "Container", allContainers: "All containers", clearFilters: "Clear filters",
     sortBy: "Sort by", sortNewest: "Newest first", sortOldest: "Oldest first",

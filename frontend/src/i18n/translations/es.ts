@@ -297,6 +297,8 @@ const es = {
     emptyTitle: "No tienes materiales disponibles",
     emptyDescription: "Los residuos con otro estado no se incluyen en el inventario disponible.",
     categoryFilter: "Categoría", allCategories: "Todas las categorías",
+    ageFilter: "Antigüedad", allAges: "Todas las antigüedades", ageUpTo7: "Hasta 7 días",
+    ageFrom8To30: "Entre 8 y 30 días", ageOver30: "Más de 30 días",
     saleSearchLabel: "Identificador de venta", saleSearchPlaceholder: "UUID o referencia SAL-...",
     containerFilter: "Contenedor", allContainers: "Todos los contenedores", clearFilters: "Limpiar filtros",
     sortBy: "Ordenar por", sortNewest: "Más recientes primero", sortOldest: "Más antiguos primero",
