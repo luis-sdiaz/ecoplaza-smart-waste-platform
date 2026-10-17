@@ -4,6 +4,14 @@ const TITLE_FILL = "FF166534";
 const HEADER_FILL = "FF15803D";
 const WHITE = "FFFFFFFF";
 const BORDER = "FFD1D5DB";
+const HEADER_ROW_HEIGHT = 34;
+const MAX_HEADER_WIDTH = 32;
+
+function readableHeaderWidth(header: string, requestedWidth: number): number {
+  const longestWord = Math.max(...header.trim().split(/\s+/u).map((word) => word.length));
+  const wrappedHeaderWidth = Math.ceil(header.length / 2) + 2;
+  return Math.max(requestedWidth, Math.min(MAX_HEADER_WIDTH, Math.max(longestWord + 2, wrappedHeaderWidth)));
+}
 
 export async function createExcelWorkbook(subject: string): Promise<Workbook> {
   const excelModule = await import("exceljs");
@@ -64,15 +72,17 @@ export function styleExcelWorksheet(
 
   const headerRow = worksheet.getRow(3);
   headerRow.values = [...headers.map(safeExcelText)];
-  headerRow.height = 22;
+  headerRow.height = HEADER_ROW_HEIGHT;
   headerRow.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: WHITE } };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_FILL } };
-    cell.alignment = { vertical: "middle" };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
     cell.border = { bottom: { style: "thin", color: { argb: BORDER } } };
   });
 
-  worksheet.columns = widths.map((width) => ({ width }));
+  worksheet.columns = widths.map((width, index) => ({
+    width: readableHeaderWidth(headers[index] ?? "", width),
+  }));
   worksheet.views = [{ state: "frozen", ySplit: 3, topLeftCell: "A4" }];
   worksheet.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3, column: headers.length } };
 }

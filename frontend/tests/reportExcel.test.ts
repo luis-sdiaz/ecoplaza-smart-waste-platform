@@ -70,6 +70,10 @@ test("creates a valid formatted analytics workbook with real Excel value types",
   assert.equal(summary.views[0]?.state, "frozen");
   assert.ok(summary.autoFilter);
   assert.equal(summary.getCell("A3").fill.type, "pattern");
+  assert.equal(summary.getRow(3).height, 34);
+  assert.equal(summary.getCell("A3").alignment.wrapText, true);
+  assert.equal(summary.getCell("A3").alignment.horizontal, "center");
+  assert.ok((summary.getColumn(1).width ?? 0) >= 31);
 
   const distribution = reopened.getWorksheet("Waste distribution")!;
   assert.equal(distribution.getCell("A4").value, "'=Organic");
@@ -80,11 +84,21 @@ test("creates a valid formatted analytics workbook with real Excel value types",
   const performance = reopened.getWorksheet("Sales performance")!;
   assert.equal(performance.getCell("D4").value, 1000.25);
   assert.match(performance.getCell("D4").numFmt, /COP/);
+  assert.ok((performance.getColumn(3).width ?? 0) >= 20);
 
   const trend = reopened.getWorksheet("Daily sales")!;
   assert.ok(trend.getCell("A4").value instanceof Date);
   assert.equal(trend.getCell("A4").numFmt, "yyyy-mm-dd");
   assert.equal(trend.getCell("C5").value, 2000.5);
+
+  for (const worksheet of reopened.worksheets) {
+    assert.equal(worksheet.getRow(3).height, 34);
+    worksheet.getRow(3).eachCell((cell) => {
+      assert.equal(cell.alignment.wrapText, true);
+      assert.equal(cell.font.bold, true);
+      assert.equal(cell.fill.type, "pattern");
+    });
+  }
 });
 
 test("rejects invalid report values instead of emitting a misleading workbook", async () => {
