@@ -27,6 +27,10 @@ vi.mock("../src/services/containerCsv", () => ({
   saveContainerCsv: vi.fn(),
 }));
 
+vi.mock("../src/services/containerExcelService", () => ({
+  saveContainerExcel: vi.fn(),
+}));
+
 import ContainerManagementPanel from "../src/components/ContainerManagementPanel";
 
 const containerA = { id: "container-a", code: "CTR-A", createdAt: "2026-10-01T12:00:00.000Z" };

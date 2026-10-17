@@ -27,6 +27,7 @@ import {
 } from "../services/coreWorkflow";
 import { listAvailableWasteRecords } from "../services/wasteService";
 import { saveContainerCsv, type ContainerCsvLabels } from "../services/containerCsv";
+import { saveContainerExcel, type ContainerExcelLabels } from "../services/containerExcelService";
 import SuccessToast from "./SuccessToast";
 
 type Feedback = {
@@ -54,8 +55,8 @@ function ContainerManagementPanel() {
   const [sortOption, setSortOption] = useState<ContainerSortOption>("codeAsc");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportNotice, setExportNotice] = useState<"success" | "error" | null>(null);
+  const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
+  const [exportNotice, setExportNotice] = useState<"csvSuccess" | "excelSuccess" | "error" | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isStockLoading, setIsStockLoading] = useState(true);
   const [stockLoadError, setStockLoadError] = useState(false);
@@ -182,9 +183,9 @@ function ContainerManagementPanel() {
     `${new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(weightKg)} ${t("common.kg")}`;
 
   const exportContainers = async (): Promise<void> => {
-    if (visibleContainers.length === 0 || isExporting) return;
+    if (visibleContainers.length === 0 || exportKind !== null) return;
 
-    setIsExporting(true);
+    setExportKind("csv");
     setExportNotice(null);
     const labels: ContainerCsvLabels = {
       id: t("containers.csv.id"),
@@ -199,11 +200,41 @@ function ContainerManagementPanel() {
         i18n.resolvedLanguage === "en" ? "en" : "es",
         `ecoplaza-containers-${new Date().toISOString().slice(0, 10)}.csv`,
       );
-      if (result === "saved") setExportNotice("success");
+      if (result === "saved") setExportNotice("csvSuccess");
     } catch {
       setExportNotice("error");
     } finally {
-      setIsExporting(false);
+      setExportKind(null);
+    }
+  };
+
+  const exportContainersExcel = async (): Promise<void> => {
+    if (visibleContainers.length === 0 || exportKind !== null) return;
+
+    setExportKind("excel");
+    setExportNotice(null);
+    const labels: ContainerExcelLabels = {
+      workbookTitle: t("containers.excel.workbookTitle"),
+      sheetName: t("containers.excel.sheetName"),
+      id: t("containers.excel.id"),
+      code: t("containers.excel.code"),
+      createdAt: t("containers.excel.createdAt"),
+      availableRecordCount: t("containers.excel.availableRecordCount"),
+      availableWeightKg: t("containers.excel.availableWeightKg"),
+    };
+
+    try {
+      const result = await saveContainerExcel(
+        visibleContainers,
+        stockByContainer,
+        labels,
+        `ecoplaza-containers-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      );
+      if (result === "saved") setExportNotice("excelSuccess");
+    } catch {
+      setExportNotice("error");
+    } finally {
+      setExportKind(null);
     }
   };
 
@@ -230,14 +261,25 @@ function ContainerManagementPanel() {
             </span>
             <button
               type="button"
-              disabled={visibleContainers.length === 0 || isExporting}
+              disabled={visibleContainers.length === 0 || exportKind !== null}
               onClick={() => void exportContainers()}
               className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-border px-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isExporting
+              {exportKind === "csv"
                 ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
                 : <Download size={16} aria-hidden="true" />}
-              {isExporting ? t("containers.exporting") : t("containers.exportCsv")}
+              {exportKind === "csv" ? t("containers.exporting") : t("containers.exportCsv")}
+            </button>
+            <button
+              type="button"
+              disabled={visibleContainers.length === 0 || exportKind !== null}
+              onClick={() => void exportContainersExcel()}
+              className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-primary px-3 text-sm font-semibold text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exportKind === "excel"
+                ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
+                : <Download size={16} aria-hidden="true" />}
+              {exportKind === "excel" ? t("containers.exportingExcel") : t("containers.exportExcel")}
             </button>
           </div>
         )}
@@ -424,8 +466,8 @@ function ContainerManagementPanel() {
       </div>
       {exportNotice !== null && (
         <SuccessToast
-          title={t(exportNotice === "success" ? "containers.exportSuccessTitle" : "containers.exportErrorTitle")}
-          description={t(exportNotice === "success" ? "containers.exportSuccessDescription" : "containers.exportErrorDescription")}
+          title={t(exportNotice === "csvSuccess" ? "containers.exportSuccessTitle" : exportNotice === "excelSuccess" ? "containers.excelExportSuccessTitle" : "containers.exportErrorTitle")}
+          description={t(exportNotice === "csvSuccess" ? "containers.exportSuccessDescription" : exportNotice === "excelSuccess" ? "containers.excelExportSuccessDescription" : "containers.exportErrorDescription")}
           closeLabel={t("containers.dismissNotification")}
           variant={exportNotice === "error" ? "error" : "success"}
           onClose={() => setExportNotice(null)}
