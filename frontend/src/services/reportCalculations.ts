@@ -26,6 +26,14 @@ export interface ReportMonthlySalesItem {
   averageSaleValue: number;
 }
 
+export interface ReportTopBuyerItem {
+  buyerId: string;
+  buyerName: string;
+  purchaseCount: number;
+  purchasedWeightKg: number;
+  totalPurchasedValue: number;
+}
+
 export function getHighestRevenueDay(
   salesTrend: ReadonlyArray<ReportSalesTrendItem>,
 ): ReportSalesTrendItem | null {
@@ -73,6 +81,7 @@ export interface ReportStatistics {
   salesByCategory: ReportSalesCategoryItem[];
   salesTrend: ReportSalesTrendItem[];
   monthlySales: ReportMonthlySalesItem[];
+  topBuyers: ReportTopBuyerItem[];
 }
 
 export interface ReportWasteInput {
@@ -89,6 +98,8 @@ export interface ReportSaleInput {
   weightKg: number;
   totalValue: number;
   soldAt: string;
+  buyerId: string;
+  buyerName: string;
 }
 
 const REPORT_CATEGORIES: ReportWasteCategory[] = [
@@ -117,6 +128,44 @@ function sumSafely(values: ReadonlyArray<number>): number | null {
 
 function hasDuplicateValues(values: ReadonlyArray<string>): boolean {
   return new Set(values).size !== values.length;
+}
+
+export function calculateTopBuyers(
+  sales: ReadonlyArray<Pick<ReportSaleInput, "buyerId" | "buyerName" | "weightKg" | "totalValue">>,
+  limit = 5,
+): ReportTopBuyerItem[] | null {
+  if (!Number.isSafeInteger(limit) || limit < 0) return null;
+  const buckets = new Map<string, { buyerName: string; weights: number[]; values: number[] }>();
+
+  for (const sale of sales) {
+    const buyerName = sale.buyerName.trim();
+    if (sale.buyerId.trim() === "" || buyerName === "") return null;
+    const bucket = buckets.get(sale.buyerId) ?? { buyerName, weights: [], values: [] };
+    if (bucket.buyerName !== buyerName) return null;
+    bucket.weights.push(sale.weightKg);
+    bucket.values.push(sale.totalValue);
+    buckets.set(sale.buyerId, bucket);
+  }
+
+  const ranking: ReportTopBuyerItem[] = [];
+  for (const [buyerId, bucket] of buckets) {
+    const purchasedWeightKg = sumSafely(bucket.weights);
+    const totalPurchasedValue = sumSafeMonetaryValues(bucket.values);
+    if (purchasedWeightKg === null || totalPurchasedValue === null) return null;
+    ranking.push({
+      buyerId,
+      buyerName: bucket.buyerName,
+      purchaseCount: bucket.values.length,
+      purchasedWeightKg,
+      totalPurchasedValue,
+    });
+  }
+
+  return ranking.sort((left, right) =>
+    right.totalPurchasedValue - left.totalPurchasedValue ||
+    left.buyerName.localeCompare(right.buyerName, "es", { sensitivity: "base" }) ||
+    left.buyerId.localeCompare(right.buyerId)
+  ).slice(0, limit);
 }
 
 function toLocalDateKey(isoTimestamp: string): string | null {
@@ -273,6 +322,7 @@ export function calculateReportStatistics(
   const salesByCategory = calculateSalesByCategory(sales);
   const salesTrend = calculateSalesTrend(sales);
   const monthlySales = salesTrend === null ? null : calculateMonthlySales(salesTrend, dateRange);
+  const topBuyers = calculateTopBuyers(sales);
 
   if (
     totalRegisteredWeightKg === null ||
@@ -281,7 +331,8 @@ export function calculateReportStatistics(
     grossSalesValue === null ||
     salesByCategory === null ||
     salesTrend === null ||
-    monthlySales === null
+    monthlySales === null ||
+    topBuyers === null
   ) {
     return null;
   }
@@ -315,5 +366,6 @@ export function calculateReportStatistics(
     salesByCategory,
     salesTrend,
     monthlySales,
+    topBuyers,
   };
 }

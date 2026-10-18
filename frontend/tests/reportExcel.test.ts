@@ -52,6 +52,7 @@ const statistics = {
     { month: "2026-09", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
     { month: "2026-10", salesCount: 2, grossSalesValue: 3000.75, averageSaleValue: 1500.375 },
   ],
+  topBuyers: [],
 };
 
 const salesLabels: SalesExcelLabels = {

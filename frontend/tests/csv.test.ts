@@ -34,6 +34,7 @@ const report = {
   salesByCategory: [],
   salesTrend: [],
   monthlySales: [],
+  topBuyers: [],
 };
 
 function translateFrom(

@@ -51,6 +51,7 @@ const report = {
   salesByCategory: [],
   salesTrend: [],
   monthlySales: [],
+  topBuyers: [],
 };
 const salesLabels = {
   reference: "Reference", completedAt: "Date", category: "Category",

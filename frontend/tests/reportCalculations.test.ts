@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   calculateReportStatistics,
   calculateMonthlySales,
+  calculateTopBuyers,
   calculateSalesTrend,
   getHighestRevenueDay,
   type ReportSaleInput,
@@ -20,11 +21,11 @@ const wasteRecords: ReportWasteInput[] = [
 const sales: ReportSaleInput[] = [
   {
     id: "sale-1", wasteRecordId: "waste-2", category: "recyclable", weightKg: 20,
-    totalValue: 1000.25, soldAt: "2026-10-13T05:00:00.000Z",
+    totalValue: 1000.25, soldAt: "2026-10-13T05:00:00.000Z", buyerId: "buyer-b", buyerName: "Beta",
   },
   {
     id: "sale-2", wasteRecordId: "waste-3", category: "nonRecyclable", weightKg: 5,
-    totalValue: 2000.5, soldAt: "2026-10-14T04:59:59.999Z",
+    totalValue: 2000.5, soldAt: "2026-10-14T04:59:59.999Z", buyerId: "buyer-a", buyerName: "Alpha",
   },
 ];
 
@@ -48,6 +49,25 @@ test("calculates historical, available, sold, revenue, and category values", () 
     { category: "recyclable", salesCount: 1, soldWeightKg: 20, grossSalesValue: 1000.25, averagePricePerKg: 50.0125 },
     { category: "nonRecyclable", salesCount: 1, soldWeightKg: 5, grossSalesValue: 2000.5, averagePricePerKg: 400.1 },
   ]);
+  assert.deepEqual(result?.topBuyers, [
+    { buyerId: "buyer-a", buyerName: "Alpha", purchaseCount: 1, purchasedWeightKg: 5, totalPurchasedValue: 2000.5 },
+    { buyerId: "buyer-b", buyerName: "Beta", purchaseCount: 1, purchasedWeightKg: 20, totalPurchasedValue: 1000.25 },
+  ]);
+});
+
+test("ranks at most five scoped buyers with deterministic revenue ties", () => {
+  const scopedSales = Array.from({ length: 6 }, (_, index) => ({
+    buyerId: `buyer-${index}`,
+    buyerName: index < 2 ? (index === 0 ? "Zulu" : "Alpha") : `Buyer ${index}`,
+    weightKg: index + 1,
+    totalValue: index < 2 ? 1000 : 900 - index,
+  }));
+  assert.deepEqual(calculateTopBuyers(scopedSales)?.map(({ buyerId }) => buyerId), [
+    "buyer-1", "buyer-0", "buyer-2", "buyer-3", "buyer-4",
+  ]);
+  assert.deepEqual(calculateTopBuyers([]), []);
+  assert.equal(calculateTopBuyers([{ ...scopedSales[0], totalValue: Number.NaN }]), null);
+  assert.equal(calculateTopBuyers([{ ...scopedSales[0], buyerName: "" }]), null);
 });
 
 test("uses sale categories even when their waste records are outside the report period", () => {
@@ -129,6 +149,7 @@ test("returns valid zero statistics for an interval without records", () => {
     ],
     salesTrend: [],
     monthlySales: [],
+    topBuyers: [],
   });
 });
 

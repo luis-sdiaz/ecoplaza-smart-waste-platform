@@ -473,6 +473,24 @@ function UserReportsPage({ userId }: { userId: string }) {
           <WasteDistributionChart data={statistics.distribution} isFiltered={isFiltered} />
           <SalesCategoryPerformance data={statistics.salesByCategory} isFiltered={isFiltered} />
           <MonthlySalesSummary data={statistics.monthlySales} isFiltered={isFiltered} />
+          <section className="rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5" aria-labelledby="top-buyers-title">
+            <h2 id="top-buyers-title" className="text-base font-semibold text-ecoplaza-text">{t("reports.topBuyers")}</h2>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("reports.topBuyersDescription")}</p>
+            {statistics.topBuyers.length === 0 ? (
+              <p className="mt-4 text-sm text-ecoplaza-text-muted">{t(isFiltered ? "reports.emptyTopBuyersPeriod" : "reports.emptyTopBuyers")}</p>
+            ) : (
+              <ol className="mt-4 divide-y divide-ecoplaza-border">
+                {statistics.topBuyers.map((buyer, index) => (
+                  <li key={buyer.buyerId} className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_repeat(3,auto)] sm:items-center">
+                    <div className="min-w-0"><span className="mr-2 text-xs font-semibold text-ecoplaza-primary">#{index + 1}</span><span className="font-medium text-ecoplaza-text">{buyer.buyerName}</span></div>
+                    <span className="text-sm text-ecoplaza-text-muted">{t("reports.buyerPurchases", { count: buyer.purchaseCount })}</span>
+                    <span className="text-sm text-ecoplaza-text">{formatWeight(buyer.purchasedWeightKg)}</span>
+                    <span className="text-sm font-semibold text-ecoplaza-primary">{currencyFormatter.format(buyer.totalPurchasedValue)}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
           <SalesTrendChart data={statistics.salesTrend} isFiltered={isFiltered} />
         </div>
       )}
