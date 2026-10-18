@@ -49,8 +49,8 @@ const statistics = {
     { date: "2026-10-14", salesCount: 1, grossSalesValue: 2000.5 },
   ],
   monthlySales: [
-    { month: "2026-09", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
-    { month: "2026-10", salesCount: 2, grossSalesValue: 3000.75, averageSaleValue: 1500.375 },
+    { month: "2026-09", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0, revenueChangePercentage: null },
+    { month: "2026-10", salesCount: 2, grossSalesValue: 3000.75, averageSaleValue: 1500.375, revenueChangePercentage: null },
   ],
   topBuyers: [],
 };

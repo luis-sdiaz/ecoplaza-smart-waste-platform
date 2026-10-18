@@ -24,6 +24,7 @@ export interface ReportMonthlySalesItem {
   salesCount: number;
   grossSalesValue: number;
   averageSaleValue: number;
+  revenueChangePercentage: number | null;
 }
 
 export interface ReportTopBuyerItem {
@@ -222,6 +223,26 @@ function fromMonthOrdinal(ordinal: number): string {
   return `${String(year).padStart(4, "0")}-${month}`;
 }
 
+export function calculateRevenueChangePercentage(
+  currentGrossSalesValue: number,
+  previousGrossSalesValue: number,
+): number | null {
+  if (
+    !Number.isFinite(currentGrossSalesValue) ||
+    !Number.isFinite(previousGrossSalesValue) ||
+    currentGrossSalesValue < 0 ||
+    previousGrossSalesValue < 0
+  ) {
+    return null;
+  }
+  if (previousGrossSalesValue === 0) {
+    return currentGrossSalesValue === 0 ? 0 : null;
+  }
+
+  const change = ((currentGrossSalesValue - previousGrossSalesValue) / previousGrossSalesValue) * 100;
+  return Number.isFinite(change) ? change : null;
+}
+
 export function calculateMonthlySales(
   salesTrend: ReadonlyArray<ReportSalesTrendItem>,
   dateRange?: ReportDateRange,
@@ -264,7 +285,19 @@ export function calculateMonthlySales(
     if (grossSalesValue === null) return null;
     const averageSaleValue = calculateSafeAverageMonetaryValue(grossSalesValue, salesCount);
     if (averageSaleValue === null) return null;
-    summary.push({ month, salesCount, grossSalesValue, averageSaleValue });
+
+    const previousItem = summary.at(-1);
+    const revenueChangePercentage = previousItem === undefined
+      ? null
+      : calculateRevenueChangePercentage(grossSalesValue, previousItem.grossSalesValue);
+
+    summary.push({
+      month,
+      salesCount,
+      grossSalesValue,
+      averageSaleValue,
+      revenueChangePercentage,
+    });
   }
   return summary;
 }

@@ -21,6 +21,9 @@ function MonthlySalesSummary({ data, isFiltered }: MonthlySalesSummaryProps) {
     month: "long",
     year: "numeric",
   });
+  const percentageFormatter = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+  });
   const hasSales = data.some((item) => item.salesCount > 0);
 
   return (
@@ -44,12 +47,13 @@ function MonthlySalesSummary({ data, isFiltered }: MonthlySalesSummaryProps) {
 
       {data.length > 0 && (
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full min-w-[680px] border-separate border-spacing-0 text-left text-sm">
+          <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-sm">
             <thead>
               <tr className="text-ecoplaza-text-muted">
                 <th scope="col" className="border-b border-ecoplaza-border px-4 py-3 font-semibold">{t("reports.month")}</th>
                 <th scope="col" className="border-b border-ecoplaza-border px-4 py-3 text-right font-semibold">{t("reports.salesCount")}</th>
                 <th scope="col" className="border-b border-ecoplaza-border px-4 py-3 text-right font-semibold">{t("reports.grossSales")}</th>
+                <th scope="col" className="border-b border-ecoplaza-border px-4 py-3 text-right font-semibold">{t("reports.revenueChange")}</th>
                 <th scope="col" className="border-b border-ecoplaza-border px-4 py-3 text-right font-semibold">{t("reports.averagePerOperation")}</th>
               </tr>
             </thead>
@@ -61,6 +65,24 @@ function MonthlySalesSummary({ data, isFiltered }: MonthlySalesSummaryProps) {
                   </th>
                   <td className="border-b border-ecoplaza-border px-4 py-3 text-right">{numberFormatter.format(item.salesCount)}</td>
                   <td className="border-b border-ecoplaza-border px-4 py-3 text-right font-semibold">{currencyFormatter.format(item.grossSalesValue)}</td>
+                  <td className="border-b border-ecoplaza-border px-4 py-3 text-right font-semibold">
+                    {item.revenueChangePercentage === null ? (
+                      <span className="text-ecoplaza-text-muted">—</span>
+                    ) : (
+                      <span
+                        className={
+                          item.revenueChangePercentage > 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : item.revenueChangePercentage < 0
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-ecoplaza-text-muted"
+                        }
+                      >
+                        {item.revenueChangePercentage > 0 ? "+" : ""}
+                        {percentageFormatter.format(item.revenueChangePercentage)}%
+                      </span>
+                    )}
+                  </td>
                   <td className="border-b border-ecoplaza-border px-4 py-3 text-right font-semibold text-ecoplaza-primary">{currencyFormatter.format(item.averageSaleValue)}</td>
                 </tr>
               ))}

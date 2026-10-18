@@ -19,6 +19,7 @@ export {
   calculateReportStatistics,
   calculateSalesByCategory,
   calculateMonthlySales,
+  calculateRevenueChangePercentage,
   calculateTopBuyers,
   calculateSalesTrend,
   type ReportCategoryDistributionItem,

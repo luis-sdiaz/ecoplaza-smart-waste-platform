@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   calculateReportStatistics,
   calculateMonthlySales,
+  calculateRevenueChangePercentage,
   calculateTopBuyers,
   calculateSalesTrend,
   getHighestRevenueDay,
@@ -92,9 +93,9 @@ test("summarizes sales chronologically by month across years and fills empty mon
     { date: "2026-02-01", salesCount: 2, grossSalesValue: 20.2 },
     { date: "2026-02-02", salesCount: 1, grossSalesValue: 0.1 },
   ]), [
-    { month: "2025-12", salesCount: 1, grossSalesValue: 10.1, averageSaleValue: 10.1 },
-    { month: "2026-01", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
-    { month: "2026-02", salesCount: 3, grossSalesValue: 20.3, averageSaleValue: 6.76667 },
+    { month: "2025-12", salesCount: 1, grossSalesValue: 10.1, averageSaleValue: 10.1, revenueChangePercentage: null },
+    { month: "2026-01", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0, revenueChangePercentage: -100 },
+    { month: "2026-02", salesCount: 3, grossSalesValue: 20.3, averageSaleValue: 6.76667, revenueChangePercentage: null },
   ]);
 });
 
@@ -103,9 +104,40 @@ test("includes zero-sale months from the selected period", () => {
     startDate: "2025-12-15",
     endDate: "2026-02-03",
   }), [
-    { month: "2025-12", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
-    { month: "2026-01", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
-    { month: "2026-02", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0 },
+    { month: "2025-12", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0, revenueChangePercentage: null },
+    { month: "2026-01", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0, revenueChangePercentage: 0 },
+    { month: "2026-02", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0, revenueChangePercentage: 0 },
+  ]);
+});
+
+test("calculates monthly revenue change percentage handling zero values, growth, and decline", () => {
+  assert.equal(calculateRevenueChangePercentage(150, 100), 50);
+  assert.equal(calculateRevenueChangePercentage(75, 100), -25);
+  assert.equal(calculateRevenueChangePercentage(0, 100), -100);
+  assert.equal(calculateRevenueChangePercentage(0, 0), 0);
+  assert.equal(calculateRevenueChangePercentage(100, 0), null);
+  assert.equal(calculateRevenueChangePercentage(Number.NaN, 100), null);
+  assert.equal(calculateRevenueChangePercentage(100, Number.NaN), null);
+  assert.equal(calculateRevenueChangePercentage(-10, 100), null);
+  assert.equal(calculateRevenueChangePercentage(100, -10), null);
+});
+
+test("tracks revenue variation across year boundary and filtered periods with real sales", () => {
+  const result = calculateMonthlySales([
+    { date: "2025-12-10", salesCount: 1, grossSalesValue: 500 },
+    { date: "2026-01-15", salesCount: 2, grossSalesValue: 750 },
+    { date: "2026-02-20", salesCount: 1, grossSalesValue: 375 },
+    { date: "2026-03-05", salesCount: 0, grossSalesValue: 0 },
+  ], {
+    startDate: "2025-12-01",
+    endDate: "2026-03-31",
+  });
+
+  assert.deepEqual(result, [
+    { month: "2025-12", salesCount: 1, grossSalesValue: 500, averageSaleValue: 500, revenueChangePercentage: null },
+    { month: "2026-01", salesCount: 2, grossSalesValue: 750, averageSaleValue: 375, revenueChangePercentage: 50 },
+    { month: "2026-02", salesCount: 1, grossSalesValue: 375, averageSaleValue: 375, revenueChangePercentage: -50 },
+    { month: "2026-03", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0, revenueChangePercentage: -100 },
   ]);
 });
 
