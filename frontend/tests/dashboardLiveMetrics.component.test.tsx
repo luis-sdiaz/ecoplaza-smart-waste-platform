@@ -218,6 +218,27 @@ describe("Dashboard live commercial metrics", () => {
     expect(within(metric("dashboard.availableInventory")).getByText("0 kg")).toBeTruthy();
     expect(within(metric("dashboard.revenue")).getByText(/COP.*0/)).toBeTruthy();
     expect(screen.getByText("dashboard.materialStatusEmpty")).toBeTruthy();
+    expect(screen.getByText("dashboard.topRevenueCategoryEmpty")).toBeTruthy();
+  });
+
+  test("highlights the highest revenue waste category with commercial metrics", async () => {
+    const stats = {
+      ...statistics(50, 5000),
+      salesByCategory: [
+        { category: "organic" as const, salesCount: 1, soldWeightKg: 10, grossSalesValue: 1000, averagePricePerKg: 100 },
+        { category: "recyclable" as const, salesCount: 4, soldWeightKg: 40, grossSalesValue: 4000, averagePricePerKg: 100 },
+        { category: "nonRecyclable" as const, salesCount: 0, soldWeightKg: 0, grossSalesValue: 0, averagePricePerKg: 0 },
+      ],
+    };
+    reportMocks.getReportStatistics.mockResolvedValueOnce(success(stats));
+
+    render(<DashboardPage />);
+
+    const card = await screen.findByTestId("top-revenue-category-card");
+    expect(within(card).getByText("common.recyclable")).toBeTruthy();
+    expect(within(card).getByText(/COP.*4,000/)).toBeTruthy();
+    expect(within(card).getByText("80%")).toBeTruthy();
+    expect(within(card).getByText(/40 kg/)).toBeTruthy();
   });
 
   test("clears user A metrics and ignores its delayed response after switching to B", async () => {

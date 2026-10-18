@@ -22,6 +22,7 @@ import {
   selectOldestAvailableInventory,
   type AgingInventoryItem,
 } from "../services/dashboardAgingInventory";
+import { findTopRevenueCategory } from "../services/dashboardRevenueCategory";
 
 type StatisticsResult = Awaited<ReturnType<typeof getReportStatistics>>;
 type AvailableWasteResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
@@ -231,6 +232,9 @@ function UserDashboardPage({ userId }: { userId: string }) {
     statistics.availableWeightKg,
     statistics.soldWeightKg,
   );
+  const topRevenueCategory = statistics === null
+    ? null
+    : findTopRevenueCategory(statistics.salesByCategory, statistics.grossSalesValue);
 
   return (
     <section className="p-8">
@@ -378,6 +382,43 @@ function UserDashboardPage({ userId }: { userId: string }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5" data-testid="top-revenue-category-card">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="top-revenue-category-title" className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.topRevenueCategory")}</h2>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryDescription")}</p>
+          </div>
+          <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{realBadge}</span>
+        </div>
+
+        {realValueUnavailable || topRevenueCategory === null ? (
+          <p className="mt-4 rounded-xl bg-ecoplaza-background px-4 py-6 text-center text-sm text-ecoplaza-text-muted">
+            {realValueUnavailable ? "—" : t("dashboard.topRevenueCategoryEmpty")}
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl bg-ecoplaza-background p-4">
+              <p className="text-xs text-ecoplaza-text-muted">{t("common.category")}</p>
+              <p className="mt-1 text-base font-bold text-ecoplaza-text">{t(`common.${topRevenueCategory.category}`)}</p>
+            </div>
+            <div className="rounded-xl bg-ecoplaza-background p-4">
+              <p className="text-xs text-ecoplaza-text-muted">{t("dashboard.revenue")}</p>
+              <p className="mt-1 text-base font-bold text-ecoplaza-primary">{currencyFormatter.format(topRevenueCategory.grossSalesValue)}</p>
+            </div>
+            <div className="rounded-xl bg-ecoplaza-background p-4">
+              <p className="text-xs text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryParticipation")}</p>
+              <p className="mt-1 text-base font-bold text-ecoplaza-text">{formatPercentage(topRevenueCategory.revenuePercentage)}</p>
+            </div>
+            <div className="rounded-xl bg-ecoplaza-background p-4">
+              <p className="text-xs text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryVolume")}</p>
+              <p className="mt-1 text-sm font-semibold text-ecoplaza-text">
+                {formatWeight(topRevenueCategory.soldWeightKg)} · {t("reports.buyerPurchases", { count: topRevenueCategory.salesCount })}
+              </p>
+            </div>
           </div>
         )}
       </div>
