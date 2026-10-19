@@ -1,394 +1,149 @@
-# EcoPlaza — Smart Waste Platform
+# EcoPlaza Smart Waste Platform
 
-EcoPlaza es una aplicación de escritorio orientada a la gestión inteligente de residuos. El proyecto busca centralizar el monitoreo de contenedores, el registro de residuos, el control de inventario, compradores, ventas e informes dentro de una misma plataforma.
+EcoPlaza es una aplicación de escritorio para registrar, controlar y comercializar residuos aprovechables. La versión actual combina una interfaz React/TypeScript empaquetada con Tauri 2 y un backend administrado en Supabase (Auth + PostgreSQL).
 
-La idea principal es que los residuos aprovechables puedan ser gestionados no solamente como desechos, sino también como materiales que pueden ingresar a un inventario y posteriormente ser comercializados.
+## Estado actual
 
-Este proyecto se desarrolla como parte del proceso académico de Diseño de Interfaces de Software, aplicando conceptos de arquitectura de información, sistemas de diseño, navegación, internacionalización, usabilidad e interacción con el usuario.
+La aplicación ya trabaja con datos operativos reales aislados por usuario para:
 
----
+- autenticación, registro, verificación y recuperación de contraseña con Supabase Auth;
+- perfiles de usuario;
+- gestión de contenedores;
+- registro e historial de residuos;
+- inventario disponible;
+- directorio de compradores;
+- ventas transaccionales;
+- panel e informes con filtros por fecha;
+- exportación CSV y Excel.
 
-## Estado actual del proyecto
+Los sensores y lecturas IoT continúan siendo demostrativos. La gestión de contenedores que aparece en la pantalla de sensores sí usa datos reales. El módulo de asistente de IA solo presenta una interfaz informativa: no existe todavía un proveedor, API ni modelo conectado.
 
-EcoPlaza se encuentra actualmente en una primera etapa funcional de desarrollo.
-
-Hasta el momento se ha trabajado principalmente en la interfaz de escritorio y en la definición de los principales módulos de la plataforma.
-
-### Funcionalidades implementadas
-
-- Aplicación de escritorio mediante Tauri.
-- Navegación entre todos los módulos principales.
-- Panel general de información.
-- Vista de monitoreo de sensores.
-- Gestión visual de residuos.
-- Registro local de nuevos residuos.
-- Validación del formulario de registro.
-- Generación automática de identificadores como `RES-005`, `RES-006`, etc.
-- Persistencia local de los residuos registrados.
-- Vista de inventario.
-- Gestión visual de compradores.
-- Vista de ventas.
-- Módulo de informes.
-- Interfaz inicial para el asistente de inteligencia artificial.
-- Página de configuración.
-- Interfaz bilingüe en español e inglés.
-- Persistencia del idioma seleccionado.
-- Página de error 404.
-- Diseño consistente mediante componentes reutilizables.
-
-Los datos de sensores, inventario, compradores, ventas e informes utilizados actualmente son datos demostrativos para validar la interfaz y la experiencia de usuario.
-
----
-
-## Internacionalización
-
-EcoPlaza cuenta actualmente con soporte para:
-
-- Español
-- English
-
-El idioma predeterminado es español.
-
-Desde el módulo de Configuración el usuario puede cambiar el idioma de la interfaz y la preferencia queda almacenada localmente, por lo que se conserva incluso después de cerrar y volver a abrir la aplicación.
-
-La internacionalización fue implementada utilizando:
+## Arquitectura
 
 ```text
-i18next
-react-i18next
+React 19 + TypeScript + Vite
+        │
+        ├── Supabase Auth
+        ├── Supabase PostgREST / PostgreSQL
+        │       └── Row Level Security por owner_id
+        ├── CSV y Excel (ExcelJS)
+        └── Tauri 2
+                ├── diálogo nativo para guardar
+                └── escritura de archivos autorizada
 ```
 
-Las traducciones están organizadas en:
+La aplicación consulta Supabase directamente con una clave publicable. La seguridad de datos no depende de ocultar esa clave: las migraciones activan RLS y limitan cada fila al usuario autenticado. Las ventas se crean mediante la función PostgreSQL `create_sale`, que valida comprador y residuo, registra la venta y marca el residuo como vendido dentro de una única transacción.
 
-```text
-frontend/src/i18n/
-├── config.ts
-└── translations/
-    ├── es.ts
-    └── en.ts
-```
+## Módulos
 
----
-
-## Registro local de residuos
-
-El módulo de Residuos incluye actualmente uno de los primeros flujos funcionales de EcoPlaza.
-
-El usuario puede registrar:
-
-- Categoría del residuo.
-- Contenedor.
-- Peso registrado.
-
-La aplicación valida la información antes de crear el registro.
-
-Cada nuevo residuo recibe automáticamente un identificador consecutivo:
-
-```text
-RES-001
-RES-002
-RES-003
-...
-```
-
-Los nuevos registros se almacenan temporalmente mediante `localStorage`.
-
-Esto permite validar el comportamiento de la interfaz antes de realizar la integración con el backend y la base de datos.
-
----
-
-## Módulos de EcoPlaza
-
-La aplicación está organizada actualmente en los siguientes módulos:
-
-| Módulo | Descripción |
+| Módulo | Fuente de datos y alcance |
 | --- | --- |
-| Inicio | Resumen general del estado de EcoPlaza |
-| Sensores | Monitoreo de contenedores y lecturas IoT |
-| Residuos | Consulta y registro de residuos |
-| Inventario | Control del material disponible |
-| Compradores | Gestión de posibles compradores |
-| Ventas | Registro y seguimiento de ventas |
-| Informes | Visualización de métricas y resultados |
-| Asistente IA | Interfaz para futuras consultas mediante inteligencia artificial |
-| Configuración | Preferencias generales de la aplicación |
+| Inicio | Métricas reales de residuos, inventario y ventas; tarjetas de sensores demostrativas opcionales |
+| Sensores | Lecturas demostrativas y gestión real de contenedores |
+| Residuos | Registro e historial real en PostgreSQL; bloque demostrativo separado |
+| Inventario | Residuos reales disponibles para venta |
+| Compradores | Alta, edición, filtros e historial real de compras |
+| Ventas | Venta completa de un registro disponible mediante una transacción PostgreSQL |
+| Informes | Distribución, rendimiento, tendencias, variación mensual y ranking de compradores |
+| Configuración | Idioma, tema y visibilidad persistente de datos demostrativos |
+| Asistente IA | Interfaz no conectada; no envía consultas ni genera respuestas |
 
----
+La preferencia de datos demostrativos solo controla bloques locales y métricas simuladas. No altera filas de Supabase ni oculta la gestión real de contenedores.
 
-## Tecnologías utilizadas
+## Persistencia y seguridad
 
-### Frontend
+Las migraciones de [supabase/migrations](supabase/migrations) crean perfiles, contenedores, residuos, compradores y ventas. Incluyen:
 
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- React Router
-- Lucide React
-- i18next
-- react-i18next
+- claves foráneas que conservan el mismo propietario entre entidades;
+- políticas RLS basadas en `auth.uid()`;
+- validaciones de categorías, pesos, precios y estados;
+- venta única por registro de residuo;
+- revocación de escrituras directas sensibles y creación de ventas mediante RPC.
 
-### Aplicación de escritorio
+No se debe usar una clave `service_role` en el frontend. El cliente valida expresamente que la variable contenga una clave publicable.
 
-- Tauri 2
-- Rust
+## Requisitos
 
-### Tecnologías previstas para las siguientes etapas
+- Node.js 24 y npm 11 (versiones verificadas durante la auditoría).
+- Rust 1.90 o posterior, según `rust-version` de Tauri.
+- En Windows: Microsoft C++ Build Tools y WebView2 Runtime.
+- Un proyecto Supabase con las migraciones del repositorio aplicadas.
 
-- Python
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
-- ESP32
-- Sensores IoT
-- Ollama
-- Modelos locales de inteligencia artificial
+## Configuración local
 
----
-
-## Arquitectura general prevista
-
-EcoPlaza está planteado para evolucionar hacia la siguiente arquitectura:
-
-```text
-Sensores IoT
-    │
-    ▼
-   ESP32
-    │
-    ▼
-FastAPI Backend
-    │
-    ├── PostgreSQL
-    │
-    └── Procesamiento de datos
-    │
-    ▼
-React + TypeScript
-    │
-    ▼
-Tauri Desktop
-    │
-    ▼
-Usuario
+```powershell
+git clone https://github.com/luis-sdiaz/ecoplaza-smart-waste-platform.git
+cd ecoplaza-smart-waste-platform\frontend
+npm ci
+Copy-Item .env.example .env.local
 ```
 
-Actualmente el trabajo se encuentra concentrado principalmente en la capa de interfaz y experiencia de usuario.
+Edite `frontend/.env.local`:
 
----
+```dotenv
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_publishable_key
+```
 
-## Estructura del repositorio
+Los archivos `.env*` locales están ignorados por Git, salvo `.env.example`. No confirme secretos ni claves administrativas.
+
+## Desarrollo y verificación
+
+Todos los comandos siguientes se ejecutan dentro de `frontend`:
+
+```powershell
+npm run dev       # interfaz web de desarrollo
+npx tauri dev     # aplicación de escritorio en desarrollo
+npm run build     # TypeScript completo + bundle web de producción
+npm run lint      # ESLint
+npm test          # pruebas Node.js y Vitest/jsdom
+```
+
+`npm test` ejecuta dos grupos:
+
+- `test:node`: cálculos, filtros, exportaciones y flujos puros con el runner de Node;
+- `test:components`: interacciones React con Vitest, Testing Library y jsdom.
+
+Los tres proyectos TypeScript (`app`, configuración y pruebas) forman parte de `tsc -b`, por lo que el build también valida los archivos de prueba.
+
+## Compilación del instalador de Windows
+
+Desde `frontend`, con la cadena de Rust y las herramientas de Windows instaladas:
+
+```powershell
+npx tauri build
+```
+
+Tauri ejecuta primero `npm run build` y genera los artefactos bajo `frontend/src-tauri/target/release/bundle/`. Para distribución pública todavía deben definirse firma de código, canal de actualización y políticas de entrega.
+
+## Estructura relevante
 
 ```text
 ecoplaza-smart-waste-platform/
-│
-├── backend/
-│   └── Backend de EcoPlaza
-│
-├── docs/
-│   └── Documentación del proyecto
-│
-├── firmware/
-│   └── Código destinado al ESP32 y sensores
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── i18n/
-│   │   ├── layouts/
-│   │   ├── pages/
-│   │   └── main.tsx
-│   │
-│   ├── src-tauri/
-│   ├── package.json
-│   └── vite.config.ts
-│
-└── README.md
+├── README.md
+├── supabase/
+│   └── migrations/
+└── frontend/
+    ├── src/
+    │   ├── auth/
+    │   ├── components/
+    │   ├── context/
+    │   ├── pages/
+    │   └── services/
+    ├── tests/
+    ├── src-tauri/
+    ├── .env.example
+    └── package.json
 ```
 
----
+## Trabajo pendiente
 
-## Requisitos para ejecutar el proyecto
+- integrar sensores físicos/ESP32 y persistir telemetría real;
+- conectar el asistente de IA mediante un servicio seguro;
+- endurecer la configuración de producción, incluida una CSP explícita para Tauri;
+- definir firma y distribución de instaladores;
+- establecer el proceso de despliegue automatizado cuando se autorice (los workflows de GitHub Actions permanecen desactivados).
 
-Para trabajar con la versión actual se necesita tener instalado:
+## Autor y licencia
 
-- Node.js
-- npm
-- Rust
-- Cargo
-- Microsoft C++ Build Tools en Windows
-
----
-
-## Instalación
-
-Clonar el repositorio:
-
-```bash
-git clone https://github.com/luis-sdiaz/ecoplaza-smart-waste-platform.git
-```
-
-Ingresar al proyecto:
-
-```bash
-cd ecoplaza-smart-waste-platform
-```
-
-Ingresar al frontend:
-
-```bash
-cd frontend
-```
-
-Instalar las dependencias:
-
-```bash
-npm install
-```
-
----
-
-## Ejecutar en modo web
-
-Para ejecutar únicamente la interfaz con Vite:
-
-```bash
-npm run dev
-```
-
-Por defecto Vite ejecutará el proyecto en:
-
-```text
-http://localhost:5173
-```
-
----
-
-## Ejecutar como aplicación de escritorio
-
-Para iniciar EcoPlaza mediante Tauri:
-
-```bash
-npx tauri dev
-```
-
-Este comando inicia el servidor de desarrollo de Vite y posteriormente abre EcoPlaza como una aplicación de escritorio.
-
----
-
-## Compilar el frontend
-
-Para comprobar que el proyecto compile correctamente:
-
-```bash
-npm run build
-```
-
-La versión compilada del frontend se genera en:
-
-```text
-frontend/dist/
-```
-
----
-
-## Diseño de la interfaz
-
-La interfaz de EcoPlaza fue construida siguiendo una estructura visual consistente.
-
-Se definieron colores, tipografía, componentes reutilizables y patrones de navegación para mantener uniformidad entre las diferentes páginas.
-
-Algunos de los elementos reutilizados son:
-
-- Encabezados de página.
-- Tarjetas de métricas.
-- Tablas.
-- Tarjetas de sensores.
-- Sidebar de navegación.
-- Estados visuales.
-- Componentes de configuración.
-
-La tipografía principal utilizada es:
-
-```text
-Inter
-```
-
-El color principal de EcoPlaza es:
-
-```text
-#1F7A4D
-```
-
----
-
-## Contenedor de demostración
-
-Para la demostración física del proyecto se plantea inicialmente utilizar un solo contenedor equipado con sensores.
-
-EcoPlaza está diseñado para que posteriormente este contenedor pueda representar diferentes categorías de residuos:
-
-```text
-Residuos orgánicos
-Residuos reciclables
-Residuos no aprovechables
-```
-
-En futuras etapas, el sistema podrá trabajar con varios contenedores y sensores registrados simultáneamente.
-
----
-
-## Próximas etapas
-
-Las siguientes fases previstas para EcoPlaza incluyen:
-
-1. Desarrollo del backend con FastAPI.
-2. Creación de la base de datos PostgreSQL.
-3. Persistencia real de sensores, residuos, compradores y ventas.
-4. Conexión entre frontend y API.
-5. Integración del ESP32.
-6. Lectura del nivel de llenado de los contenedores.
-7. Lectura del peso de los residuos.
-8. Actualización automática de información desde los sensores.
-9. Gestión funcional de inventario y ventas.
-10. Integración del asistente de inteligencia artificial.
-11. Generación de análisis e informes a partir de datos reales.
-12. Pruebas de usabilidad y mejoras de experiencia de usuario.
-
----
-
-## Objetivo final
-
-El objetivo final de EcoPlaza es integrar en una sola aplicación:
-
-```text
-Monitoreo de residuos
-        +
-Sensores IoT
-        +
-Inventario
-        +
-Compradores
-        +
-Ventas
-        +
-Informes
-        +
-Inteligencia artificial
-```
-
-permitiendo tener una visión más organizada del proceso de aprovechamiento y comercialización de residuos.
-
----
-
-## Autor
-
-**Luis Sebastian Diaz**
-
-Proyecto académico desarrollado para la Universidad Cooperativa de Colombia.
-
----
-
-## Licencia
-
-Proyecto desarrollado con fines académicos y educativos.
+Proyecto académico de Luis Sebastian Diaz para la Universidad Cooperativa de Colombia. No se ha declarado una licencia de distribución en el repositorio.
