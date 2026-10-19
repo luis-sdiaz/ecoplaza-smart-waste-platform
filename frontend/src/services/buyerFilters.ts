@@ -2,6 +2,7 @@ import type { Buyer } from "./buyerService";
 
 export type BuyerSortOption = "updated_desc" | "name_asc" | "name_desc";
 export type BuyerContactFilter = "all" | "email" | "phone";
+export type BuyerActivityFilter = "all" | "with_purchases" | "without_purchases";
 
 function normalizeSearchValue(value: string): string {
   return value
@@ -16,12 +17,13 @@ function normalizePhoneNumber(value: string): string {
 }
 
 export function filterAndSortBuyers(
-  buyers: ReadonlyArray<Buyer>,
+  buyers: ReadonlyArray<Buyer & { purchaseCount?: number }>,
   searchQuery: string,
   sortOption: BuyerSortOption,
   locale: string,
   contactFilter: BuyerContactFilter = "all",
-): Buyer[] {
+  activityFilter: BuyerActivityFilter = "all",
+): (Buyer & { purchaseCount?: number })[] {
   const normalizedQuery = normalizeSearchValue(searchQuery);
   const normalizedPhoneQuery = normalizePhoneNumber(searchQuery);
   const filtered = normalizedQuery === ""
@@ -37,8 +39,14 @@ export function filterAndSortBuyers(
     (contactFilter === "email" && buyer.email !== null) ||
     (contactFilter === "phone" && buyer.phone !== null)
   );
+  const withRequestedActivity = withRequestedContact.filter((buyer) => {
+    if (activityFilter === "all") return true;
+    const count = buyer.purchaseCount ?? 0;
+    if (activityFilter === "with_purchases") return count > 0;
+    return count === 0;
+  });
 
-  return withRequestedContact.sort((left, right) => {
+  return withRequestedActivity.sort((left, right) => {
     if (sortOption === "updated_desc") {
       const dateDifference = Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
       if (dateDifference !== 0) return dateDifference;

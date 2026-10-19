@@ -355,6 +355,7 @@ const en = {
     sortBy: "Sort by", sortRecentlyUpdated: "Recently updated",
     sortNameAsc: "Name A–Z", sortNameDesc: "Name Z–A",
     contactFilter: "Contact", allContacts: "All buyers", withEmailFilter: "With email", withPhoneFilter: "With phone",
+    activityFilter: "Activity", activityAll: "All", activityWithPurchases: "With purchases", activityWithoutPurchases: "Without purchases",
     exportCsv: "Export CSV", exporting: "Exporting...", exportExcel: "Export Excel", exportingExcel: "Creating Excel...",
     exportSuccessTitle: "Buyer directory exported",
     exportSuccessDescription: "The filtered buyer directory was saved successfully.",

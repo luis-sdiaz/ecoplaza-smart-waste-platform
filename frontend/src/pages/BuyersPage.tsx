@@ -20,6 +20,7 @@ import {
 } from "../services/buyerService";
 import {
   filterAndSortBuyers,
+  type BuyerActivityFilter,
   type BuyerContactFilter,
   type BuyerSortOption,
 } from "../services/buyerFilters";
@@ -81,6 +82,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<BuyerSortOption>("updated_desc");
   const [contactFilter, setContactFilter] = useState<BuyerContactFilter>("all");
+  const [activityFilter, setActivityFilter] = useState<BuyerActivityFilter>("all");
   const [historyBuyer, setHistoryBuyer] = useState<Buyer | null>(null);
   const [purchaseHistory, setPurchaseHistory] = useState<SaleHistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
@@ -238,9 +240,9 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const withPhone = buyers.filter((buyer) => buyer.phone !== null).length;
   const metricsUnavailable = isLoading || loadError !== null;
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
-  const visibleBuyers = filterAndSortBuyers(buyers, searchQuery, sortOption, locale, contactFilter);
+  const visibleBuyers = filterAndSortBuyers(buyers, searchQuery, sortOption, locale, contactFilter, activityFilter);
   const hasActiveSearch = searchQuery.trim() !== "";
-  const hasActiveFilters = hasActiveSearch || contactFilter !== "all";
+  const hasActiveFilters = hasActiveSearch || contactFilter !== "all" || activityFilter !== "all";
 
   const exportBuyers = async (): Promise<void> => {
     if (visibleBuyers.length === 0 || exportKind !== null) return;
@@ -376,7 +378,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4 md:grid-cols-[1fr_auto_auto]">
+        <div className="mt-5 grid gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4 md:grid-cols-[1fr_auto_auto_auto]">
           <label className="relative block">
             <span className="sr-only">{t("buyers.searchLabel")}</span>
             <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ecoplaza-text-muted" size={17} aria-hidden="true" />
@@ -397,6 +399,19 @@ function UserBuyersPage({ userId }: { userId: string }) {
               <option value="all">{t("buyers.allContacts")}</option>
               <option value="email">{t("buyers.withEmailFilter")}</option>
               <option value="phone">{t("buyers.withPhoneFilter")}</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+            <span>{t("buyers.activityFilter")}</span>
+            <select
+              value={activityFilter}
+              disabled={isLoading || loadError !== null}
+              onChange={(event) => setActivityFilter(event.target.value as BuyerActivityFilter)}
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 py-2.5 text-sm text-ecoplaza-text"
+            >
+              <option value="all">{t("buyers.activityAll")}</option>
+              <option value="with_purchases">{t("buyers.activityWithPurchases")}</option>
+              <option value="without_purchases">{t("buyers.activityWithoutPurchases")}</option>
             </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
@@ -446,7 +461,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
               <Search size={24} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
               <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("buyers.noSearchResultsTitle")}</h3>
               <p className="mt-1 max-w-lg text-sm text-ecoplaza-text-muted">{t("buyers.noSearchResultsDescription")}</p>
-              {hasActiveFilters && <button type="button" onClick={() => { setSearchQuery(""); setContactFilter("all"); }} className="mt-4 rounded-lg border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text">{t("buyers.clearFilters")}</button>}
+              {hasActiveFilters && <button type="button" onClick={() => { setSearchQuery(""); setContactFilter("all"); setActivityFilter("all"); }} className="mt-4 rounded-lg border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text">{t("buyers.clearFilters")}</button>}
             </div>
           ) : (
             <BuyerTable buyers={visibleBuyers} onEdit={openEditForm} onViewHistory={openPurchaseHistory} />
