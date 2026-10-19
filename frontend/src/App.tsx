@@ -7,6 +7,7 @@ import LoginPage from "./pages/LoginPage";
 
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
 const BuyersPage = lazy(() => import("./pages/BuyersPage"));
+const ContainersPage = lazy(() => import("./pages/ContainersPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
@@ -51,6 +52,7 @@ function App() {
         >
           <Route path="/" element={<DashboardPage />} />
           <Route path="/sensors" element={<SensorsPage />} />
+          <Route path="/containers" element={<ContainersPage />} />
           <Route path="/waste" element={<WastePage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/buyers" element={<BuyersPage />} />
