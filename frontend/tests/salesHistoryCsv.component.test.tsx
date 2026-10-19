@@ -352,7 +352,9 @@ describe("filtered sales history and CSV integration", () => {
     const Workbook = excelModule.Workbook ??
       (excelModule as unknown as { default: typeof excelModule }).default.Workbook;
     const workbook = new Workbook();
-    await workbook.xlsx.load(bytes);
+    await workbook.xlsx.load(
+      bytes as unknown as Parameters<typeof workbook.xlsx.load>[0],
+    );
     const worksheet = workbook.getWorksheet("sales.excel.sheetName")!;
     expect(worksheet.getColumn(1).values.slice(4)).toEqual([saleAlphaEarly.id, saleAlphaLate.id]);
     expect(worksheet.getCell("B4").value).toBe(buyerAlpha.name);

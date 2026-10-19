@@ -77,7 +77,9 @@ test("creates a valid formatted analytics workbook with real Excel value types",
   assert.ok(bytes.byteLength > 0);
 
   const reopened = new Workbook();
-  await reopened.xlsx.load(Buffer.from(bytes));
+  await reopened.xlsx.load(
+    Buffer.from(bytes) as unknown as Parameters<typeof reopened.xlsx.load>[0],
+  );
   assert.deepEqual(reopened.worksheets.map(({ name }) => name), [
     "Summary", "Waste distribution", "Sales performance", "Daily sales", "Monthly summary",
   ]);
@@ -171,7 +173,9 @@ test("exports sale timestamps as Bogota wall-clock dates without a duplicate con
   ], salesLabels, "America/Bogota");
 
   const reopened = new Workbook();
-  await reopened.xlsx.load(Buffer.from(bytes));
+  await reopened.xlsx.load(
+    Buffer.from(bytes) as unknown as Parameters<typeof reopened.xlsx.load>[0],
+  );
   const worksheet = reopened.getWorksheet("Completed sales")!;
   const utcSourceCell = worksheet.getCell("C4");
   const offsetSourceCell = worksheet.getCell("C5");

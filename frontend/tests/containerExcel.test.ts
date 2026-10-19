@@ -45,7 +45,9 @@ test("creates a workbook from real containers with available stock when loaded",
   );
 
   const reopened = new Workbook();
-  await reopened.xlsx.load(Buffer.from(bytes));
+  await reopened.xlsx.load(
+    Buffer.from(bytes) as unknown as Parameters<typeof reopened.xlsx.load>[0],
+  );
   const worksheet = reopened.getWorksheet("Containers")!;
 
   assert.deepEqual((worksheet.getRow(3).values as unknown[]).slice(1), [
@@ -54,8 +56,9 @@ test("creates a workbook from real containers with available stock when loaded",
   assert.equal(worksheet.getCell("A4").value, containers[0].id);
   assert.equal(worksheet.getCell("A5").value, containers[1].id);
   assert.equal(worksheet.getCell("B4").value, "CTR-B");
-  assert.ok(worksheet.getCell("C4").value instanceof Date);
-  assert.equal(worksheet.getCell("C4").value.toISOString(), "2026-10-17T21:30:00.000Z");
+  const createdAt = worksheet.getCell("C4").value;
+  assert.ok(createdAt instanceof Date);
+  assert.equal(createdAt.toISOString(), "2026-10-17T21:30:00.000Z");
   assert.equal(worksheet.getCell("D4").value, 3);
   assert.equal(typeof worksheet.getCell("D4").value, "number");
   assert.equal(worksheet.getCell("E4").value, 12.75);

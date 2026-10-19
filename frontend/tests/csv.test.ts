@@ -38,7 +38,7 @@ const report = {
 };
 
 function translateFrom(
-  translations: typeof es,
+  translations: typeof es | typeof en,
 ): (key: string) => string {
   return (key) => {
     const value = key.split(".").reduce<unknown>((current, segment) => {

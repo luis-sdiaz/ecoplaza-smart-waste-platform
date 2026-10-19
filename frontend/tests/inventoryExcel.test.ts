@@ -54,7 +54,9 @@ test("creates a formatted workbook from the supplied filtered inventory order", 
     "America/Bogota",
   );
   const reopened = new Workbook();
-  await reopened.xlsx.load(Buffer.from(bytes));
+  await reopened.xlsx.load(
+    Buffer.from(bytes) as unknown as Parameters<typeof reopened.xlsx.load>[0],
+  );
   const worksheet = reopened.getWorksheet("Available inventory")!;
 
   assert.deepEqual((worksheet.getRow(3).values as unknown[]).slice(1), [
@@ -71,8 +73,9 @@ test("creates a formatted workbook from the supplied filtered inventory order", 
   assert.equal(worksheet.getCell("C4").value, "'=Organic");
   assert.equal(worksheet.getCell("D4").value, 7.5);
   assert.match(worksheet.getCell("D4").numFmt, /kg/);
-  assert.ok(worksheet.getCell("E4").value instanceof Date);
-  assert.equal(worksheet.getCell("E4").value.toISOString(), "2026-10-15T21:00:00.000Z");
+  const registeredAt = worksheet.getCell("E4").value;
+  assert.ok(registeredAt instanceof Date);
+  assert.equal(registeredAt.toISOString(), "2026-10-15T21:00:00.000Z");
   assert.equal(worksheet.getCell("E4").numFmt, "yyyy-mm-dd");
   assert.equal(worksheet.getCell("F4").value, 2);
   assert.equal(typeof worksheet.getCell("F4").value, "number");

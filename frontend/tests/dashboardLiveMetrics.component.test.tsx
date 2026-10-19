@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { ReportStatistics } from "../src/services/reportService";
 
 const authState = vi.hoisted(() => ({ current: { user: null } as { user: TestUser | null } }));
 const reportMocks = vi.hoisted(() => ({ getReportStatistics: vi.fn() }));
@@ -25,7 +26,7 @@ function deferred<T>(): Deferred<T> {
 const userA = { id: "11111111-1111-4111-8111-111111111111" };
 const userB = { id: "22222222-2222-4222-8222-222222222222" };
 
-function statistics(availableWeightKg: number, grossSalesValue: number) {
+function statistics(availableWeightKg: number, grossSalesValue: number): ReportStatistics {
   const soldWeightKg = grossSalesValue === 0 ? 0 : 5;
   return {
     wasteRecordCount: availableWeightKg === 0 ? 0 : 2,

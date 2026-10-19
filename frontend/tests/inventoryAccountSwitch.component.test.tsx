@@ -87,7 +87,10 @@ vi.mock("../src/services/containerService", () => ({
 
 vi.mock("../src/services/wasteService", () => ({
   listAvailableWasteRecords: inventoryMocks.listWaste,
-  calculateWasteStatistics: (records: typeof wasteA[]) => ({
+  calculateWasteStatistics: (records: Array<{
+    category: "organic" | "recyclable" | "nonRecyclable";
+    weightKg: number;
+  }>) => ({
     recordCount: records.length,
     totalWeightKg: records.reduce((sum, record) => sum + record.weightKg, 0),
     organicWeightKg: records.filter((record) => record.category === "organic")

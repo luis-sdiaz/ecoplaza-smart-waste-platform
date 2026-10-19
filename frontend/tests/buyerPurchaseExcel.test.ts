@@ -64,15 +64,18 @@ test("exports only the selected buyer purchases in the supplied filtered order",
   const bytes = await createBuyerPurchaseExcel(sales, selectedBuyerId, labels, "America/Bogota");
 
   const reopened = new Workbook();
-  await reopened.xlsx.load(Buffer.from(bytes));
+  await reopened.xlsx.load(
+    Buffer.from(bytes) as unknown as Parameters<typeof reopened.xlsx.load>[0],
+  );
   const worksheet = reopened.getWorksheet("Purchase history")!;
 
   assert.equal(worksheet.rowCount, 5);
   assert.equal(worksheet.getCell("A4").value, sales[0].id);
   assert.equal(worksheet.getCell("A5").value, sales[1].id);
   assert.equal(worksheet.getCell("A6").value, null);
-  assert.ok(worksheet.getCell("B4").value instanceof Date);
-  assert.equal(worksheet.getCell("B4").value.toISOString(), "2026-10-17T21:30:00.000Z");
+  const soldAt = worksheet.getCell("B4").value;
+  assert.ok(soldAt instanceof Date);
+  assert.equal(soldAt.toISOString(), "2026-10-17T21:30:00.000Z");
   assert.equal(worksheet.getCell("D4").value, 2.5);
   assert.equal(worksheet.getCell("E4").value, 1200.25);
   assert.equal(worksheet.getCell("F4").value, 3000.625);
@@ -85,6 +88,8 @@ test("exports only the selected buyer purchases in the supplied filtered order",
 test("creates a valid empty workbook when no selected buyer purchases are supplied", async () => {
   const bytes = await createBuyerPurchaseExcel([], selectedBuyerId, labels, "America/Bogota");
   const reopened = new Workbook();
-  await reopened.xlsx.load(Buffer.from(bytes));
+  await reopened.xlsx.load(
+    Buffer.from(bytes) as unknown as Parameters<typeof reopened.xlsx.load>[0],
+  );
   assert.equal(reopened.getWorksheet("Purchase history")!.rowCount, 3);
 });

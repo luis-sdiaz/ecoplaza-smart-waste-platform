@@ -49,7 +49,9 @@ test("creates a professional workbook from the supplied filtered waste history",
   ]), labels, "America/Bogota");
 
   const reopened = new Workbook();
-  await reopened.xlsx.load(Buffer.from(bytes));
+  await reopened.xlsx.load(
+    Buffer.from(bytes) as unknown as Parameters<typeof reopened.xlsx.load>[0],
+  );
   const worksheet = reopened.getWorksheet("Waste history")!;
 
   assert.deepEqual((worksheet.getRow(3).values as unknown[]).slice(1), [
@@ -68,8 +70,9 @@ test("creates a professional workbook from the supplied filtered waste history",
   assert.equal(worksheet.getCell("D4").value, 7.5);
   assert.equal(typeof worksheet.getCell("D4").value, "number");
   assert.equal(worksheet.getCell("E4").value, "'=CON-002");
-  assert.ok(worksheet.getCell("F4").value instanceof Date);
-  assert.equal(worksheet.getCell("F4").value.toISOString(), "2026-10-17T21:30:00.000Z");
+  const registeredAt = worksheet.getCell("F4").value;
+  assert.ok(registeredAt instanceof Date);
+  assert.equal(registeredAt.toISOString(), "2026-10-17T21:30:00.000Z");
   assert.equal(worksheet.getCell("F4").numFmt, "yyyy-mm-dd hh:mm");
   assert.equal(worksheet.getCell("G4").value, "Sold");
   assert.equal(worksheet.views[0]?.state, "frozen");
