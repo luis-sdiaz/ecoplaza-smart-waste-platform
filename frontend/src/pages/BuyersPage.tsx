@@ -239,6 +239,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
 
   const withEmail = buyers.filter((buyer) => buyer.email !== null).length;
   const withPhone = buyers.filter((buyer) => buyer.phone !== null).length;
+  const withContact = buyers.filter((buyer) => buyer.email !== null || buyer.phone !== null).length;
   const activitySummary = useMemo(
     () => calculateBuyerActivitySummary(buyers),
     [buyers],
@@ -317,26 +318,35 @@ function UserBuyersPage({ userId }: { userId: string }) {
         description={t("buyers.description")}
       />
 
-      <div className="mt-8 grid grid-cols-3 gap-4">
+      <section
+        aria-label={t("buyers.summaryTotal")}
+        className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      >
         <MetricCard
-          title={t("buyers.registered")}
+          title={t("buyers.summaryTotal")}
           value={metricsUnavailable ? "—" : String(buyers.length)}
           description={t("buyers.registeredContacts")}
           badge={t("buyers.realData")}
         />
         <MetricCard
-          title={t("buyers.withEmail")}
-          value={metricsUnavailable ? "—" : String(withEmail)}
-          description={t("buyers.withEmailDescription")}
+          title={t("buyers.summaryWithPurchases")}
+          value={metricsUnavailable ? "—" : String(activitySummary.withPurchasesCount)}
+          description={t("buyers.withPurchasesDescription")}
           badge={t("buyers.realData")}
         />
         <MetricCard
-          title={t("buyers.withPhone")}
-          value={metricsUnavailable ? "—" : String(withPhone)}
-          description={t("buyers.withPhoneDescription")}
+          title={t("buyers.summaryWithoutPurchases")}
+          value={metricsUnavailable ? "—" : String(activitySummary.withoutPurchasesCount)}
+          description={t("buyers.withoutPurchasesDescription")}
+          badge={metricsUnavailable ? undefined : t("buyers.summaryShare", { percentage: activitySummary.withoutPurchasesPercentage })}
+        />
+        <MetricCard
+          title={t("buyers.withContact")}
+          value={metricsUnavailable ? "—" : String(withContact)}
+          description={metricsUnavailable ? "—" : `${t("buyers.withEmail")}: ${withEmail} · ${t("buyers.withPhone")}: ${withPhone}`}
           badge={t("buyers.realData")}
         />
-      </div>
+      </section>
 
       <div className="mt-8">
         <div className="flex items-end justify-between gap-4">
@@ -383,8 +393,8 @@ function UserBuyersPage({ userId }: { userId: string }) {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4 md:grid-cols-[1fr_auto_auto_auto]">
-          <label className="relative block">
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4">
+          <label className="relative min-w-[280px] flex-1">
             <span className="sr-only">{t("buyers.searchLabel")}</span>
             <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ecoplaza-text-muted" size={17} aria-hidden="true" />
             <input
@@ -396,17 +406,20 @@ function UserBuyersPage({ userId }: { userId: string }) {
               className="w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background py-2.5 pr-3 pl-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted"
             />
           </label>
-          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+          <label className="flex shrink-0 items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("buyers.contactFilter")}</span>
-            <select value={contactFilter} disabled={isLoading || loadError !== null}
+            <select
+              value={contactFilter}
+              disabled={isLoading || loadError !== null}
               onChange={(event) => setContactFilter(event.target.value as BuyerContactFilter)}
-              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 py-2.5 text-sm text-ecoplaza-text">
+              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 py-2.5 text-sm text-ecoplaza-text"
+            >
               <option value="all">{t("buyers.allContacts")}</option>
               <option value="email">{t("buyers.withEmailFilter")}</option>
               <option value="phone">{t("buyers.withPhoneFilter")}</option>
             </select>
           </label>
-          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+          <label className="flex shrink-0 items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("buyers.activityFilter")}</span>
             <select
               value={activityFilter}
@@ -419,7 +432,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
               <option value="without_purchases">{t("buyers.activityWithoutPurchases")}</option>
             </select>
           </label>
-          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
+          <label className="flex shrink-0 items-center gap-2 text-sm text-ecoplaza-text-muted">
             <span>{t("buyers.sortBy")}</span>
             <select
               value={sortOption}
@@ -433,33 +446,6 @@ function UserBuyersPage({ userId }: { userId: string }) {
             </select>
           </label>
         </div>
-
-        {!isLoading && loadError === null && (
-          <section
-            aria-label={t("buyers.summaryTotal")}
-            className="mt-4 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4"
-          >
-            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-ecoplaza-border/60 bg-ecoplaza-background/60 p-3">
-                <dt className="text-xs text-ecoplaza-text-muted">{t("buyers.summaryTotal")}</dt>
-                <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{activitySummary.totalCount}</dd>
-              </div>
-              <div className="rounded-xl border border-ecoplaza-border/60 bg-ecoplaza-background/60 p-3">
-                <dt className="text-xs text-ecoplaza-text-muted">{t("buyers.summaryWithPurchases")}</dt>
-                <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{activitySummary.withPurchasesCount}</dd>
-              </div>
-              <div className="rounded-xl border border-ecoplaza-border/60 bg-ecoplaza-background/60 p-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <dt className="text-xs text-ecoplaza-text-muted">{t("buyers.summaryWithoutPurchases")}</dt>
-                  <span className="text-xs font-semibold text-ecoplaza-primary">
-                    {t("buyers.summaryShare", { percentage: activitySummary.withoutPurchasesPercentage })}
-                  </span>
-                </div>
-                <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{activitySummary.withoutPurchasesCount}</dd>
-              </div>
-            </dl>
-          </section>
-        )}
 
         <div className="mt-4">
           {isLoading ? (
