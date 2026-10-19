@@ -324,6 +324,8 @@ const es = {
     recordSearchLabel: "Buscar por número de registro", recordSearchPlaceholder: "Ej. RES-001",
     clearSearch: "Limpiar búsqueda",
     containerFilter: "Contenedor", allContainers: "Todos los contenedores", clearFilters: "Limpiar filtros",
+    weightRange: "Rango de peso", minWeight: "Peso mín. (kg)", maxWeight: "Peso máx. (kg)", allWeights: "Cualquier peso", invalidWeightRange: "Rango de peso no válido",
+    advancedFilters: "Filtros avanzados",
     sortBy: "Ordenar por", sortNewest: "Más recientes primero", sortOldest: "Más antiguos primero",
     sortWeightDesc: "Mayor peso primero", sortWeightAsc: "Menor peso primero",
     emptyFilteredTitle: "No hay materiales con estos filtros",

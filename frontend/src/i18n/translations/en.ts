@@ -324,6 +324,8 @@ const en = {
     recordSearchLabel: "Search by record number", recordSearchPlaceholder: "E.g. RES-001",
     clearSearch: "Clear search",
     containerFilter: "Container", allContainers: "All containers", clearFilters: "Clear filters",
+    weightRange: "Weight range", minWeight: "Min weight (kg)", maxWeight: "Max weight (kg)", allWeights: "Any weight", invalidWeightRange: "Invalid weight range",
+    advancedFilters: "Advanced filters",
     sortBy: "Sort by", sortNewest: "Newest first", sortOldest: "Oldest first",
     sortWeightDesc: "Highest weight first", sortWeightAsc: "Lowest weight first",
     emptyFilteredTitle: "No materials match these filters",

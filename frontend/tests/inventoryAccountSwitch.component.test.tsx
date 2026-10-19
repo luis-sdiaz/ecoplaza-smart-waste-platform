@@ -208,6 +208,8 @@ describe("Inventory account isolation", () => {
     render(<InventoryPage />);
     expect(await screen.findByText("RES-003")).toBeTruthy();
 
+    fireEvent.click(screen.getByRole("button", { name: /advanced|avanzados/i }));
+
     fireEvent.change(screen.getByLabelText("inventory.ageFilter"), { target: { value: "from8To30" } });
     fireEvent.change(screen.getByLabelText("inventory.categoryFilter"), { target: { value: "organic" } });
     fireEvent.change(screen.getByLabelText("inventory.containerFilter"), { target: { value: containerA.id } });
