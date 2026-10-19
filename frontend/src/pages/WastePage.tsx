@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw, Search } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  Database,
+  Download,
+  LoaderCircle,
+  RefreshCw,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
@@ -10,6 +20,8 @@ import WasteRecordTable, { type WasteRecord } from "../components/WasteRecordTab
 import WasteRegistrationModal, {
   type WasteRegistrationValues,
 } from "../components/WasteRegistrationModal";
+import DateRangePickerButton from "../components/common/DateRangePickerButton";
+import { formatColombianDate } from "../services/colombianDate";
 import {
   listContainers,
   type Container,
@@ -119,6 +131,7 @@ function UserWastePage({ userId }: { userId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [statusFilter, setStatusFilter] = useState<WasteStatus | "all">("all");
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
   const [containerFilter, setContainerFilter] = useState("all");
@@ -264,8 +277,18 @@ function UserWastePage({ userId }: { userId: string }) {
   );
   const visibleRemoteRecords = sortWasteHistory(filteredRemoteRecords, sortOption);
   const filteredSummary = summarizeFilteredWaste(visibleRemoteRecords);
-  const hasActiveFilters = statusFilter !== "all" || categoryFilter !== "all" ||
-    containerFilter !== "all" || activeDateRange !== null || recordSearch.trim() !== "";
+  const hasActiveFilters =
+    recordSearch.trim() !== "" ||
+    statusFilter !== "all" ||
+    categoryFilter !== "all" ||
+    containerFilter !== "all" ||
+    activeDateRange !== null ||
+    startDate !== "" ||
+    endDate !== "";
+  const activeAdvancedCount =
+    (categoryFilter !== "all" ? 1 : 0) +
+    (containerFilter !== "all" ? 1 : 0) +
+    (activeDateRange !== null || startDate !== "" || endDate !== "" ? 1 : 0);
   const tableRecords: WasteRecord[] = visibleRemoteRecords.map((record) => ({
     id: `RES-${record.recordNumber.padStart(3, "0")}`,
     category: record.category,
@@ -280,15 +303,24 @@ function UserWastePage({ userId }: { userId: string }) {
   const registrationUnavailable = isLoading || loadError !== null || containers.length === 0;
   const metricsUnavailable = isLoading || loadError !== null;
 
-  const applyDateRange = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    const nextRange = { startDate, endDate };
+  const handleApplyDateRange = (start: string, end: string): boolean => {
+    const nextRange = { startDate: start, endDate: end };
     if (!isValidReportDateRange(nextRange)) {
       setDateRangeError(true);
-      return;
+      return false;
     }
     setDateRangeError(false);
+    setStartDate(start);
+    setEndDate(end);
     setActiveDateRange(nextRange);
+    return true;
+  };
+
+  const handleClearDateRange = (): void => {
+    setStartDate("");
+    setEndDate("");
+    setActiveDateRange(null);
+    setDateRangeError(false);
   };
 
   const clearHistoryFilters = (): void => {
@@ -404,119 +436,187 @@ function UserWastePage({ userId }: { userId: string }) {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap justify-end gap-3">
-          <label className="relative min-w-56 flex-1">
-            <span className="sr-only">{t("waste.recordSearchLabel")}</span>
-            <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ecoplaza-text-muted" size={17} aria-hidden="true" />
-            <input type="search" value={recordSearch} disabled={isLoading || loadError !== null}
-              onChange={(event) => setRecordSearch(event.target.value)} placeholder={t("waste.recordSearchPlaceholder")}
-              className="w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface py-2 pr-3 pl-10 text-sm text-ecoplaza-text" />
-          </label>
-          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
-            <span>{t("waste.sortLabel")}</span>
-            <select
-              value={sortOption}
-              disabled={isLoading || loadError !== null}
-              onChange={(event) => setSortOption(event.target.value as WasteSortOption)}
-              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
-            >
-              <option value="newest">{t("waste.sortNewest")}</option>
-              <option value="oldest">{t("waste.sortOldest")}</option>
-              <option value="weightDesc">{t("waste.sortWeightDesc")}</option>
-              <option value="weightAsc">{t("waste.sortWeightAsc")}</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
-            <span>{t("waste.statusFilter")}</span>
-            <select
-              value={statusFilter}
-              disabled={isLoading || loadError !== null}
-              onChange={(event) => setStatusFilter(event.target.value as WasteStatus | "all")}
-              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
-            >
-              <option value="all">{t("waste.allStatuses")}</option>
-              <option value="registered">{t("common.registered")}</option>
-              <option value="available">{t("common.available")}</option>
-              <option value="sold">{t("common.sold")}</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
-            <span>{t("waste.categoryFilter")}</span>
-            <select
-              value={categoryFilter}
-              disabled={isLoading || loadError !== null}
-              onChange={(event) => setCategoryFilter(event.target.value as WasteCategory | "all")}
-              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
-            >
-              <option value="all">{t("waste.allCategories")}</option>
-              <option value="organic">{t("common.organic")}</option>
-              <option value="recyclable">{t("common.recyclable")}</option>
-              <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-ecoplaza-text-muted">
-            <span>{t("waste.containerFilter")}</span>
-            <select
-              value={containerFilter}
-              disabled={isLoading || loadError !== null}
-              onChange={(event) => setContainerFilter(event.target.value)}
-              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
-            >
-              <option value="all">{t("waste.allContainers")}</option>
-              {containers.map((container) => (
-                <option key={container.id} value={container.id}>{container.code}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <div className="mt-5 flex flex-col gap-0 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface shadow-sm">
+          {/* ZONA PRIMARIA (Siempre visible) */}
+          <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center">
+            {/* Buscador por ID (flex-1) */}
+            <label className="relative min-w-[250px] flex-1">
+              <span className="sr-only">{t("waste.recordSearchLabel")}</span>
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted"
+                size={17}
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={recordSearch}
+                disabled={isLoading || loadError !== null}
+                onChange={(event) => setRecordSearch(event.target.value)}
+                placeholder={t("waste.recordSearchPlaceholder")}
+                aria-label={t("waste.recordSearchLabel")}
+                className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background pl-10 pr-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+              />
+              {recordSearch.trim() !== "" && (
+                <button
+                  type="button"
+                  onClick={() => setRecordSearch("")}
+                  aria-label={t("waste.clearSearch")}
+                  className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-ecoplaza-text-muted hover:bg-ecoplaza-surface hover:text-ecoplaza-text"
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              )}
+            </label>
 
-        <form onSubmit={applyDateRange} className="mt-3 flex flex-wrap items-end justify-end gap-3">
-          <label className="text-sm text-ecoplaza-text-muted">
-            <span className="block">{t("waste.startDate")}</span>
-            <input
-              type="date"
-              value={startDate}
-              max={endDate || undefined}
-              disabled={isLoading || loadError !== null}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="mt-1 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
-            />
-          </label>
-          <label className="text-sm text-ecoplaza-text-muted">
-            <span className="block">{t("waste.endDate")}</span>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate || undefined}
-              disabled={isLoading || loadError !== null}
-              onChange={(event) => setEndDate(event.target.value)}
-              className="mt-1 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={isLoading || loadError !== null}
-            className="rounded-xl bg-ecoplaza-secondary px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t("waste.applyDateRange")}
-          </button>
-          <button
-            type="button"
-            disabled={(!hasActiveFilters && startDate === "" && endDate === "") || isLoading}
-            onClick={clearHistoryFilters}
-            className="rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t("waste.clearFilters")}
-          </button>
-        </form>
-        {dateRangeError && (
-          <p role="alert" className="mt-2 text-right text-sm text-ecoplaza-danger">{t("waste.invalidDateRange")}</p>
-        )}
-        {activeDateRange !== null && (
-          <p className="mt-2 text-right text-xs font-medium text-ecoplaza-primary">
-            {t("waste.activeDateRange", { start: activeDateRange.startDate, end: activeDateRange.endDate })}
-          </p>
-        )}
+            {/* Selector de Estado */}
+            <label className="flex shrink-0 items-center gap-2 text-xs font-medium text-ecoplaza-text-muted">
+              <span>{t("waste.statusFilter")}</span>
+              <select
+                value={statusFilter}
+                disabled={isLoading || loadError !== null}
+                onChange={(event) => setStatusFilter(event.target.value as WasteStatus | "all")}
+                aria-label={t("waste.statusFilter")}
+                className="h-10 rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+              >
+                <option value="all">{t("waste.allStatuses")}</option>
+                <option value="registered">{t("common.registered")}</option>
+                <option value="available">{t("common.available")}</option>
+                <option value="sold">{t("common.sold")}</option>
+              </select>
+            </label>
+
+            {/* Botón Filtros avanzados */}
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((prev) => !prev)}
+              aria-expanded={showAdvanced}
+              aria-label={t("waste.advancedFilters")}
+              className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-ecoplaza-border bg-transparent px-3.5 text-sm font-medium text-ecoplaza-text transition-colors hover:bg-ecoplaza-border/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+            >
+              <SlidersHorizontal size={16} className="text-ecoplaza-text-muted" aria-hidden="true" />
+              <span>{t("waste.advancedFilters")}</span>
+              {activeAdvancedCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-ecoplaza-primary px-1 text-[11px] font-bold text-white">
+                  {activeAdvancedCount}
+                </span>
+              )}
+              <ChevronDown
+                size={16}
+                className={`text-ecoplaza-text-muted transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+
+            {/* Botón Limpiar (solo visible si hasActiveFilters es true) */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={clearHistoryFilters}
+                className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-ecoplaza-border/60 bg-transparent px-3.5 text-sm font-medium text-ecoplaza-danger transition-colors hover:border-ecoplaza-danger/40 hover:bg-ecoplaza-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <X size={15} aria-hidden="true" />
+                <span>{t("waste.clearFilters")}</span>
+              </button>
+            )}
+          </div>
+
+          {/* ZONA AVANZADA (Divulgación progresiva) */}
+          {showAdvanced && (
+            <div className="rounded-b-2xl border-t border-ecoplaza-border bg-ecoplaza-background/50 p-4 transition-all duration-300 ease-in-out">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                {/* Selector de Categoría */}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("waste.categoryFilter")}
+                  </span>
+                  <select
+                    value={categoryFilter}
+                    disabled={isLoading || loadError !== null}
+                    onChange={(event) => setCategoryFilter(event.target.value as WasteCategory | "all")}
+                    aria-label={t("waste.categoryFilter")}
+                    className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  >
+                    <option value="all">{t("waste.allCategories")}</option>
+                    <option value="organic">{t("common.organic")}</option>
+                    <option value="recyclable">{t("common.recyclable")}</option>
+                    <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
+                  </select>
+                </label>
+
+                {/* Selector de Contenedor */}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("waste.containerFilter")}
+                  </span>
+                  <select
+                    value={containerFilter}
+                    disabled={isLoading || loadError !== null}
+                    onChange={(event) => setContainerFilter(event.target.value)}
+                    aria-label={t("waste.containerFilter")}
+                    className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  >
+                    <option value="all">{t("waste.allContainers")}</option>
+                    {containers.map((container) => (
+                      <option key={container.id} value={container.id}>
+                        {container.code}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* Selector de Rango de Fechas (Popover) */}
+                <div className="relative flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("waste.dateRange")}
+                  </span>
+                  <DateRangePickerButton
+                    startDate={startDate}
+                    endDate={endDate}
+                    activeRange={activeDateRange}
+                    error={dateRangeError}
+                    disabled={isLoading || loadError !== null}
+                    onApply={handleApplyDateRange}
+                    onClear={handleClearDateRange}
+                  />
+                </div>
+
+                {/* Selector Ordenar por */}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("waste.sortLabel")}
+                  </span>
+                  <select
+                    value={sortOption}
+                    disabled={isLoading || loadError !== null}
+                    onChange={(event) => setSortOption(event.target.value as WasteSortOption)}
+                    aria-label={t("waste.sortLabel")}
+                    className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  >
+                    <option value="newest">{t("waste.sortNewest")}</option>
+                    <option value="oldest">{t("waste.sortOldest")}</option>
+                    <option value="weightDesc">{t("waste.sortWeightDesc")}</option>
+                    <option value="weightAsc">{t("waste.sortWeightAsc")}</option>
+                  </select>
+                </label>
+              </div>
+
+              {dateRangeError && (
+                <p role="alert" className="mt-3 text-xs text-ecoplaza-danger">
+                  {t("waste.invalidDateRange")}
+                </p>
+              )}
+              {activeDateRange !== null && (
+                <p className="mt-2 text-xs font-medium text-ecoplaza-primary">
+                  {t("waste.activeDateRange", {
+                    start: formatColombianDate(activeDateRange.startDate),
+                    end: formatColombianDate(activeDateRange.endDate),
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         {!isLoading && loadError === null && (
           <div className="mt-4 rounded-2xl border border-ecoplaza-primary/20 bg-ecoplaza-primary/5 p-4" aria-label={t("waste.filteredSummaryTitle")}>
