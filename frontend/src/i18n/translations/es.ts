@@ -609,6 +609,8 @@ const es = {
     weightUnit: "Unidad de peso", kilograms: "Kilogramos (kg)",
     demoContainer: "Contenedor de demostración", demoDescription: "Define la categoría que representará el contenedor físico.",
     assignedCategory: "Categoría asignada", demoHelp: "Esta configuración permitirá usar el mismo contenedor físico para demostrar las tres categorías gestionadas por EcoPlaza.",
+    showDemoData: "Mostrar datos demostrativos",
+    showDemoDataDescription: "Muestra u oculta las lecturas simuladas, compradores y ventas de demostración en toda la plataforma.",
     appearance: "Apariencia", appearanceDescription: "Personaliza el tema visual de EcoPlaza.",
     lightTheme: "Claro", darkTheme: "Oscuro", selectedTheme: "Tema seleccionado",
     resetPreferences: "Restablecer preferencias",

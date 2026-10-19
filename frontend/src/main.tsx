@@ -7,15 +7,18 @@ import "./index.css";
 import App from "./App.tsx";
 import AuthProvider from "./auth/AuthProvider";
 import { ThemeProvider } from "./theme/ThemeProvider";
+import { DemoVisibilityProvider } from "./context/DemoVisibilityProvider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </AuthProvider>
+      <DemoVisibilityProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </AuthProvider>
+      </DemoVisibilityProvider>
     </ThemeProvider>
   </StrictMode>,
 );

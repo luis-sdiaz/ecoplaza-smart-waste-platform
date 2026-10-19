@@ -3,6 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Check, Moon, RotateCcw, Sun } from "lucide-react";
 import i18n, { LANGUAGE_STORAGE_KEY } from "../i18n/config";
 import { useTheme } from "../theme/useTheme";
+import {
+  useDemoVisibility,
+  DEFAULT_SHOW_DEMO_DATA,
+} from "../context/DemoVisibilityContext";
 import ResetPreferencesDialog from "./ResetPreferencesDialog";
 import SuccessToast from "./SuccessToast";
 
@@ -52,6 +56,7 @@ function storePreference(key: string, value: string): boolean {
 function SettingsPanel() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const { showDemoData, setShowDemoData } = useDemoVisibility();
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(readWeightUnit);
   const [demoCategory, setDemoCategory] =
     useState<DemoCategory>(readDemoCategory);
@@ -118,6 +123,7 @@ function SettingsPanel() {
           DEFAULT_DEMO_CATEGORY,
         );
 
+        setShowDemoData(DEFAULT_SHOW_DEMO_DATA);
         setTheme(DEFAULT_THEME);
         setIsResetDialogOpen(false);
 
@@ -214,6 +220,22 @@ function SettingsPanel() {
           <p className="mt-3 text-xs leading-5 text-ecoplaza-text-muted">
             {t("settings.demoHelp")}
           </p>
+
+          <div className="mt-5 border-t border-ecoplaza-border pt-4">
+            <label htmlFor="show-demo-data" className="flex items-center justify-between cursor-pointer">
+              <span className="mr-3">
+                <span className="block text-sm font-medium text-ecoplaza-text">{t("settings.showDemoData")}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-ecoplaza-text-muted">{t("settings.showDemoDataDescription")}</span>
+              </span>
+              <input
+                id="show-demo-data"
+                type="checkbox"
+                checked={showDemoData}
+                onChange={(event) => setShowDemoData(event.target.checked)}
+                className="h-5 w-5 rounded border-ecoplaza-border text-ecoplaza-primary focus:ring-ecoplaza-primary"
+              />
+            </label>
+          </div>
         </div>
       </article>
 

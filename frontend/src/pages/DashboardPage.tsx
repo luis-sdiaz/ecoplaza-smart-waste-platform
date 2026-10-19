@@ -23,6 +23,7 @@ import {
   type AgingInventoryItem,
 } from "../services/dashboardAgingInventory";
 import { findTopRevenueCategory } from "../services/dashboardRevenueCategory";
+import { useDemoVisibility } from "../context/DemoVisibilityContext";
 
 type StatisticsResult = Awaited<ReturnType<typeof getReportStatistics>>;
 type AvailableWasteResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
@@ -37,6 +38,7 @@ function getStatisticsErrorKey(code: ReportErrorCode): string {
 
 function UserDashboardPage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
+  const { showDemoData } = useDemoVisibility();
   const requestRevisionRef = useRef(0);
   const salesRevisionRef = useRef(0);
   const inventoryRevisionRef = useRef(0);
@@ -274,19 +276,21 @@ function UserDashboardPage({ userId }: { userId: string }) {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className={`mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 ${showDemoData ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
         <MetricCard
           title={t("dashboard.registeredWaste")}
           value={metricValue((data) => formatWeight(data.totalRegisteredWeightKg))}
           description={t("dashboard.realWasteDescription")}
           badge={realBadge}
         />
-        <MetricCard
-          title={t("dashboard.activeSensors")}
-          value="8"
-          description={t("dashboard.registeredSensors", { count: 10 })}
-          badge={demoBadge}
-        />
+        {showDemoData && (
+          <MetricCard
+            title={t("dashboard.activeSensors")}
+            value="8"
+            description={t("dashboard.registeredSensors", { count: 10 })}
+            badge={demoBadge}
+          />
+        )}
         <MetricCard
           title={t("dashboard.availableInventory")}
           value={metricValue((data) => formatWeight(data.availableWeightKg))}
@@ -478,21 +482,23 @@ function UserDashboardPage({ userId }: { userId: string }) {
         )}
       </div>
 
-      <div className="mt-8">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
-            <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{demoBadge}</span>
+      {showDemoData && (
+        <div className="mt-8">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
+              <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{demoBadge}</span>
+            </div>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.sensorMonitoringDemo")}</p>
           </div>
-          <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.sensorMonitoringDemo")}</p>
-        </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-4">
-          <SensorStatusCard name={`${t("waste.container")} 01`} category={t("common.wasteOrganic")} fillLevel={68} status={t("common.active")} />
-          <SensorStatusCard name={`${t("waste.container")} 02`} category={t("common.wasteRecyclable")} fillLevel={42} status={t("common.active")} />
-          <SensorStatusCard name={`${t("waste.container")} 03`} category={t("common.wasteNonRecyclable")} fillLevel={81} status={t("common.active")} />
+          <div className="mt-4 grid grid-cols-3 gap-4">
+            <SensorStatusCard name={`${t("waste.container")} 01`} category={t("common.wasteOrganic")} fillLevel={68} status={t("common.active")} />
+            <SensorStatusCard name={`${t("waste.container")} 02`} category={t("common.wasteRecyclable")} fillLevel={42} status={t("common.active")} />
+            <SensorStatusCard name={`${t("waste.container")} 03`} category={t("common.wasteNonRecyclable")} fillLevel={81} status={t("common.active")} />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-8">
         <div>

@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import SuccessToast from "../components/SuccessToast";
+import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import WasteRecordTable, { type WasteRecord } from "../components/WasteRecordTable";
 import WasteRegistrationModal, {
   type WasteRegistrationValues,
@@ -107,6 +108,7 @@ function getContainerLoadErrorKey(code: ContainerErrorCode): string {
 
 function UserWastePage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
+  const { showDemoData } = useDemoVisibility();
   const [legacyRecords] = useState<WasteRecord[]>(() => [
     ...baseWasteRecords,
     ...readSavedWasteRecords(userId),
@@ -591,14 +593,16 @@ function UserWastePage({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <div className="mt-10 border-t border-ecoplaza-border pt-8">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-ecoplaza-text">{t("waste.localRecords")}</h2>
-          <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{t("waste.localData")}</span>
+      {showDemoData && (
+        <div className="mt-10 border-t border-ecoplaza-border pt-8">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("waste.localRecords")}</h2>
+            <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{t("waste.localData")}</span>
+          </div>
+          <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("waste.localDescription")}</p>
+          <div className="mt-4"><WasteRecordTable records={legacyRecords} /></div>
         </div>
-        <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("waste.localDescription")}</p>
-        <div className="mt-4"><WasteRecordTable records={legacyRecords} /></div>
-      </div>
+      )}
 
       {isModalOpen && (
         <WasteRegistrationModal

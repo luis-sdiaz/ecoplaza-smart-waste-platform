@@ -9,6 +9,7 @@ import DemoBuyerTable, { type DemoBuyer } from "../components/DemoBuyerTable";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import SuccessToast from "../components/SuccessToast";
+import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import {
   createBuyer,
   listBuyers,
@@ -65,6 +66,7 @@ function getPurchaseHistoryErrorKey(code: SalesErrorCode): string {
 
 function UserBuyersPage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
+  const { showDemoData } = useDemoVisibility();
   const requestRevisionRef = useRef(0);
   const historyRevisionRef = useRef(0);
   const isSubmittingRef = useRef(false);
@@ -452,18 +454,20 @@ function UserBuyersPage({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <div className="mt-10 border-t border-ecoplaza-border pt-8">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-ecoplaza-text">{t("buyers.demoTitle")}</h2>
-          <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-            {t("buyers.demoData")}
-          </span>
+      {showDemoData && (
+        <div className="mt-10 border-t border-ecoplaza-border pt-8">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("buyers.demoTitle")}</h2>
+            <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
+              {t("buyers.demoData")}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.demoDescription")}</p>
+          <div className="mt-4">
+            <DemoBuyerTable buyers={demoBuyers} />
+          </div>
         </div>
-        <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.demoDescription")}</p>
-        <div className="mt-4">
-          <DemoBuyerTable buyers={demoBuyers} />
-        </div>
-      </div>
+      )}
 
       {isFormOpen && (
         <BuyerFormModal

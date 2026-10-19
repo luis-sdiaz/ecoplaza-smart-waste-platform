@@ -21,6 +21,7 @@ import SaleRegistrationModal, {
 import SaleDetailsModal from "../components/SaleDetailsModal";
 import SalesTable from "../components/SalesTable";
 import SuccessToast from "../components/SuccessToast";
+import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import {
   exportSalesHistory,
   type SalesCsvLabels,
@@ -98,6 +99,7 @@ async function fetchSalesPageData(
 
 function UserSalesPage({ userId }: { userId: string }) {
   const { t, i18n } = useTranslation();
+  const { showDemoData } = useDemoVisibility();
   const requestRevisionRef = useRef(new RequestRevisionTracker());
   const isSubmittingRef = useRef(false);
   const notificationSequenceRef = useRef(0);
@@ -701,14 +703,16 @@ function UserSalesPage({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <div className="mt-10 border-t border-ecoplaza-border pt-8">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-ecoplaza-text">{t("sales.demoTitle")}</h2>
-          <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{t("sales.demoData")}</span>
+      {showDemoData && (
+        <div className="mt-10 border-t border-ecoplaza-border pt-8">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("sales.demoTitle")}</h2>
+            <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{t("sales.demoData")}</span>
+          </div>
+          <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("sales.demoDescription")}</p>
+          <div className="mt-4"><DemoSalesTable sales={demoSales} /></div>
         </div>
-        <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("sales.demoDescription")}</p>
-        <div className="mt-4"><DemoSalesTable sales={demoSales} /></div>
-      </div>
+      )}
 
       {isModalOpen && (
         <SaleRegistrationModal
