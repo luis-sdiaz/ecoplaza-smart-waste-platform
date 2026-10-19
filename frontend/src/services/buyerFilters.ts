@@ -4,6 +4,45 @@ export type BuyerSortOption = "updated_desc" | "name_asc" | "name_desc";
 export type BuyerContactFilter = "all" | "email" | "phone";
 export type BuyerActivityFilter = "all" | "with_purchases" | "without_purchases";
 
+export interface BuyerActivitySummary {
+  totalCount: number;
+  withPurchasesCount: number;
+  withoutPurchasesCount: number;
+  withoutPurchasesPercentage: number;
+}
+
+export function calculateBuyerActivitySummary(
+  buyers: readonly (Buyer & { purchaseCount?: number })[],
+): BuyerActivitySummary {
+  const totalCount = buyers.length;
+  if (totalCount === 0) {
+    return {
+      totalCount: 0,
+      withPurchasesCount: 0,
+      withoutPurchasesCount: 0,
+      withoutPurchasesPercentage: 0,
+    };
+  }
+
+  let withPurchasesCount = 0;
+  for (const buyer of buyers) {
+    if ((buyer.purchaseCount ?? 0) > 0) {
+      withPurchasesCount += 1;
+    }
+  }
+
+  const withoutPurchasesCount = totalCount - withPurchasesCount;
+  const rawPercentage = (withoutPurchasesCount / totalCount) * 100;
+  const withoutPurchasesPercentage = Math.round(rawPercentage * 10) / 10;
+
+  return {
+    totalCount,
+    withPurchasesCount,
+    withoutPurchasesCount,
+    withoutPurchasesPercentage,
+  };
+}
+
 function normalizeSearchValue(value: string): string {
   return value
     .normalize("NFD")

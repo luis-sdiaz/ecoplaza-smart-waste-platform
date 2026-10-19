@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
@@ -19,6 +19,7 @@ import {
   type BuyerInput,
 } from "../services/buyerService";
 import {
+  calculateBuyerActivitySummary,
   filterAndSortBuyers,
   type BuyerActivityFilter,
   type BuyerContactFilter,
@@ -238,6 +239,10 @@ function UserBuyersPage({ userId }: { userId: string }) {
 
   const withEmail = buyers.filter((buyer) => buyer.email !== null).length;
   const withPhone = buyers.filter((buyer) => buyer.phone !== null).length;
+  const activitySummary = useMemo(
+    () => calculateBuyerActivitySummary(buyers),
+    [buyers],
+  );
   const metricsUnavailable = isLoading || loadError !== null;
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const visibleBuyers = filterAndSortBuyers(buyers, searchQuery, sortOption, locale, contactFilter, activityFilter);
@@ -428,6 +433,33 @@ function UserBuyersPage({ userId }: { userId: string }) {
             </select>
           </label>
         </div>
+
+        {!isLoading && loadError === null && (
+          <section
+            aria-label={t("buyers.summaryTotal")}
+            className="mt-4 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4"
+          >
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-ecoplaza-border/60 bg-ecoplaza-background/60 p-3">
+                <dt className="text-xs text-ecoplaza-text-muted">{t("buyers.summaryTotal")}</dt>
+                <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{activitySummary.totalCount}</dd>
+              </div>
+              <div className="rounded-xl border border-ecoplaza-border/60 bg-ecoplaza-background/60 p-3">
+                <dt className="text-xs text-ecoplaza-text-muted">{t("buyers.summaryWithPurchases")}</dt>
+                <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{activitySummary.withPurchasesCount}</dd>
+              </div>
+              <div className="rounded-xl border border-ecoplaza-border/60 bg-ecoplaza-background/60 p-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <dt className="text-xs text-ecoplaza-text-muted">{t("buyers.summaryWithoutPurchases")}</dt>
+                  <span className="text-xs font-semibold text-ecoplaza-primary">
+                    {t("buyers.summaryShare", { percentage: activitySummary.withoutPurchasesPercentage })}
+                  </span>
+                </div>
+                <dd className="mt-1 text-lg font-semibold text-ecoplaza-text">{activitySummary.withoutPurchasesCount}</dd>
+              </div>
+            </dl>
+          </section>
+        )}
 
         <div className="mt-4">
           {isLoading ? (

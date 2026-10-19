@@ -356,6 +356,7 @@ const es = {
     sortNameAsc: "Nombre A–Z", sortNameDesc: "Nombre Z–A",
     contactFilter: "Contacto", allContacts: "Todos", withEmailFilter: "Con correo", withPhoneFilter: "Con teléfono",
     activityFilter: "Actividad", activityAll: "Todos", activityWithPurchases: "Con compras", activityWithoutPurchases: "Sin compras",
+    summaryTotal: "Total compradores", summaryWithPurchases: "Con compras", summaryWithoutPurchases: "Sin compras", summaryShare: "{{percentage}}% del total",
     exportCsv: "Exportar CSV", exporting: "Exportando...", exportExcel: "Exportar Excel", exportingExcel: "Creando Excel...",
     exportSuccessTitle: "Directorio exportado",
     exportSuccessDescription: "El directorio filtrado de compradores se guardó correctamente.",
