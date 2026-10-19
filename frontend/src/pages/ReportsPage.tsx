@@ -227,7 +227,7 @@ function UserReportsPage({ userId }: { userId: string }) {
       metric: t("reports.csv.metric"), value: t("reports.csv.value"), unit: t("reports.csv.unit"),
       category: t("reports.csv.category"), weight: t("reports.csv.weight"), percentage: t("reports.csv.percentage"),
       sales: t("reports.salesCount"), grossRevenue: t("reports.grossSales"), averagePricePerKg: t("reports.csv.averagePricePerKg"), date: t("reports.csv.date"),
-      month: t("reports.month"), averagePerOperation: t("reports.averagePerOperation"),
+      month: t("reports.month"), revenueChange: t("reports.revenueChange"), averagePerOperation: t("reports.averagePerOperation"),
       records: t("reports.wasteRecords"), historicalWeight: t("reports.historicalWeight"),
       availableWeight: t("reports.availableWeight"), soldWeight: t("reports.soldWeight"),
       period: t("reports.csv.period"), from: t("reports.csv.from"), to: t("reports.csv.to"), allTime: t("reports.csv.allTime"),

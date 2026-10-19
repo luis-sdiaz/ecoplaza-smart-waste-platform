@@ -20,7 +20,7 @@ const labels: ReportExcelLabels = {
   weight: "Weight", percentage: "Percentage", sales: "Sales",
   grossRevenue: "Gross revenue", date: "Date", records: "Records",
   averagePricePerKg: "Average price (COP/kg)",
-  month: "Month", averagePerOperation: "Average per operation",
+  month: "Month", revenueChange: "Change", averagePerOperation: "Average per operation",
   historicalWeight: "Historical weight", availableWeight: "Available weight",
   soldWeight: "Sold weight", period: "Period", from: "From", to: "To",
   allTime: "All history", countUnit: "records", kilogramsUnit: "kg", copUnit: "COP",
@@ -50,7 +50,7 @@ const statistics = {
   ],
   monthlySales: [
     { month: "2026-09", salesCount: 0, grossSalesValue: 0, averageSaleValue: 0, revenueChangePercentage: null },
-    { month: "2026-10", salesCount: 2, grossSalesValue: 3000.75, averageSaleValue: 1500.375, revenueChangePercentage: null },
+    { month: "2026-10", salesCount: 2, grossSalesValue: 3000.75, averageSaleValue: 1500.375, revenueChangePercentage: 25.5 },
   ],
   topBuyers: [],
 };
@@ -125,8 +125,11 @@ test("creates a valid formatted analytics workbook with real Excel value types",
   assert.equal(monthly.getCell("A4").numFmt, "mmmm yyyy");
   assert.equal(monthly.getCell("B4").value, 0);
   assert.equal(monthly.getCell("C5").value, 3000.75);
-  assert.equal(monthly.getCell("D5").value, 1500.375);
-  assert.match(monthly.getCell("D5").numFmt, /COP/);
+  assert.equal(monthly.getCell("D4").value, null);
+  assert.equal(monthly.getCell("D5").value, 0.255);
+  assert.equal(monthly.getCell("D5").numFmt, "0.0%");
+  assert.equal(monthly.getCell("E5").value, 1500.375);
+  assert.match(monthly.getCell("E5").numFmt, /COP/);
 
   for (const worksheet of reopened.worksheets) {
     assert.equal(worksheet.getRow(3).height, 34);
