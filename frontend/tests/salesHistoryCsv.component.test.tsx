@@ -227,11 +227,13 @@ describe("filtered sales history and CSV integration", () => {
     await screen.findByTitle(saleAlphaLate.id);
     expectVisible(allSales.map((sale) => sale.id));
 
+    fireEvent.click(screen.getByRole("button", { name: "sales.advancedFilters" }));
     fireEvent.change(screen.getByLabelText("sales.buyerFilter"), {
       target: { value: buyerAlpha.id },
     });
     await waitFor(() => expectVisible([saleAlphaLate.id, saleAlphaEarly.id]));
 
+    fireEvent.click(screen.getByRole("button", { name: "sales.allDates" }));
     fireEvent.change(screen.getByLabelText("sales.startDate"), {
       target: { value: "2026-10-15" },
     });
@@ -263,6 +265,8 @@ describe("filtered sales history and CSV integration", () => {
     render(<SalesPage />);
     await screen.findByTitle(saleAlphaLate.id);
 
+    fireEvent.click(screen.getByRole("button", { name: "sales.advancedFilters" }));
+    fireEvent.click(screen.getByRole("button", { name: "sales.allDates" }));
     fireEvent.change(screen.getByLabelText("sales.startDate"), {
       target: { value: "2026-10-05" },
     });
@@ -286,10 +290,16 @@ describe("filtered sales history and CSV integration", () => {
     render(<SalesPage />);
     await screen.findByTitle(saleAlphaLate.id);
 
-    fireEvent.click(screen.getByRole("button", { name: "sales.last7Days" }));
+    fireEvent.click(screen.getByRole("button", { name: "sales.advancedFilters" }));
+    fireEvent.click(screen.getByRole("button", { name: "sales.allDates" }));
+    fireEvent.change(screen.getByLabelText("sales.startDate"), {
+      target: { value: "2026-10-10" },
+    });
+    fireEvent.change(screen.getByLabelText("sales.endDate"), {
+      target: { value: "2026-10-16" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "sales.applyDateRange" }));
     await waitFor(() => expectVisible([saleBeta.id]));
-    expect((screen.getByLabelText("sales.startDate") as HTMLInputElement).value).toBe("2026-10-10");
-    expect((screen.getByLabelText("sales.endDate") as HTMLInputElement).value).toBe("2026-10-16");
 
     fireEvent.change(screen.getByLabelText("sales.categoryFilter"), { target: { value: "organic" } });
     expectVisible([saleBeta.id]);
@@ -310,6 +320,7 @@ describe("filtered sales history and CSV integration", () => {
     render(<SalesPage />);
     await screen.findByTitle(saleAlphaLate.id);
 
+    fireEvent.click(screen.getByRole("button", { name: "sales.advancedFilters" }));
     fireEvent.change(screen.getByLabelText("sales.minimumAmount"), { target: { value: "4000" } });
     fireEvent.change(screen.getByLabelText("sales.maximumAmount"), { target: { value: "4000.00" } });
     expectVisible([saleBeta.id]);
@@ -336,6 +347,7 @@ describe("filtered sales history and CSV integration", () => {
     render(<SalesPage />);
     await screen.findByTitle(saleAlphaLate.id);
 
+    fireEvent.click(screen.getByRole("button", { name: "sales.advancedFilters" }));
     fireEvent.change(screen.getByLabelText("sales.buyerFilter"), { target: { value: buyerAlpha.id } });
     await waitFor(() => expectVisible([saleAlphaLate.id, saleAlphaEarly.id]));
     fireEvent.change(screen.getByLabelText("sales.minimumAmount"), { target: { value: "1000" } });
@@ -369,10 +381,12 @@ describe("filtered sales history and CSV integration", () => {
     render(<SalesPage />);
     await screen.findByTitle(saleAlphaLate.id);
 
+    fireEvent.click(screen.getByRole("button", { name: "sales.advancedFilters" }));
     fireEvent.change(screen.getByLabelText("sales.buyerFilter"), {
       target: { value: buyerBeta.id },
     });
     await screen.findByTitle(saleBeta.id);
+    fireEvent.click(screen.getByRole("button", { name: "sales.allDates" }));
     fireEvent.change(screen.getByLabelText("sales.startDate"), {
       target: { value: "2026-10-15" },
     });
@@ -414,6 +428,7 @@ describe("filtered sales history and CSV integration", () => {
       .mockResolvedValueOnce({ ok: true, data: [saleBeta] });
     render(<SalesPage />);
     await screen.findByTitle(saleAlphaLate.id);
+    fireEvent.click(screen.getByRole("button", { name: "sales.advancedFilters" }));
     const buyerFilter = screen.getByLabelText("sales.buyerFilter");
 
     fireEvent.change(buyerFilter, { target: { value: buyerAlpha.id } });

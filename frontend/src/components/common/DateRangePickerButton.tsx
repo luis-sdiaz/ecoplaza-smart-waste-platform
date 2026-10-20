@@ -10,6 +10,7 @@ export interface DateRangePickerButtonProps {
   activeRange: ReportDateRange | null;
   error?: boolean;
   disabled?: boolean;
+  namespace?: "waste" | "sales";
   onApply: (start: string, end: string) => boolean;
   onClear: () => void;
 }
@@ -20,10 +21,12 @@ export default function DateRangePickerButton({
   activeRange,
   error = false,
   disabled = false,
+  namespace = "waste",
   onApply,
   onClear,
 }: DateRangePickerButtonProps) {
   const { t } = useTranslation();
+  const ns = namespace;
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
   const [draftStart, setDraftStart] = useState(startDate);
   const [draftEnd, setDraftEnd] = useState(endDate);
@@ -88,7 +91,7 @@ export default function DateRangePickerButton({
 
   const displayText = activeRange
     ? formatColombianDateRange(activeRange.startDate, activeRange.endDate)
-    : t("waste.allDates", "Todas las fechas");
+    : t(`${ns}.allDates`, "Todas las fechas");
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -129,12 +132,12 @@ export default function DateRangePickerButton({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={t("waste.dateRange", "Rango de fechas")}
+          aria-label={t(`${ns}.dateRange`, "Rango de fechas")}
           className="absolute left-0 top-full z-50 mt-2 flex w-72 flex-col gap-3 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface p-4 shadow-lg sm:w-80"
         >
           <div className="flex items-center justify-between border-b border-ecoplaza-border/60 pb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
-              {t("waste.dateRange", "Rango de fechas")}
+              {t(`${ns}.dateRange`, "Rango de fechas")}
             </span>
             <button
               type="button"
@@ -150,14 +153,14 @@ export default function DateRangePickerButton({
             {/* Input Fecha Inicial */}
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
-                {t("waste.startDate")}
+                {t(`${ns}.startDate`)}
               </span>
               <input
                 type="date"
                 value={draftStart}
                 max={draftEnd || undefined}
                 onChange={(event) => setDraftStart(event.target.value)}
-                aria-label={t("waste.startDate")}
+                aria-label={t(`${ns}.startDate`)}
                 className="h-10 w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
               />
             </label>
@@ -165,21 +168,21 @@ export default function DateRangePickerButton({
             {/* Input Fecha Final */}
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
-                {t("waste.endDate")}
+                {t(`${ns}.endDate`)}
               </span>
               <input
                 type="date"
                 value={draftEnd}
                 min={draftStart || undefined}
                 onChange={(event) => setDraftEnd(event.target.value)}
-                aria-label={t("waste.endDate")}
+                aria-label={t(`${ns}.endDate`)}
                 className="h-10 w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
               />
             </label>
 
             {error && (
               <p role="alert" className="text-xs text-ecoplaza-danger">
-                {t("waste.invalidDateRange")}
+                {t(`${ns}.invalidDateRange`)}
               </p>
             )}
 
@@ -190,7 +193,7 @@ export default function DateRangePickerButton({
                 onClick={handleClear}
                 className="text-xs font-medium text-ecoplaza-text-muted transition-colors hover:text-ecoplaza-danger hover:underline"
               >
-                {t("waste.clearDates", "Limpiar fechas")}
+                {t(`${ns}.clearDates`, "Limpiar fechas")}
               </button>
               <button
                 type="submit"
@@ -198,7 +201,7 @@ export default function DateRangePickerButton({
                 disabled={disabled}
                 className="rounded-lg bg-ecoplaza-primary px-3.5 py-2 text-xs font-semibold text-ecoplaza-on-primary shadow-xs transition-colors hover:bg-ecoplaza-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {t("waste.applyDateRange")}
+                {t(`${ns}.applyDateRange`)}
               </button>
             </div>
           </form>

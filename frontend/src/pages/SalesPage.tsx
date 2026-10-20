@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { AlertTriangle, CalendarRange, Database, Download, LoaderCircle, RefreshCw, Search } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, ChevronDown, Database, Download, LoaderCircle, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import type { Buyer } from "../services/buyerService";
@@ -21,6 +21,7 @@ import SaleRegistrationModal, {
 import SaleDetailsModal from "../components/SaleDetailsModal";
 import SalesTable from "../components/SalesTable";
 import SuccessToast from "../components/SuccessToast";
+import DateRangePickerButton from "../components/common/DateRangePickerButton";
 import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import {
   exportSalesHistory,
@@ -28,11 +29,9 @@ import {
 } from "../services/salesCsvService";
 import { getCsvCategoryLabels } from "../services/csvCategoryLabels";
 import {
-  getReportDateRangePreset,
   isValidReportDateRange,
   toTimestampRange,
   type ReportDateRange,
-  type ReportDateRangePreset,
   type TimestampRange,
 } from "../services/reportDateRange";
 import {
@@ -124,6 +123,7 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [sortOption, setSortOption] = useState<SalesSortOption>("newest");
   const [minimumAmount, setMinimumAmount] = useState("");
   const [maximumAmount, setMaximumAmount] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const applyLoadResults = useCallback((
     salesResult: SalesListResult,
@@ -336,7 +336,14 @@ function UserSalesPage({ userId }: { userId: string }) {
   const metricsUnavailable = isLoading || loadError !== null || !amountRangeResult.valid;
   const registrationUnavailable = isLoading || loadError !== null || buyers.length === 0 || wasteRecords.length === 0;
   const exportUnavailable = metricsUnavailable || visibleSales.length === 0 || exportKind !== null;
-  const isFiltered = activeDateRange !== null || buyerFilter !== "" || categoryFilter !== "all" || saleSearch.trim() !== "" || minimumAmount.trim() !== "" || maximumAmount.trim() !== "";
+  const isAmountFiltered = minimumAmount.trim() !== "" || maximumAmount.trim() !== "";
+  const activeAdvancedCount =
+    (buyerFilter !== "" ? 1 : 0) +
+    (categoryFilter !== "all" ? 1 : 0) +
+    (activeDateRange !== null ? 1 : 0) +
+    (isAmountFiltered ? 1 : 0);
+  const hasActiveFilters = saleSearch.trim() !== "" || activeAdvancedCount > 0;
+  const isFiltered = hasActiveFilters;
   const emptyState = getSalesEmptyState(
     buyerFilter !== "",
     activeDateRange !== null,
@@ -347,27 +354,28 @@ function UserSalesPage({ userId }: { userId: string }) {
   const formatInputDate = (value: string): string =>
     dateFormatter.format(new Date(`${value}T00:00:00`));
 
-  const applyDateRange = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    const nextRange = { startDate, endDate };
+  const handleApplyDateRange = (nextStart: string, nextEnd: string): boolean => {
+    const nextRange = { startDate: nextStart, endDate: nextEnd };
 
     if (!isValidReportDateRange(nextRange)) {
       setDateRangeError("sales.invalidDateRange");
-      return;
+      return false;
     }
 
     setDateRangeError(null);
+    setStartDate(nextStart);
+    setEndDate(nextEnd);
     setActiveDateRange(nextRange);
     void loadSalesData(toTimestampRange(nextRange), buyerFilter || undefined);
+    return true;
   };
 
-  const applyDateRangePreset = (preset: ReportDateRangePreset): void => {
-    const nextRange = getReportDateRangePreset(preset);
-    setStartDate(nextRange.startDate);
-    setEndDate(nextRange.endDate);
+  const handleClearDateRange = (): void => {
+    setStartDate("");
+    setEndDate("");
     setDateRangeError(null);
-    setActiveDateRange(nextRange);
-    void loadSalesData(toTimestampRange(nextRange), buyerFilter || undefined);
+    setActiveDateRange(null);
+    void loadSalesData(undefined, buyerFilter || undefined);
   };
 
   const clearFilters = (): void => {
@@ -539,104 +547,209 @@ function UserSalesPage({ userId }: { userId: string }) {
           </div>
         </div>
 
-        <form onSubmit={applyDateRange} className="mt-5 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
-          <div className="flex items-start gap-3">
-            <CalendarRange className="mt-0.5 text-ecoplaza-primary" size={20} aria-hidden="true" />
-            <div>
-              <h3 className="text-sm font-semibold text-ecoplaza-text">{t("sales.dateRange")}</h3>
-              <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.dateRangeDescription")}</p>
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2" aria-label={t("sales.quickRanges")}>
-            {(["last7Days", "last30Days", "currentMonth"] as const).map((preset) => (
+        <div className="mt-5 flex flex-col gap-0 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface shadow-sm">
+          {/* ZONA PRIMARIA (Siempre visible) */}
+          <div className="flex flex-col md:flex-row gap-3 items-center p-4">
+            {/* Buscador por ID/Comprador (flex-1) */}
+            <label className="relative min-w-[250px] flex-1">
+              <span className="sr-only">{t("sales.saleSearchLabel")}</span>
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted"
+                size={17}
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={saleSearch}
+                disabled={isLoading || loadError !== null}
+                onChange={(event) => setSaleSearch(event.target.value)}
+                placeholder={t("sales.saleSearchPlaceholder")}
+                aria-label={t("sales.saleSearchLabel")}
+                className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background pl-10 pr-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+              />
+              {saleSearch.trim() !== "" && (
+                <button
+                  type="button"
+                  onClick={() => setSaleSearch("")}
+                  aria-label={t("sales.clearSearch")}
+                  className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-ecoplaza-text-muted hover:bg-ecoplaza-surface hover:text-ecoplaza-text"
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              )}
+            </label>
+
+            {/* Botón Filtros avanzados */}
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((prev) => !prev)}
+              aria-expanded={showAdvanced}
+              aria-label={t("sales.advancedFilters")}
+              className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-ecoplaza-border bg-transparent px-3.5 text-sm font-medium text-ecoplaza-text transition-colors hover:bg-ecoplaza-border/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+            >
+              <SlidersHorizontal size={16} className="text-ecoplaza-text-muted" aria-hidden="true" />
+              <span>{t("sales.advancedFilters")}</span>
+              {activeAdvancedCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-ecoplaza-primary px-1 text-[11px] font-bold text-white">
+                  {activeAdvancedCount}
+                </span>
+              )}
+              <ChevronDown
+                size={16}
+                className={`text-ecoplaza-text-muted transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+
+            {/* Botón Limpiar (solo visible si hasActiveFilters es true) */}
+            {hasActiveFilters && (
               <button
-                key={preset}
                 type="button"
                 disabled={isLoading}
-                onClick={() => applyDateRangePreset(preset)}
-                className="rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={clearFilters}
+                className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-ecoplaza-border/60 bg-transparent px-3.5 text-sm font-medium text-ecoplaza-danger transition-colors hover:border-ecoplaza-danger/40 hover:bg-ecoplaza-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {t(`sales.${preset}`)}
+                <X size={15} aria-hidden="true" />
+                <span>{t("sales.clearFilters")}</span>
               </button>
-            ))}
+            )}
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5 xl:items-end">
-            <label className="text-xs font-medium text-ecoplaza-text-muted">
-              {t("sales.saleSearchLabel")}
-              <span className="relative mt-1 block">
-                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted" size={15} aria-hidden="true" />
-                <input
-                  type="search"
-                  value={saleSearch}
-                  disabled={isLoading}
-                  onChange={(event) => setSaleSearch(event.target.value)}
-                  placeholder={t("sales.saleSearchPlaceholder")}
-                  className="block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background py-2 pr-3 pl-9 text-sm text-ecoplaza-text"
-                />
-              </span>
-            </label>
-            <label className="text-xs font-medium text-ecoplaza-text-muted">
-              {t("sales.buyerFilter")}
-              <select value={buyerFilter} disabled={isLoading} onChange={(event) => applyBuyerFilter(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text">
-                <option value="">{t("sales.allBuyers")}</option>
-                {buyers.map((buyer) => <option key={buyer.id} value={buyer.id}>{buyer.name}</option>)}
-              </select>
-            </label>
-            <label className="text-xs font-medium text-ecoplaza-text-muted">
-              {t("sales.categoryFilter")}
-              <select value={categoryFilter} disabled={isLoading}
-                onChange={(event) => setCategoryFilter(event.target.value as WasteCategoryFilter)}
-                className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text">
-                <option value="all">{t("sales.allCategories")}</option>
-                <option value="organic">{t("common.organic")}</option>
-                <option value="recyclable">{t("common.recyclable")}</option>
-                <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
-              </select>
-            </label>
-            <label className="text-xs font-medium text-ecoplaza-text-muted">
-              {t("sales.sortBy")}
-              <select
-                value={sortOption}
-                disabled={isLoading}
-                onChange={(event) => setSortOption(event.target.value as SalesSortOption)}
-                className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text"
-              >
-                <option value="newest">{t("sales.sortNewest")}</option>
-                <option value="oldest">{t("sales.sortOldest")}</option>
-                <option value="valueDesc">{t("sales.sortValueDesc")}</option>
-                <option value="valueAsc">{t("sales.sortValueAsc")}</option>
-              </select>
-            </label>
-            <label className="text-xs font-medium text-ecoplaza-text-muted">
-              {t("sales.startDate")}
-              <input type="date" value={startDate} max={endDate || undefined} required disabled={isLoading} onChange={(event) => setStartDate(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
-            </label>
-            <label className="text-xs font-medium text-ecoplaza-text-muted">
-              {t("sales.endDate")}
-              <input type="date" value={endDate} min={startDate || undefined} required disabled={isLoading} onChange={(event) => setEndDate(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
-            </label>
-            <label className="text-xs font-medium text-ecoplaza-text-muted">
-              {t("sales.minimumAmount")}
-              <input type="number" min="0" step="any" value={minimumAmount} disabled={isLoading} onChange={(event) => setMinimumAmount(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
-            </label>
-            <label className="text-xs font-medium text-ecoplaza-text-muted">
-              {t("sales.maximumAmount")}
-              <input type="number" min="0" step="any" value={maximumAmount} disabled={isLoading} onChange={(event) => setMaximumAmount(event.target.value)} className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text" />
-            </label>
-            <button type="submit" disabled={isLoading} className="rounded-lg bg-ecoplaza-secondary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-              {t("sales.applyDateRange")}
-            </button>
-            <button type="button" disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")} onClick={clearFilters} className="rounded-lg border border-ecoplaza-border px-4 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50">
-              {t("sales.clearFilters")}
-            </button>
-          </div>
-          {dateRangeError !== null && <p role="alert" className="mt-3 text-sm text-ecoplaza-danger">{t(dateRangeError)}</p>}
-          {activeDateRange !== null && (
-            <p className="mt-3 text-sm font-medium text-ecoplaza-primary">
-              {t("sales.activeDateRange", { start: formatInputDate(activeDateRange.startDate), end: formatInputDate(activeDateRange.endDate) })}
-            </p>
+
+          {/* ZONA AVANZADA (Divulgación progresiva) */}
+          {showAdvanced && (
+            <div className="rounded-b-2xl border-t border-ecoplaza-border bg-ecoplaza-background/50 p-4 transition-all duration-300 ease-in-out">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                {/* 1. Selector de Comprador */}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("sales.buyerFilter")}
+                  </span>
+                  <select
+                    value={buyerFilter}
+                    disabled={isLoading || loadError !== null}
+                    onChange={(event) => applyBuyerFilter(event.target.value)}
+                    aria-label={t("sales.buyerFilter")}
+                    className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  >
+                    <option value="">{t("sales.allBuyers")}</option>
+                    {buyers.map((buyer) => (
+                      <option key={buyer.id} value={buyer.id}>{buyer.name}</option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* 2. Selector de Categoría */}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("sales.categoryFilter")}
+                  </span>
+                  <select
+                    value={categoryFilter}
+                    disabled={isLoading || loadError !== null}
+                    onChange={(event) => setCategoryFilter(event.target.value as WasteCategoryFilter)}
+                    aria-label={t("sales.categoryFilter")}
+                    className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  >
+                    <option value="all">{t("sales.allCategories")}</option>
+                    <option value="organic">{t("common.organic")}</option>
+                    <option value="recyclable">{t("common.recyclable")}</option>
+                    <option value="nonRecyclable">{t("common.nonRecyclable")}</option>
+                  </select>
+                </label>
+
+                {/* 3. Fechas: DateRangePickerButton */}
+                <div className="relative flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("sales.dateRange")}
+                  </span>
+                  <DateRangePickerButton
+                    startDate={startDate}
+                    endDate={endDate}
+                    activeRange={activeDateRange}
+                    error={dateRangeError !== null}
+                    disabled={isLoading || loadError !== null}
+                    namespace="sales"
+                    onApply={handleApplyDateRange}
+                    onClear={handleClearDateRange}
+                  />
+                </div>
+
+                {/* 4. Rango de Valor (COP): Agrupa Valor mínimo y Valor máximo en un solo bloque compacto */}
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("sales.amountRange")}
+                  </span>
+                  <div className="flex h-10 w-full items-center gap-2 overflow-hidden rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 focus-within:border-ecoplaza-primary">
+                    <label className="flex flex-1 min-w-0 items-center gap-1.5 text-xs text-ecoplaza-text-muted">
+                      <span className="sr-only">{t("sales.minimumAmount")}</span>
+                      <span className="shrink-0" aria-hidden="true">{t("sales.minAmount")}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={minimumAmount}
+                        disabled={isLoading || loadError !== null}
+                        onChange={(event) => setMinimumAmount(event.target.value)}
+                        placeholder="0"
+                        aria-label={t("sales.minimumAmount")}
+                        className="flex-1 min-w-0 bg-transparent text-sm text-ecoplaza-text outline-none placeholder:text-ecoplaza-text-muted/60"
+                      />
+                    </label>
+                    <span className="shrink-0 text-ecoplaza-text-muted" aria-hidden="true">—</span>
+                    <label className="flex flex-1 min-w-0 items-center gap-1.5 text-xs text-ecoplaza-text-muted">
+                      <span className="sr-only">{t("sales.maximumAmount")}</span>
+                      <span className="shrink-0" aria-hidden="true">{t("sales.maxAmount")}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={maximumAmount}
+                        disabled={isLoading || loadError !== null}
+                        onChange={(event) => setMaximumAmount(event.target.value)}
+                        placeholder="∞"
+                        aria-label={t("sales.maximumAmount")}
+                        className="flex-1 min-w-0 bg-transparent text-sm text-ecoplaza-text outline-none placeholder:text-ecoplaza-text-muted/60"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 5. Selector Ordenar por */}
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
+                    {t("sales.sortBy")}
+                  </span>
+                  <select
+                    value={sortOption}
+                    disabled={isLoading || loadError !== null}
+                    onChange={(event) => setSortOption(event.target.value as SalesSortOption)}
+                    aria-label={t("sales.sortBy")}
+                    className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  >
+                    <option value="newest">{t("sales.sortNewest")}</option>
+                    <option value="oldest">{t("sales.sortOldest")}</option>
+                    <option value="valueDesc">{t("sales.sortValueDesc")}</option>
+                    <option value="valueAsc">{t("sales.sortValueAsc")}</option>
+                  </select>
+                </label>
+              </div>
+
+              {dateRangeError !== null && (
+                <p role="alert" className="mt-3 text-xs text-ecoplaza-danger">
+                  {t(dateRangeError)}
+                </p>
+              )}
+              {activeDateRange !== null && (
+                <p className="mt-2 text-xs font-medium text-ecoplaza-primary">
+                  {t("sales.activeDateRange", {
+                    start: formatInputDate(activeDateRange.startDate),
+                    end: formatInputDate(activeDateRange.endDate),
+                  })}
+                </p>
+              )}
+            </div>
           )}
-        </form>
+        </div>
 
         {!isLoading && !loadError && (buyers.length === 0 || wasteRecords.length === 0) && (
           <div className="mt-4 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-text-muted">
