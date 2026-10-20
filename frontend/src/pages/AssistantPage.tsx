@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Bot, Paperclip, Send } from "lucide-react";
+import { Bot, Loader2, Paperclip, Send } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import PageHeader from "../components/PageHeader";
 
@@ -26,7 +26,9 @@ function AssistantPage() {
     },
   ]);
   const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,14 +36,42 @@ function AssistantPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isTyping]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerAssistantResponse = () => {
+    setIsTyping(true);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: String(prev.length + 1),
+          role: "assistant",
+          content:
+            "Analizando los datos de la plataforma... Esta es una respuesta simulada mientras conectamos el modelo de IA.",
+        },
+      ]);
+      setIsTyping(false);
+      typingTimeoutRef.current = null;
+    }, 1600);
+  };
 
   const handleSendMessage = (e?: FormEvent) => {
     if (e) {
       e.preventDefault();
     }
     const trimmed = input.trim();
-    if (!trimmed) {
+    if (!trimmed || isTyping) {
       return;
     }
 
@@ -54,9 +84,13 @@ function AssistantPage() {
       },
     ]);
     setInput("");
+    triggerAssistantResponse();
   };
 
   const handleSelectPrompt = (promptText: string) => {
+    if (isTyping) {
+      return;
+    }
     setMessages((prev) => [
       ...prev,
       {
@@ -65,6 +99,7 @@ function AssistantPage() {
         content: promptText,
       },
     ]);
+    triggerAssistantResponse();
   };
 
   return (
@@ -136,6 +171,24 @@ function AssistantPage() {
             </div>
           )}
 
+          {isTyping && (
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-ecoplaza-border bg-ecoplaza-background text-ecoplaza-primary">
+                <Bot size={18} aria-hidden="true" />
+              </div>
+              <div className="flex items-center gap-2.5 rounded-2xl rounded-tl-sm border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-text shadow-xs">
+                <Loader2
+                  size={16}
+                  className="animate-spin text-ecoplaza-primary"
+                  aria-hidden="true"
+                />
+                <span className="text-sm text-ecoplaza-text-muted">
+                  EcoPlaza IA está escribiendo...
+                </span>
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -166,7 +219,7 @@ function AssistantPage() {
 
             <button
               type="submit"
-              disabled={!input.trim()}
+              disabled={!input.trim() || isTyping}
               aria-label="Enviar mensaje"
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-ecoplaza-primary text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
