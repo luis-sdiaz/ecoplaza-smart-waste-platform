@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "EcoPlaza",
-  "version": "0.1.0",
-  "identifier": "com.luisdiaz.ecoplaza",
+  "version": "1.0.0",
+  "identifier": "com.ecoplaza.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,11 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "EcoPlaza",
-        "width": 1440,
-        "height": 900,
-        "minWidth": 1200,
-        "minHeight": 720,
+        "title": "EcoPlaza Smart Waste Platform",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 768,
+        "center": true,
         "resizable": true,
         "fullscreen": false
       }
