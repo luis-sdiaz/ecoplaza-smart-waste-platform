@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Bot, Loader2, Paperclip, Send } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import PageHeader from "../components/PageHeader";
+import { generateAssistantResponse } from "../services/assistantService";
 
 interface Message {
   id: string;
@@ -28,7 +29,7 @@ function AssistantPage() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,31 +40,41 @@ function AssistantPage() {
   }, [messages, isTyping]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+      isMountedRef.current = false;
     };
   }, []);
 
-  const triggerAssistantResponse = () => {
+  const triggerAssistantResponse = async (promptText: string) => {
     setIsTyping(true);
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    typingTimeoutRef.current = setTimeout(() => {
+    try {
+      const response = await generateAssistantResponse(promptText);
+      if (!isMountedRef.current) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: String(prev.length + 1),
+          role: "assistant",
+          content: response,
+        },
+      ]);
+    } catch {
+      if (!isMountedRef.current) return;
       setMessages((prev) => [
         ...prev,
         {
           id: String(prev.length + 1),
           role: "assistant",
           content:
-            "Analizando los datos de la plataforma... Esta es una respuesta simulada mientras conectamos el modelo de IA.",
+            "Lo sentimos, ocurrió un error al consultar las métricas de la plataforma. Por favor, verifica tu conexión e inténtalo de nuevo.",
         },
       ]);
-      setIsTyping(false);
-      typingTimeoutRef.current = null;
-    }, 1600);
+    } finally {
+      if (isMountedRef.current) {
+        setIsTyping(false);
+      }
+    }
   };
 
   const handleSendMessage = (e?: FormEvent) => {
@@ -84,7 +95,7 @@ function AssistantPage() {
       },
     ]);
     setInput("");
-    triggerAssistantResponse();
+    void triggerAssistantResponse(trimmed);
   };
 
   const handleSelectPrompt = (promptText: string) => {
@@ -99,7 +110,7 @@ function AssistantPage() {
         content: promptText,
       },
     ]);
-    triggerAssistantResponse();
+    void triggerAssistantResponse(promptText);
   };
 
   return (
