@@ -245,6 +245,8 @@ const en = {
     simulateError: "Could not record telemetry. Please try again.",
     simulateErrorNoContainer: "You must select a valid container to simulate telemetry.",
     containerCode: "Code",
+    simulateCardAction: "Simulate",
+    simulateCardAriaLabel: "Simulate reading for container {{name}}",
   },
   containers: {
     title: "My containers",

@@ -7,6 +7,7 @@ import {
   History,
   Radio,
   Thermometer,
+  Zap,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +24,7 @@ export interface SensorDeviceCardProps {
   hasTelemetry?: boolean;
   onViewHistory?: () => void;
   onManageContainer?: (containerId: string) => void;
+  onSimulateTelemetry?: (containerId: string) => void;
 }
 
 function SensorDeviceCard({
@@ -38,6 +40,7 @@ function SensorDeviceCard({
   hasTelemetry,
   onViewHistory,
   onManageContainer,
+  onSimulateTelemetry,
 }: SensorDeviceCardProps) {
   const { t } = useTranslation();
 
@@ -256,17 +259,21 @@ function SensorDeviceCard({
           </div>
         </div>
 
-        {(onViewHistory || onManageContainer) && (
+        {(onViewHistory || onSimulateTelemetry || onManageContainer) && (
           <div
             className={`mt-3 grid gap-2 border-t border-ecoplaza-border/60 pt-3 ${
-              onViewHistory && onManageContainer ? "grid-cols-2" : "grid-cols-1"
+              [onViewHistory, onSimulateTelemetry, onManageContainer].filter(Boolean).length === 3
+                ? "grid-cols-3"
+                : [onViewHistory, onSimulateTelemetry, onManageContainer].filter(Boolean).length === 2
+                ? "grid-cols-2"
+                : "grid-cols-1"
             }`}
           >
             {onViewHistory && (
               <button
                 type="button"
                 onClick={onViewHistory}
-                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-2.5 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-2 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
                 aria-label={t("sensors.viewHistoryFor", { name })}
               >
                 <History
@@ -274,7 +281,23 @@ function SensorDeviceCard({
                   className="shrink-0 text-ecoplaza-primary"
                   aria-hidden="true"
                 />
-                <span>{t("sensors.viewHistory")}</span>
+                <span className="truncate">{t("sensors.viewHistory")}</span>
+              </button>
+            )}
+
+            {onSimulateTelemetry && (
+              <button
+                type="button"
+                onClick={() => onSimulateTelemetry(sensorId)}
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-2 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                aria-label={t("sensors.simulateCardAriaLabel", { name })}
+              >
+                <Zap
+                  size={14}
+                  className="shrink-0 text-ecoplaza-primary"
+                  aria-hidden="true"
+                />
+                <span className="truncate">{t("sensors.simulateCardAction")}</span>
               </button>
             )}
 
@@ -282,7 +305,7 @@ function SensorDeviceCard({
               <button
                 type="button"
                 onClick={() => onManageContainer(sensorId)}
-                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-2.5 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-2 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
                 aria-label={t("sensors.manageContainerAriaLabel", { name })}
               >
                 <ExternalLink
@@ -290,7 +313,7 @@ function SensorDeviceCard({
                   className="shrink-0 text-ecoplaza-primary"
                   aria-hidden="true"
                 />
-                <span>{t("sensors.manageContainer")}</span>
+                <span className="truncate">{t("sensors.manageContainer")}</span>
               </button>
             )}
           </div>

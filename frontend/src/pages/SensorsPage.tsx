@@ -75,6 +75,7 @@ function SensorsPageView({
   const [historyTarget, setHistoryTarget] = useState<{ id: string; name: string } | null>(null);
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(initialAutoRefresh);
   const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false);
+  const [simulateTarget, setSimulateTarget] = useState<{ id: string; name: string } | null>(null);
   const [simulationNotice, setSimulationNotice] = useState(false);
 
   const handleTelemetryRecorded = useCallback((record: TelemetryRecord) => {
@@ -345,7 +346,10 @@ function SensorsPageView({
               {/* Botón Simular lectura */}
               <button
                 type="button"
-                onClick={() => setIsSimulateModalOpen(true)}
+                onClick={() => {
+                  setSimulateTarget(null);
+                  setIsSimulateModalOpen(true);
+                }}
                 disabled={isLoading || containers.length === 0}
                 className="flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label={t("sensors.simulateReading")}
@@ -459,6 +463,13 @@ function SensorsPageView({
                       })
                     }
                     onManageContainer={handleManageContainer}
+                    onSimulateTelemetry={(containerId) => {
+                      setSimulateTarget({
+                        id: containerId,
+                        name: container.code,
+                      });
+                      setIsSimulateModalOpen(true);
+                    }}
                   />
                 );
               })}
@@ -481,7 +492,12 @@ function SensorsPageView({
       {isSimulateModalOpen && (
         <SimulateTelemetryModal
           isOpen={isSimulateModalOpen}
-          onClose={() => setIsSimulateModalOpen(false)}
+          onClose={() => {
+            setIsSimulateModalOpen(false);
+            setSimulateTarget(null);
+          }}
+          containerId={simulateTarget?.id}
+          containerName={simulateTarget?.name}
           containers={containers}
           onTelemetryRecorded={handleTelemetryRecorded}
         />

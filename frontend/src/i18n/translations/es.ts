@@ -245,6 +245,8 @@ const es = {
     simulateError: "No fue posible registrar la telemetría. Inténtalo nuevamente.",
     simulateErrorNoContainer: "Debes seleccionar un contenedor válido para simular la lectura.",
     containerCode: "Código",
+    simulateCardAction: "Simular",
+    simulateCardAriaLabel: "Simular lectura para contenedor {{name}}",
   },
   containers: {
     title: "Mis contenedores",
