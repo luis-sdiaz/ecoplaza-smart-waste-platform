@@ -4,6 +4,7 @@ import {
   generateIoTExecutiveSummary,
   type ContainerTelemetrySnapshot,
 } from "./iotAnalyticsService.ts";
+export type { ContainerTelemetrySnapshot };
 import {
   selectOldestAvailableInventory,
   type AgingInventoryItem,
@@ -577,15 +578,41 @@ export async function fetchIoTTelemetrySnapshots(): Promise<ContainerTelemetrySn
   }
 }
 
+export function isIoTFleetResponse(response: string): boolean {
+  return (
+    response.startsWith("🔋") ||
+    response.startsWith("🚨") ||
+    response.startsWith("📡") ||
+    response.includes("IoT")
+  );
+}
+
+export async function generateAssistantResponse(
+  prompt: string,
+  lang: "es" | "en",
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+): Promise<string>;
 export async function generateAssistantResponse(
   prompt: string,
   contextOverride?: AssistantAnalyticsContext,
   telemetryOverride?: ContainerTelemetrySnapshot[],
+  lang?: "es" | "en",
+): Promise<string>;
+export async function generateAssistantResponse(
+  prompt: string,
+  contextOrLang?: AssistantAnalyticsContext | "es" | "en",
+  telemetryOverride?: ContainerTelemetrySnapshot[],
   lang: "es" | "en" = "es",
 ): Promise<string> {
+  const effectiveLang: "es" | "en" =
+    typeof contextOrLang === "string" ? contextOrLang : lang;
+  const effectiveContext =
+    typeof contextOrLang === "string" ? undefined : contextOrLang;
+  const effectiveTelemetry = telemetryOverride;
+
   let snapshots: ContainerTelemetrySnapshot[] | null = null;
-  if (telemetryOverride !== undefined) {
-    snapshots = telemetryOverride;
+  if (effectiveTelemetry !== undefined) {
+    snapshots = effectiveTelemetry;
   } else if (customTelemetryProvider) {
     snapshots = await customTelemetryProvider();
   }
@@ -604,13 +631,13 @@ export async function generateAssistantResponse(
     if (snapshots === null) {
       snapshots = await fetchIoTTelemetrySnapshots();
     }
-    const iotResponse = formatIoTFleetResponse(snapshots, prompt, lang);
+    const iotResponse = formatIoTFleetResponse(snapshots, prompt, effectiveLang);
     if (iotResponse !== null) {
       return iotResponse;
     }
   }
 
-  const context = await getAssistantContext(contextOverride);
+  const context = await getAssistantContext(effectiveContext);
   const intent = classifyAssistantPrompt(prompt);
 
   switch (intent) {
