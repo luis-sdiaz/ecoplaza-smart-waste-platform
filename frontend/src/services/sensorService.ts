@@ -144,3 +144,39 @@ export async function getLatestTelemetry(
   return mapTelemetryRowToRecord(row);
 }
 
+export async function getTelemetryHistory(
+  containerId: string,
+  limitCount = 50,
+): Promise<TelemetryRecord[]> {
+  const normalizedId = containerId?.trim();
+  if (!normalizedId) {
+    return [];
+  }
+
+  const client = await getSupabaseClient();
+  const query = client
+    .from("sensor_telemetry")
+    .select(
+      "id, container_id, fill_level_percent, battery_level_percent, temperature_celsius, recorded_at",
+    )
+    .eq("container_id", normalizedId)
+    .order("recorded_at", { ascending: false });
+
+  const result = query.limit ? await query.limit(limitCount) : await query;
+
+  if (result.error) {
+    throw new Error(
+      result.error.message ||
+        `Failed to fetch telemetry history for container ${containerId}`,
+    );
+  }
+
+  const data = result.data;
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.map(mapTelemetryRowToRecord);
+}
+
+

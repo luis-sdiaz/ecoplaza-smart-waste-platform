@@ -3,6 +3,7 @@ import { AlertTriangle, LoaderCircle, Radio, RefreshCw } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import SensorDeviceCard from "../components/SensorDeviceCard";
+import SensorTelemetryHistoryModal from "../components/SensorTelemetryHistoryModal";
 import ContainerManagementPanel from "../components/ContainerManagementPanel";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
@@ -43,6 +44,7 @@ function SensorsPage({ initialContainers }: SensorsPageProps = {}) {
   const [telemetryByContainer, setTelemetryByContainer] = useState<ContainerTelemetryMap>(new Map());
   const [isLoading, setIsLoading] = useState(initialContainers === undefined && Boolean(user));
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fetchTelemetryData = useCallback(
     async (revision: number) => {
@@ -329,6 +331,12 @@ function SensorsPage({ initialContainers }: SensorsPageProps = {}) {
                         ? formatTelemetryTimestamp(telemetry.recordedAt, locale)
                         : t("sensors.noTelemetry")
                     }
+                    onViewHistory={() =>
+                      setHistoryTarget({
+                        id: container.id,
+                        name: container.code,
+                      })
+                    }
                   />
                 );
               })}
@@ -338,6 +346,15 @@ function SensorsPage({ initialContainers }: SensorsPageProps = {}) {
       )}
 
       {user && <ContainerManagementPanel key={user.id} />}
+
+      {historyTarget && (
+        <SensorTelemetryHistoryModal
+          containerId={historyTarget.id}
+          containerName={historyTarget.name}
+          isOpen={true}
+          onClose={() => setHistoryTarget(null)}
+        />
+      )}
     </section>
   );
 }

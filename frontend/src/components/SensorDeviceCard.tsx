@@ -1,4 +1,12 @@
-import { AlertTriangle, Battery, BatteryMedium, BatteryWarning, Radio, Thermometer } from "lucide-react";
+import {
+  AlertTriangle,
+  Battery,
+  BatteryMedium,
+  BatteryWarning,
+  History,
+  Radio,
+  Thermometer,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export interface SensorDeviceCardProps {
@@ -12,6 +20,7 @@ export interface SensorDeviceCardProps {
   batteryLevel?: number | null;
   temperatureCelsius?: number | null;
   hasTelemetry?: boolean;
+  onViewHistory?: () => void;
 }
 
 function SensorDeviceCard({
@@ -25,6 +34,7 @@ function SensorDeviceCard({
   batteryLevel,
   temperatureCelsius,
   hasTelemetry,
+  onViewHistory,
 }: SensorDeviceCardProps) {
   const { t } = useTranslation();
 
@@ -58,15 +68,39 @@ function SensorDeviceCard({
 
   const getBatteryIcon = (level: number | null | undefined) => {
     if (level === null || level === undefined || Number.isNaN(level)) {
-      return <Battery className="shrink-0 text-ecoplaza-text-muted" size={16} aria-hidden="true" />;
+      return (
+        <Battery
+          className="shrink-0 text-ecoplaza-text-muted"
+          size={16}
+          aria-hidden="true"
+        />
+      );
     }
     if (level <= 20) {
-      return <BatteryWarning className="shrink-0 text-ecoplaza-danger" size={16} aria-hidden="true" />;
+      return (
+        <BatteryWarning
+          className="shrink-0 text-ecoplaza-danger"
+          size={16}
+          aria-hidden="true"
+        />
+      );
     }
     if (level <= 50) {
-      return <BatteryMedium className="shrink-0 text-ecoplaza-warning" size={16} aria-hidden="true" />;
+      return (
+        <BatteryMedium
+          className="shrink-0 text-ecoplaza-warning"
+          size={16}
+          aria-hidden="true"
+        />
+      );
     }
-    return <Battery className="shrink-0 text-ecoplaza-primary" size={16} aria-hidden="true" />;
+    return (
+      <Battery
+        className="shrink-0 text-ecoplaza-primary"
+        size={16}
+        aria-hidden="true"
+      />
+    );
   };
 
   return (
@@ -74,7 +108,10 @@ function SensorDeviceCard({
       <div>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold text-ecoplaza-text" title={name}>
+            <h3
+              className="truncate text-base font-semibold text-ecoplaza-text"
+              title={name}
+            >
               {name}
             </h3>
             <p className="mt-1 break-all font-mono text-xs text-ecoplaza-text-muted">
@@ -82,7 +119,9 @@ function SensorDeviceCard({
             </p>
           </div>
 
-          <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${statusBadgeClass}`}>
+          <span
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${statusBadgeClass}`}
+          >
             {displayStatus}
           </span>
         </div>
@@ -93,7 +132,9 @@ function SensorDeviceCard({
           )}
 
           <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="text-ecoplaza-text-muted">{t("sensors.fillLevel")}</span>
+            <span className="text-ecoplaza-text-muted">
+              {t("sensors.fillLevel")}
+            </span>
             <span
               className={`font-semibold ${
                 isCritical ? "text-ecoplaza-danger" : "text-ecoplaza-text"
@@ -127,7 +168,11 @@ function SensorDeviceCard({
 
           {!isDataAvailable && (
             <div className="mt-3 flex items-center gap-2 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 px-3 py-2 text-xs text-ecoplaza-text-muted">
-              <Radio className="shrink-0 text-ecoplaza-text-muted" size={14} aria-hidden="true" />
+              <Radio
+                className="shrink-0 text-ecoplaza-text-muted"
+                size={14}
+                aria-hidden="true"
+              />
               <span>{t("sensors.noTelemetry")}</span>
             </div>
           )}
@@ -136,7 +181,9 @@ function SensorDeviceCard({
             <div className="flex items-center gap-2">
               {getBatteryIcon(batteryLevel)}
               <div>
-                <p className="text-[11px] text-ecoplaza-text-muted">{t("sensors.battery")}</p>
+                <p className="text-[11px] text-ecoplaza-text-muted">
+                  {t("sensors.battery")}
+                </p>
                 <p className="text-xs font-semibold text-ecoplaza-text">
                   {isDataAvailable &&
                   batteryLevel !== null &&
@@ -149,9 +196,15 @@ function SensorDeviceCard({
             </div>
 
             <div className="flex items-center gap-2">
-              <Thermometer size={16} className="shrink-0 text-ecoplaza-text-muted" aria-hidden="true" />
+              <Thermometer
+                size={16}
+                className="shrink-0 text-ecoplaza-text-muted"
+                aria-hidden="true"
+              />
               <div>
-                <p className="text-[11px] text-ecoplaza-text-muted">{t("sensors.temperature")}</p>
+                <p className="text-[11px] text-ecoplaza-text-muted">
+                  {t("sensors.temperature")}
+                </p>
                 <p className="text-xs font-semibold text-ecoplaza-text">
                   {isDataAvailable &&
                   temperatureCelsius !== null &&
@@ -166,31 +219,57 @@ function SensorDeviceCard({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-ecoplaza-border/60 pt-3 text-xs">
-        {weight !== undefined && weight !== null ? (
-          <div>
-            <p className="text-xs text-ecoplaza-text-muted">{t("sensors.registeredWeight")}</p>
-            <p className="mt-0.5 text-sm font-semibold text-ecoplaza-text">
-              {weight} kg
+      <div>
+        <div className="mt-4 flex items-center justify-between border-t border-ecoplaza-border/60 pt-3 text-xs">
+          {weight !== undefined && weight !== null ? (
+            <div>
+              <p className="text-xs text-ecoplaza-text-muted">
+                {t("sensors.registeredWeight")}
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-ecoplaza-text">
+                {weight} kg
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs text-ecoplaza-text-muted">
+                {t("sensors.lastReading")}
+              </p>
+            </div>
+          )}
+
+          <div className="text-right">
+            {weight !== undefined && weight !== null && (
+              <p className="text-xs text-ecoplaza-text-muted">
+                {t("sensors.lastReading")}
+              </p>
+            )}
+            <p
+              className="mt-0.5 max-w-[180px] truncate text-xs font-medium text-ecoplaza-text"
+              title={lastUpdate || ""}
+            >
+              {lastUpdate || (isDataAvailable ? "—" : t("sensors.noTelemetry"))}
             </p>
           </div>
-        ) : (
-          <div>
-            <p className="text-xs text-ecoplaza-text-muted">{t("sensors.lastReading")}</p>
+        </div>
+
+        {onViewHistory && (
+          <div className="mt-3 border-t border-ecoplaza-border/60 pt-3">
+            <button
+              type="button"
+              onClick={onViewHistory}
+              className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-3 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+              aria-label={t("sensors.viewHistoryFor", { name })}
+            >
+              <History
+                size={14}
+                className="shrink-0 text-ecoplaza-primary"
+                aria-hidden="true"
+              />
+              <span>{t("sensors.viewHistory")}</span>
+            </button>
           </div>
         )}
-
-        <div className="text-right">
-          {weight !== undefined && weight !== null && (
-            <p className="text-xs text-ecoplaza-text-muted">{t("sensors.lastReading")}</p>
-          )}
-          <p
-            className="mt-0.5 max-w-[180px] truncate text-xs font-medium text-ecoplaza-text"
-            title={lastUpdate || ""}
-          >
-            {lastUpdate || (isDataAvailable ? "—" : t("sensors.noTelemetry"))}
-          </p>
-        </div>
       </div>
     </article>
   );
