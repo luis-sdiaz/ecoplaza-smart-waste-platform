@@ -1,6 +1,7 @@
+import { useTranslation } from "react-i18next";
 import PageHeader from "../components/PageHeader";
 import SettingsPanel from "../components/SettingsPanel";
-import { useTranslation } from "react-i18next";
+import SystemInfoCard from "../components/SystemInfoCard";
 
 function SettingsPage() {
   const { t } = useTranslation();
@@ -12,8 +13,9 @@ function SettingsPage() {
         description={t("settings.description")}
       />
 
-      <div className="mt-8">
+      <div className="mt-8 space-y-8">
         <SettingsPanel />
+        <SystemInfoCard />
       </div>
     </section>
   );
