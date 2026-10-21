@@ -3,6 +3,7 @@ import {
   Battery,
   BatteryMedium,
   BatteryWarning,
+  ExternalLink,
   History,
   Radio,
   Thermometer,
@@ -21,6 +22,7 @@ export interface SensorDeviceCardProps {
   temperatureCelsius?: number | null;
   hasTelemetry?: boolean;
   onViewHistory?: () => void;
+  onManageContainer?: (containerId: string) => void;
 }
 
 function SensorDeviceCard({
@@ -35,6 +37,7 @@ function SensorDeviceCard({
   temperatureCelsius,
   hasTelemetry,
   onViewHistory,
+  onManageContainer,
 }: SensorDeviceCardProps) {
   const { t } = useTranslation();
 
@@ -253,21 +256,43 @@ function SensorDeviceCard({
           </div>
         </div>
 
-        {onViewHistory && (
-          <div className="mt-3 border-t border-ecoplaza-border/60 pt-3">
-            <button
-              type="button"
-              onClick={onViewHistory}
-              className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-3 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
-              aria-label={t("sensors.viewHistoryFor", { name })}
-            >
-              <History
-                size={14}
-                className="shrink-0 text-ecoplaza-primary"
-                aria-hidden="true"
-              />
-              <span>{t("sensors.viewHistory")}</span>
-            </button>
+        {(onViewHistory || onManageContainer) && (
+          <div
+            className={`mt-3 grid gap-2 border-t border-ecoplaza-border/60 pt-3 ${
+              onViewHistory && onManageContainer ? "grid-cols-2" : "grid-cols-1"
+            }`}
+          >
+            {onViewHistory && (
+              <button
+                type="button"
+                onClick={onViewHistory}
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-2.5 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                aria-label={t("sensors.viewHistoryFor", { name })}
+              >
+                <History
+                  size={14}
+                  className="shrink-0 text-ecoplaza-primary"
+                  aria-hidden="true"
+                />
+                <span>{t("sensors.viewHistory")}</span>
+              </button>
+            )}
+
+            {onManageContainer && (
+              <button
+                type="button"
+                onClick={() => onManageContainer(sensorId)}
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-ecoplaza-border bg-ecoplaza-background/50 px-2.5 py-2 text-xs font-semibold text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:bg-ecoplaza-background hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                aria-label={t("sensors.manageContainerAriaLabel", { name })}
+              >
+                <ExternalLink
+                  size={14}
+                  className="shrink-0 text-ecoplaza-primary"
+                  aria-hidden="true"
+                />
+                <span>{t("sensors.manageContainer")}</span>
+              </button>
+            )}
           </div>
         )}
       </div>

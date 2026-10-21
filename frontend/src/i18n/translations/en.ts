@@ -226,6 +226,8 @@ const en = {
     live: "Live",
     paused: "Paused",
     refreshEvery10s: "Refresh every 10s",
+    manageContainer: "Manage",
+    manageContainerAriaLabel: "Manage container {{name}}",
   },
   containers: {
     title: "My containers",

@@ -6,6 +6,7 @@ import SensorDeviceCard from "../components/SensorDeviceCard";
 import SensorTelemetryHistoryModal from "../components/SensorTelemetryHistoryModal";
 import ContainerManagementPanel from "../components/ContainerManagementPanel";
 import { useTranslation } from "react-i18next";
+import { useInRouterContext, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import { listContainers, type Container } from "../services/containerService";
@@ -18,6 +19,7 @@ const AUTO_REFRESH_INTERVAL_MS = 10000;
 type SensorsPageProps = {
   initialContainers?: Container[];
   initialAutoRefresh?: boolean;
+  onNavigateToContainers?: (containerId?: string) => void;
 };
 
 function formatTelemetryTimestamp(
@@ -37,11 +39,29 @@ function formatTelemetryTimestamp(
   }
 }
 
-function SensorsPage({
+type SensorsPageViewProps = SensorsPageProps & {
+  navigate?: (to: string) => void;
+};
+
+function SensorsPageView({
   initialContainers,
   initialAutoRefresh = false,
-}: SensorsPageProps = {}) {
+  onNavigateToContainers,
+  navigate,
+}: SensorsPageViewProps) {
   const { t, i18n } = useTranslation();
+
+  const handleManageContainer = useCallback(
+    (containerId: string) => {
+      if (onNavigateToContainers) {
+        onNavigateToContainers(containerId);
+      } else if (navigate) {
+        navigate("/containers");
+      }
+    },
+    [onNavigateToContainers, navigate],
+  );
+
   const { user } = useAuth();
   const { showDemoData } = useDemoVisibility();
 
@@ -410,6 +430,7 @@ function SensorsPage({
                         name: container.code,
                       })
                     }
+                    onManageContainer={handleManageContainer}
                   />
                 );
               })}
@@ -432,4 +453,15 @@ function SensorsPage({
   );
 }
 
-export default SensorsPage;
+function SensorsPageRouted(props: SensorsPageProps) {
+  const navigate = useNavigate();
+  return <SensorsPageView {...props} navigate={navigate} />;
+}
+
+export default function SensorsPage(props: SensorsPageProps = {}) {
+  const inRouter = useInRouterContext();
+  if (inRouter) {
+    return <SensorsPageRouted {...props} />;
+  }
+  return <SensorsPageView {...props} />;
+}

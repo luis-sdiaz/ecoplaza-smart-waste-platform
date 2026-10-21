@@ -226,6 +226,8 @@ const es = {
     live: "En vivo",
     paused: "Pausado",
     refreshEvery10s: "Actualizar cada 10s",
+    manageContainer: "Gestionar",
+    manageContainerAriaLabel: "Gestionar contenedor {{name}}",
   },
   containers: {
     title: "Mis contenedores",
