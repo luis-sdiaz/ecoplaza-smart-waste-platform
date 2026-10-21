@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Bot, Loader2, Paperclip, Send } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import PageHeader from "../components/PageHeader";
+import IoTFleetDiagnosticCard from "../components/IoTFleetDiagnosticCard";
 import { generateAssistantResponse } from "../services/assistantService";
 
 interface Message {
@@ -121,6 +122,10 @@ function AssistantPage() {
           title={t("assistant.title")}
           description={t("assistant.description")}
         />
+      </div>
+
+      <div className="mt-4 shrink-0">
+        <IoTFleetDiagnosticCard />
       </div>
 
       <div className="mt-6 mb-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface shadow-xs">

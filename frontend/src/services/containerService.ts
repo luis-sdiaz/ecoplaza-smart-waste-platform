@@ -223,3 +223,6 @@ export async function createContainer(
     return failure(error);
   }
 }
+
+export const getContainers = listContainers;
+
