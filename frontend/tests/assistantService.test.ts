@@ -7,10 +7,13 @@ import {
   formatAssistantInventoryResponse,
   formatAssistantProjectionResponse,
   formatAssistantSalesResponse,
+  formatIoTFleetResponse,
   generateAssistantResponse,
   setAssistantDataProvider,
+  setAssistantTelemetryProvider,
   type AssistantAnalyticsContext,
 } from "../src/services/assistantService.ts";
+import type { ContainerTelemetrySnapshot } from "../src/services/iotAnalyticsService.ts";
 import type { Container } from "../src/services/containerService.ts";
 import type { SaleHistoryItem } from "../src/services/salesService.ts";
 import type { RemoteWasteRecord } from "../src/services/wasteService.ts";
@@ -326,4 +329,168 @@ test("supports custom data provider for seamless integration and mocking", async
     setAssistantDataProvider(null);
   }
 });
+
+const mockIoTTelemetrySnapshots: ContainerTelemetrySnapshot[] = [
+  {
+    containerId: "ctr-uuid-1",
+    containerName: "CTR-PLAZA-CENTRAL",
+    fillLevel: 95,
+    batteryLevel: 14,
+    temperature: 22,
+    updatedAt: "2026-10-21T08:00:00.000Z",
+  },
+  {
+    containerId: "ctr-uuid-2",
+    containerName: "CTR-MERCADO",
+    fillLevel: 82,
+    batteryLevel: 65,
+    temperature: 24,
+    updatedAt: "2026-10-21T08:00:00.000Z",
+  },
+  {
+    containerId: "ctr-uuid-3",
+    containerName: "CTR-PARQUE",
+    fillLevel: 40,
+    batteryLevel: 88,
+    temperature: 20,
+    updatedAt: "2026-10-21T08:00:00.000Z",
+  },
+];
+
+test("formatIoTFleetResponse: a) retorna null cuando la consulta no está relacionada con IoT o sensores", () => {
+  const resultSales = formatIoTFleetResponse(
+    mockIoTTelemetrySnapshots,
+    "¿cuáles son las ventas del mes?",
+  );
+  assert.equal(resultSales, null);
+
+  const resultInventory = formatIoTFleetResponse(
+    mockIoTTelemetrySnapshots,
+    "mostrar residuos estancados en inventario",
+  );
+  assert.equal(resultInventory, null);
+
+  const resultGeneral = formatIoTFleetResponse(
+    mockIoTTelemetrySnapshots,
+    "hola, ¿cómo estás?",
+  );
+  assert.equal(resultGeneral, null);
+});
+
+test("formatIoTFleetResponse: b) genera respuesta general de flota en español e inglés", () => {
+  const resEs = formatIoTFleetResponse(
+    mockIoTTelemetrySnapshots,
+    "¿cuál es el estado de los sensores?",
+    "es",
+  );
+  assert.ok(resEs !== null);
+  assert.match(resEs, /Diagnóstico General de Flota y Sensores IoT/);
+  assert.match(resEs, /Se monitorean 3 contenedor\(es\)/);
+  assert.match(resEs, /promedio de 72\.3%/);
+
+  const resEn = formatIoTFleetResponse(
+    mockIoTTelemetrySnapshots,
+    "what is the fleet status?",
+    "en",
+  );
+  assert.ok(resEn !== null);
+  assert.match(resEn, /General IoT Fleet and Sensors Diagnostic/);
+  assert.match(resEn, /Monitoring 3 container\(s\)/);
+  assert.match(resEn, /average fill level of 72\.3%/);
+});
+
+test("formatIoTFleetResponse: c) detalla contenedores críticos en la cola de despacho ante recolección urgente", () => {
+  const resUrgEs = formatIoTFleetResponse(
+    mockIoTTelemetrySnapshots,
+    "¿hay contenedores que requieran recolección urgente?",
+    "es",
+  );
+  assert.ok(resUrgEs !== null);
+  assert.match(resUrgEs, /Despacho y Recolección Urgente IoT/);
+  assert.match(resUrgEs, /Contenedores que requieren atención \(2\):/);
+  assert.match(resUrgEs, /CTR-PLAZA-CENTRAL: 95% de llenado \[Inmediata/);
+  assert.match(resUrgEs, /CTR-MERCADO: 82% de llenado \[Programada/);
+
+  const resUrgEn = formatIoTFleetResponse(
+    mockIoTTelemetrySnapshots,
+    "urgent collection dispatch list",
+    "en",
+  );
+  assert.ok(resUrgEn !== null);
+  assert.match(resUrgEn, /IoT Urgent Dispatch and Collection/);
+  assert.match(resUrgEn, /Containers requiring attention \(2\):/);
+  assert.match(resUrgEn, /CTR-PLAZA-CENTRAL: 95% fill level \[Immediate/);
+  assert.match(resUrgEn, /CTR-MERCADO: 82% fill level \[Scheduled/);
+});
+
+test("formatIoTFleetResponse: d) alerta sobre niveles bajos de batería (< 20%)", () => {
+  const resBat = formatIoTFleetResponse(
+    mockIoTTelemetrySnapshots,
+    "¿cuál es el estado de las baterías?",
+    "es",
+  );
+  assert.ok(resBat !== null);
+  assert.match(resBat, /Estado de Baterías de Sensores IoT/);
+  assert.match(resBat, /Sensores con batería baja \(< 20%\): 1 dispositivo\(s\)/);
+  assert.match(resBat, /CTR-PLAZA-CENTRAL: 14% de batería/);
+
+  // Caso con baterías saludables en toda la flota
+  const healthyFleet: ContainerTelemetrySnapshot[] = [
+    {
+      containerId: "ctr-h-1",
+      containerName: "CTR-A",
+      fillLevel: 50,
+      batteryLevel: 90,
+      updatedAt: "2026-10-21T08:00:00.000Z",
+    },
+  ];
+  const resHealthy = formatIoTFleetResponse(
+    healthyFleet,
+    "revisar baterias de los sensores",
+    "es",
+  );
+  assert.ok(resHealthy !== null);
+  assert.match(resHealthy, /Todos los dispositivos \(1 sensores monitoreados\) operan con niveles de batería óptimos/);
+});
+
+test("formatIoTFleetResponse: e) responde adecuadamente ante una flota sin telemetría (lista vacía)", () => {
+  const emptyFleet: ContainerTelemetrySnapshot[] = [];
+
+  const resGeneral = formatIoTFleetResponse(emptyFleet, "telemetría de la flota", "es");
+  assert.ok(resGeneral !== null);
+  assert.match(resGeneral, /No hay contenedores con telemetría activa en la flota/);
+
+  const resBat = formatIoTFleetResponse(emptyFleet, "baterías de sensores", "es");
+  assert.ok(resBat !== null);
+  assert.match(resBat, /No hay sensores con telemetría activa/);
+
+  const resUrg = formatIoTFleetResponse(emptyFleet, "despacho crítico", "es");
+  assert.ok(resUrg !== null);
+  assert.match(resUrg, /No hay contenedores con telemetría activa/);
+});
+
+test("generateAssistantResponse: responde con análisis IoT cuando se consulta sobre sensores y telemetría", async () => {
+  // Con snapshots provistos directamente
+  const responseWithOverride = await generateAssistantResponse(
+    "¿qué contenedores requieren recolección urgente?",
+    undefined,
+    mockIoTTelemetrySnapshots,
+    "es",
+  );
+  assert.match(responseWithOverride, /Despacho y Recolección Urgente IoT/);
+  assert.match(responseWithOverride, /CTR-PLAZA-CENTRAL/);
+
+  // Con customTelemetryProvider
+  setAssistantTelemetryProvider(() => Promise.resolve(mockIoTTelemetrySnapshots));
+  try {
+    const responseWithProvider = await generateAssistantResponse(
+      "¿cuál es el estado de las baterías?",
+    );
+    assert.match(responseWithProvider, /Estado de Baterías de Sensores IoT/);
+    assert.match(responseWithProvider, /14% de batería/);
+  } finally {
+    setAssistantTelemetryProvider(null);
+  }
+});
+
 

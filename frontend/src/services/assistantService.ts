@@ -1,5 +1,10 @@
 import type { Container } from "./containerService.ts";
 import {
+  calculateFleetHealth,
+  generateIoTExecutiveSummary,
+  type ContainerTelemetrySnapshot,
+} from "./iotAnalyticsService.ts";
+import {
   selectOldestAvailableInventory,
   type AgingInventoryItem,
 } from "./dashboardAgingInventory.ts";
@@ -403,10 +408,208 @@ export async function getAssistantContext(
   return await fetchPlatformAnalyticsContext();
 }
 
+type AssistantTelemetryProvider = () => Promise<ContainerTelemetrySnapshot[]>;
+let customTelemetryProvider: AssistantTelemetryProvider | null = null;
+
+export function setAssistantTelemetryProvider(
+  provider: AssistantTelemetryProvider | null,
+): void {
+  customTelemetryProvider = provider;
+}
+
+export function formatIoTFleetResponse(
+  snapshots: ContainerTelemetrySnapshot[],
+  query: string,
+  lang: "es" | "en" = "es",
+): string | null {
+  const normalized = query
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const isBattery =
+    /\b(bateria|baterias|battery|batteries)\b/.test(normalized);
+  const isUrgent =
+    /\b(urgente|urgentes|urgencia|urgencias|critico|criticos|critica|criticas|despacho|despachos|urgent|critical|dispatch)\b/.test(
+      normalized,
+    );
+  const isGeneralIoT =
+    /\b(sensor|sensores|telemetria|telemetry|flota|fleet)\b/.test(normalized);
+
+  if (!isBattery && !isUrgent && !isGeneralIoT) {
+    return null;
+  }
+
+  const health = calculateFleetHealth(snapshots);
+  const isEn = lang === "en";
+
+  if (isBattery) {
+    if (snapshots.length === 0) {
+      return isEn
+        ? "🔋 IoT Battery Status:\n\nNo active sensors with telemetry in the fleet to evaluate batteries."
+        : "🔋 Estado de Baterías IoT:\n\nNo hay sensores con telemetría activa en la flota para evaluar sus baterías.";
+    }
+
+    const lowBatterySensors = snapshots.filter(
+      (s) => typeof s.batteryLevel === "number" && s.batteryLevel < 20,
+    );
+
+    if (lowBatterySensors.length > 0) {
+      if (isEn) {
+        return [
+          "🔋 IoT Sensor Battery Status:",
+          "",
+          `• Sensors with low battery (< 20%): ${lowBatterySensors.length} device(s) require recharge or replacement:`,
+          ...lowBatterySensors.map(
+            (s) => `  - ${s.containerName}: ${s.batteryLevel}% battery`,
+          ),
+          "",
+          "Recommendation: Prioritize sensors with critical battery levels to ensure telemetry continuity.",
+        ].join("\n");
+      }
+
+      return [
+        "🔋 Estado de Baterías de Sensores IoT:",
+        "",
+        `• Sensores con batería baja (< 20%): ${lowBatterySensors.length} dispositivo(s) requieren recarga o reemplazo:`,
+        ...lowBatterySensors.map(
+          (s) => `  - ${s.containerName}: ${s.batteryLevel}% de batería`,
+        ),
+        "",
+        "Recomendación: Atender prioritariamente los sensores con batería crítica para asegurar la continuidad de la telemetría.",
+      ].join("\n");
+    }
+
+    return isEn
+      ? `🔋 IoT Sensor Battery Status:\n\n• All devices (${health.totalMonitored} monitored sensors) are operating with optimal battery levels (≥ 20%). No battery warnings reported.`
+      : `🔋 Estado de Baterías de Sensores IoT:\n\n• Todos los dispositivos (${health.totalMonitored} sensores monitoreados) operan con niveles de batería óptimos (≥ 20%). No hay alertas de batería en la red.`;
+  }
+
+  if (isUrgent) {
+    if (snapshots.length === 0) {
+      return isEn
+        ? "🚨 IoT Urgent Dispatch and Collection:\n\nNo containers with active telemetry in the fleet."
+        : "🚨 Despacho y Recolección Urgente IoT:\n\nNo hay contenedores con telemetría activa en la flota.";
+    }
+
+    if (health.urgentDispatchList.length > 0) {
+      if (isEn) {
+        return [
+          "🚨 IoT Urgent Dispatch and Collection:",
+          "",
+          `• Containers requiring attention (${health.urgentDispatchList.length}):`,
+          ...health.urgentDispatchList.map(
+            (item) =>
+              `  - ${item.containerName}: ${item.fillLevel}% fill level [${
+                item.priority === "CRITICAL"
+                  ? "Immediate (≥ 90%)"
+                  : "Scheduled (≥ 75%)"
+              }]`,
+          ),
+          "",
+          "Recommendation: Dispatch priority collection routes to prevent container overflows.",
+        ].join("\n");
+      }
+
+      return [
+        "🚨 Despacho y Recolección Urgente IoT:",
+        "",
+        `• Contenedores que requieren atención (${health.urgentDispatchList.length}):`,
+        ...health.urgentDispatchList.map(
+          (item) =>
+            `  - ${item.containerName}: ${item.fillLevel}% de llenado [${
+              item.priority === "CRITICAL"
+                ? "Inmediata (≥ 90%)"
+                : "Programada (≥ 75%)"
+            }]`,
+        ),
+        "",
+        "Recomendación: Enviar rutas de recolección prioritaria para prevenir desbordamientos.",
+      ].join("\n");
+    }
+
+    return isEn
+      ? "🚨 IoT Urgent Dispatch and Collection:\n\n• Great news: No containers exceed the warning threshold (75%). The entire fleet is operating within normal capacity."
+      : "🚨 Despacho y Recolección Urgente IoT:\n\n• Excelente noticia: Ningún contenedor supera el umbral de advertencia (75%). La flota completa opera con capacidad normal.";
+  }
+
+  const executiveSummary = generateIoTExecutiveSummary(health, lang);
+  return isEn
+    ? `📡 General IoT Fleet and Sensors Diagnostic:\n\n${executiveSummary}`
+    : `📡 Diagnóstico General de Flota y Sensores IoT:\n\n${executiveSummary}`;
+}
+
+export async function fetchIoTTelemetrySnapshots(): Promise<ContainerTelemetrySnapshot[]> {
+  try {
+    const { listContainers } = await import("./containerService.ts");
+    const { getLatestTelemetry } = await import("./sensorService.ts");
+
+    const containersResult = await listContainers();
+    if (!containersResult.ok || !Array.isArray(containersResult.data)) {
+      return [];
+    }
+
+    const telemetryPromises: Promise<ContainerTelemetrySnapshot | null>[] =
+      containersResult.data.map(async (c) => {
+        try {
+          const tel = await getLatestTelemetry(c.id);
+          if (!tel) return null;
+          const snapshot: ContainerTelemetrySnapshot = {
+            containerId: c.id,
+            containerName: c.code,
+            fillLevel: tel.fillLevelPercent,
+            batteryLevel: tel.batteryLevelPercent,
+            temperature: tel.temperatureCelsius,
+            updatedAt: tel.recordedAt,
+          };
+          return snapshot;
+        } catch {
+          return null;
+        }
+      });
+
+    const resolved = await Promise.all(telemetryPromises);
+    return resolved.filter(
+      (item): item is ContainerTelemetrySnapshot => item !== null,
+    );
+  } catch {
+    return [];
+  }
+}
+
 export async function generateAssistantResponse(
   prompt: string,
   contextOverride?: AssistantAnalyticsContext,
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+  lang: "es" | "en" = "es",
 ): Promise<string> {
+  let snapshots: ContainerTelemetrySnapshot[] | null = null;
+  if (telemetryOverride !== undefined) {
+    snapshots = telemetryOverride;
+  } else if (customTelemetryProvider) {
+    snapshots = await customTelemetryProvider();
+  }
+
+  const normalized = prompt
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const isCandidateIoT =
+    /\b(sensor|sensores|telemetria|telemetry|flota|fleet|bateria|baterias|battery|batteries|urgente|urgentes|urgencia|urgencias|critico|criticos|critica|criticas|despacho|despachos|urgent|critical|dispatch)\b/.test(
+      normalized,
+    );
+
+  if (isCandidateIoT) {
+    if (snapshots === null) {
+      snapshots = await fetchIoTTelemetrySnapshots();
+    }
+    const iotResponse = formatIoTFleetResponse(snapshots, prompt, lang);
+    if (iotResponse !== null) {
+      return iotResponse;
+    }
+  }
+
   const context = await getAssistantContext(contextOverride);
   const intent = classifyAssistantPrompt(prompt);
 
