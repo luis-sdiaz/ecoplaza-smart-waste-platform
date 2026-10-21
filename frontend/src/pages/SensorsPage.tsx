@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, LoaderCircle, Radio, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, LoaderCircle, Radio, RefreshCw } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import SensorDeviceCard from "../components/SensorDeviceCard";
 import SensorTelemetryHistoryModal from "../components/SensorTelemetryHistoryModal";
+import SimulateTelemetryModal from "../components/SimulateTelemetryModal";
+import SuccessToast from "../components/SuccessToast";
 import ContainerManagementPanel from "../components/ContainerManagementPanel";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext, useNavigate } from "react-router-dom";
@@ -72,6 +74,17 @@ function SensorsPageView({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [historyTarget, setHistoryTarget] = useState<{ id: string; name: string } | null>(null);
   const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(initialAutoRefresh);
+  const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false);
+  const [simulationNotice, setSimulationNotice] = useState(false);
+
+  const handleTelemetryRecorded = useCallback((record: TelemetryRecord) => {
+    setTelemetryByContainer((prev) => {
+      const next = new Map(prev);
+      next.set(record.containerId, record);
+      return next;
+    });
+    setSimulationNotice(true);
+  }, []);
 
   const isBusyRef = useRef(isLoading);
   useEffect(() => {
@@ -154,7 +167,7 @@ function SensorsPageView({
 
   // Auto-refresco en vivo controlado con temporizador periódico
   useEffect(() => {
-    if (!isAutoRefreshEnabled || !user || historyTarget !== null) {
+    if (!isAutoRefreshEnabled || !user || historyTarget !== null || isSimulateModalOpen) {
       return;
     }
 
@@ -168,7 +181,7 @@ function SensorsPageView({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [isAutoRefreshEnabled, user, historyTarget, fetchTelemetryData]);
+  }, [isAutoRefreshEnabled, user, historyTarget, isSimulateModalOpen, fetchTelemetryData]);
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
 
@@ -329,6 +342,21 @@ function SensorsPageView({
                 </span>
               </button>
 
+              {/* Botón Simular lectura */}
+              <button
+                type="button"
+                onClick={() => setIsSimulateModalOpen(true)}
+                disabled={isLoading || containers.length === 0}
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={t("sensors.simulateReading")}
+                title={t("sensors.simulateReading")}
+              >
+                <Activity size={15} aria-hidden="true" />
+                <span className="hidden sm:inline">
+                  {t("sensors.simulateReading")}
+                </span>
+              </button>
+
               {/* Botón de recarga manual */}
               <button
                 type="button"
@@ -447,6 +475,25 @@ function SensorsPageView({
           containerName={historyTarget.name}
           isOpen={true}
           onClose={() => setHistoryTarget(null)}
+        />
+      )}
+
+      {isSimulateModalOpen && (
+        <SimulateTelemetryModal
+          isOpen={isSimulateModalOpen}
+          onClose={() => setIsSimulateModalOpen(false)}
+          containers={containers}
+          onTelemetryRecorded={handleTelemetryRecorded}
+        />
+      )}
+
+      {simulationNotice && (
+        <SuccessToast
+          title={t("sensors.simulateSuccessTitle")}
+          description={t("sensors.simulateSuccessDescription")}
+          closeLabel={t("sensors.simulateClose")}
+          variant="success"
+          onClose={() => setSimulationNotice(false)}
         />
       )}
     </section>
