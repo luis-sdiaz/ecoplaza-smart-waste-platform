@@ -12,11 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "EcoPlaza Smart Waste Platform",
+        "title": "EcoPlaza — Smart Waste & IoT Platform",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,
-        "minHeight": 768,
+        "minHeight": 700,
         "center": true,
         "resizable": true,
         "fullscreen": false
