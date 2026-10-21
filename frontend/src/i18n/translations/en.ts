@@ -221,6 +221,11 @@ const en = {
     historyLoading: "Loading readings history...",
     historyError: "Could not load telemetry history.",
     closeHistory: "Close history",
+    autoRefresh: "Auto-refresh",
+    autoRefreshAriaLabel: "Toggle live telemetry auto-refresh",
+    live: "Live",
+    paused: "Paused",
+    refreshEvery10s: "Refresh every 10s",
   },
   containers: {
     title: "My containers",

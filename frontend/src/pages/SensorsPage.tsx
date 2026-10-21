@@ -13,8 +13,11 @@ import { getLatestTelemetry, type TelemetryRecord } from "../services/sensorServ
 
 type ContainerTelemetryMap = Map<string, TelemetryRecord | null>;
 
+const AUTO_REFRESH_INTERVAL_MS = 10000;
+
 type SensorsPageProps = {
   initialContainers?: Container[];
+  initialAutoRefresh?: boolean;
 };
 
 function formatTelemetryTimestamp(
@@ -34,7 +37,10 @@ function formatTelemetryTimestamp(
   }
 }
 
-function SensorsPage({ initialContainers }: SensorsPageProps = {}) {
+function SensorsPage({
+  initialContainers,
+  initialAutoRefresh = false,
+}: SensorsPageProps = {}) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { showDemoData } = useDemoVisibility();
@@ -45,6 +51,12 @@ function SensorsPage({ initialContainers }: SensorsPageProps = {}) {
   const [isLoading, setIsLoading] = useState(initialContainers === undefined && Boolean(user));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [historyTarget, setHistoryTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(initialAutoRefresh);
+
+  const isBusyRef = useRef(isLoading);
+  useEffect(() => {
+    isBusyRef.current = isLoading;
+  }, [isLoading]);
 
   const fetchTelemetryData = useCallback(
     async (revision: number) => {
@@ -119,6 +131,24 @@ function SensorsPage({ initialContainers }: SensorsPageProps = {}) {
       requestRevisionRef.current += 1;
     };
   }, [fetchTelemetryData]);
+
+  // Auto-refresco en vivo controlado con temporizador periódico
+  useEffect(() => {
+    if (!isAutoRefreshEnabled || !user || historyTarget !== null) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (!isBusyRef.current) {
+        const revision = ++requestRevisionRef.current;
+        void fetchTelemetryData(revision);
+      }
+    }, AUTO_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isAutoRefreshEnabled, user, historyTarget, fetchTelemetryData]);
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
 
@@ -240,20 +270,63 @@ function SensorsPage({ initialContainers }: SensorsPageProps = {}) {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
-              aria-label={t("sensors.refreshTelemetry")}
-            >
-              <RefreshCw
-                size={15}
-                className={isLoading ? "animate-spin" : ""}
-                aria-hidden="true"
-              />
-              <span>{t("sensors.refreshTelemetry")}</span>
-            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              {/* Toggle de Auto-refresco en vivo */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAutoRefreshEnabled}
+                onClick={() => setIsAutoRefreshEnabled((current) => !current)}
+                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary ${
+                  isAutoRefreshEnabled
+                    ? "border-ecoplaza-primary/40 bg-ecoplaza-primary/10 text-ecoplaza-primary"
+                    : "border-ecoplaza-border bg-ecoplaza-surface text-ecoplaza-text-muted hover:border-ecoplaza-border/80 hover:text-ecoplaza-text"
+                }`}
+                aria-label={t("sensors.autoRefreshAriaLabel")}
+                title={t("sensors.refreshEvery10s")}
+              >
+                <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                  {isAutoRefreshEnabled && (
+                    <span
+                      className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ecoplaza-primary opacity-75"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span
+                    className={`relative inline-flex h-2 w-2 rounded-full transition-colors ${
+                      isAutoRefreshEnabled
+                        ? "bg-ecoplaza-primary"
+                        : "bg-ecoplaza-border"
+                    }`}
+                    aria-hidden="true"
+                  />
+                </span>
+                <span>
+                  {t(isAutoRefreshEnabled ? "sensors.live" : "sensors.paused")}
+                </span>
+                <span className="hidden sm:inline text-[11px] font-normal opacity-80">
+                  ({t("sensors.autoRefresh")})
+                </span>
+              </button>
+
+              {/* Botón de recarga manual */}
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={t("sensors.refreshTelemetry")}
+              >
+                <RefreshCw
+                  size={15}
+                  className={isLoading ? "animate-spin" : ""}
+                  aria-hidden="true"
+                />
+                <span className="hidden sm:inline">
+                  {t("sensors.refreshTelemetry")}
+                </span>
+              </button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -360,4 +433,3 @@ function SensorsPage({ initialContainers }: SensorsPageProps = {}) {
 }
 
 export default SensorsPage;
-

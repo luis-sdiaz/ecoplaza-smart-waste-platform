@@ -221,6 +221,11 @@ const es = {
     historyLoading: "Cargando historial de lecturas...",
     historyError: "No fue posible cargar el historial de telemetría.",
     closeHistory: "Cerrar historial",
+    autoRefresh: "Auto-refresco",
+    autoRefreshAriaLabel: "Alternar auto-refresco en vivo de telemetría",
+    live: "En vivo",
+    paused: "Pausado",
+    refreshEvery10s: "Actualizar cada 10s",
   },
   containers: {
     title: "Mis contenedores",
