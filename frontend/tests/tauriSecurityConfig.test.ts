@@ -58,6 +58,10 @@ test("b) app.security.csp está estrictamente configurado con directivas seguras
     "CSP debe autorizar conexiones HTTPS y WebSockets seguros hacia Supabase",
   );
   assert.ok(
+    csp.includes("https://*.supabase.in"),
+    "CSP debe autorizar conexiones hacia dominios secundarios de infraestructura Supabase",
+  );
+  assert.ok(
     csp.includes("img-src 'self' data: blob: https://*.supabase.co"),
     "CSP debe permitir imágenes locales, base64 data:, blob: y almacenamiento de Supabase",
   );
@@ -76,6 +80,14 @@ test("b) app.security.csp está estrictamente configurado con directivas seguras
   assert.ok(
     csp.includes("worker-src 'self' blob:"),
     "CSP debe permitir workers locales y creados vía blob: para tareas intensivas",
+  );
+  assert.ok(
+    csp.includes("object-src 'none'"),
+    "CSP debe prevenir inyección de plugins obsoletos con object-src 'none'",
+  );
+  assert.ok(
+    csp.includes("base-uri 'self'"),
+    "CSP debe restringir manipulaciones de base-uri a 'self'",
   );
 });
 
