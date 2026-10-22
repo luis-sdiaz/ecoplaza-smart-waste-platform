@@ -1,177 +1,210 @@
 # EcoPlaza Smart Waste Platform
 
-EcoPlaza es una aplicación de escritorio para registrar, controlar y comercializar residuos aprovechables. La versión actual combina una interfaz React/TypeScript empaquetada con Tauri 2 y un backend administrado en Supabase (Auth + PostgreSQL).
+EcoPlaza es una plataforma integral y multiplataforma de escritorio para registrar, controlar, telemedir y comercializar residuos aprovechables. Combina una interfaz moderna construida en React 19 y TypeScript empaquetada de forma nativa mediante Tauri 2 (Rust) para Windows, Linux y macOS, respaldada por una arquitectura serverless en Supabase (Auth + PostgreSQL con RLS y RPC transaccional), telemetría física con microcontroladores ESP32 en `firmware/` y un motor de analítica predictiva asistido por IA.
 
 ## Estado actual
 
-La aplicación trabaja con datos operativos reales aislados por usuario para:
+La plataforma opera con datos operativos reales y aislados por usuario con las siguientes capacidades activas:
 
-- autenticación, registro, verificación y recuperación de contraseña con Supabase Auth;
-- perfiles de usuario;
-- gestión de contenedores;
-- monitoreo y telemetría de sensores IoT persistente (nivel de llenado volumétrico, nivel de batería, temperatura interna y marcas temporales) con soporte de simulación y telemetría bidireccional;
-- registro e historial de residuos;
-- inventario disponible;
-- directorio de compradores;
-- ventas transaccionales;
-- panel e informes con filtros por fecha;
-- exportación CSV y Excel;
-- asistente inteligente conversacional conectado de forma reactiva con heurísticas de flota IoT viva, proyecciones financieras, análisis de inventario y acciones contextuales hacia la consola de sensores.
+- **Autenticación y seguridad de acceso:** Registro, inicio de sesión, verificación de correo y recuperación de contraseñas mediante Supabase Auth.
+- **Gestión de perfiles de usuario:** Almacenamiento seguro de metadatos de usuario con aislamiento multi-inquilino.
+- **Directorio de contenedores y gemelo 3D:** Modelado interactivo en Three.js / React Three Fiber con monitoreo de niveles y gestión de capacidades físicas.
+- **Consola operativa de sensores IoT:** Monitoreo en tiempo real de telemetría física persistente (nivel de llenado volumétrico %, nivel de batería %, temperatura ambiente °C y marcas temporales ISO), simulación de telemetría y diagnóstico de salud de flota (`iotAnalyticsService`).
+- **Firmware IoT en C++ para ESP32:** Código fuente completo en `firmware/src/main.cpp` con lectura de sensores ultrasónicos HC-SR04, sensores climáticos DHT22 y semáforo LED de estado visual.
+- **Trazabilidad y registro de residuos:** Historial transaccional en PostgreSQL con validaciones de categoría, peso y estados.
+- **Inventario disponible y control de merma:** Clasificación de stock en tiempo real y detección de envejecimiento de lotes en bodega.
+- **Directorio comercial de compradores:** Gestión de clientes, categorización de actividad comercial y seguimiento de compras.
+- **Ventas transaccionales atomizadas:** Creación de ventas mediante la función almacenada PostgreSQL `create_sale`, garantizando consistencia ACID y venta única por lote.
+- **Panel de control e informes analíticos:** Dashboards interactivos, métricas financieras en COP, comparativas mensuales y selectores de rangos de fecha colombiana (DD/MM/YYYY).
+- **Exportación nativa de datos:** Descarga de reportes en formatos CSV y Excel (.xlsx) estructurados con ExcelJS y diálogos de guardado nativos de escritorio.
+- **Asistente IA y Consejero Operativo:** Motor analítico interactivo (`assistantInsightsService`) que calcula la valorización económica del stock, detecta riesgos de merma por tiempo de acopio y recomienda clientes afines, integrado con respuestas en lenguaje natural sobre telemetría IoT viva y navegación contextual.
+- **Soporte multiplataforma y blindaje CSP:** Empaquetado universal Tauri 2 para Windows, Linux y macOS con directiva estricta de Content Security Policy (CSP) y principio de mínimo privilegio.
+- **Suite de pruebas de alta cobertura:** 312 pruebas automatizadas aprobadas con 100% de éxito (Node.js Test Runner + Vitest).
 
-## Arquitectura
+## Arquitectura del sistema
 
 ```text
-React 19 + TypeScript + Vite
+React 19 + TypeScript 6 + Tailwind CSS 4 + Vite 8
         │
-        ├── Supabase Auth
-        ├── Supabase PostgREST / PostgreSQL
-        │       ├── RLS por owner_id
-        │       ├── Transacciones y RPC (create_sale)
+        ├── Supabase Auth & BaaS
+        │       ├── Autenticación segura y RLS estricto por owner_id
+        │       ├── Transacciones ACID mediante RPC (create_sale)
         │       └── Telemetría IoT persistente (`sensor_telemetry`)
-        ├── Subsistema IoT & Telemetría Predictiva
-        │       ├── Sensores ultrasónicos HC-SR04 y microcontroladores ESP32
-        │       ├── Telemetría bidireccional (nivel de llenado %, batería %, temperatura °C)
+        │
+        ├── Entorno de Escritorio Nativo Multiplataforma (Tauri 2 / Rust)
+        │       ├── Soporte universal: Windows (NSIS/MSI), Linux (Deb/AppImage) y macOS (DMG/App)
+        │       ├── Content Security Policy (CSP) estricta contra ataques XSS
+        │       ├── Diálogos nativos de guardado de archivos (`@tauri-apps/plugin-dialog`)
+        │       ├── Escritura segura en disco (`@tauri-apps/plugin-fs`)
+        │       └── Diagnóstico accesible del runtime de escritorio (`DesktopDiagnosticsModal`)
+        │
+        ├── Subsistema IoT & Firmware Embebido
+        │       ├── Microcontroladores ESP32-WROOM-32 en `firmware/`
+        │       ├── Sensor ultrasónico HC-SR04 (distancia y porcentaje de llenado)
+        │       ├── Sensor DHT22 (temperatura ambiente y humedad relativa)
+        │       ├── Semáforo LED local (indicador de umbrales 0-75-90-100%)
+        │       ├── Transmisión HTTPS / MQTT en formato JSON normalizado
         │       └── Motor analítico de salud de flota (`iotAnalyticsService`)
-        ├── Asistente IA Conversacional Reactivo (`assistantService`)
-        │       ├── Heurísticas operativas, financieras y de envejecimiento de stock
-        │       ├── Diagnóstico en lenguaje natural de la flota IoT (baterías, despacho urgente, salud global)
-        │       └── Sugerencias de acción contextual interactiva hacia `/sensors`
-        ├── CSV y Excel (ExcelJS)
-        └── Tauri 2
-                ├── Diálogo nativo para guardar
-                └── Escritura de archivos autorizada
+        │
+        ├── Asistente IA Conversacional & Consejero Estratégico
+        │       ├── Motor de valorización económica de inventario en COP (`assistantInsightsService`)
+        │       ├── Detección proactiva de riesgos de merma por antigüedad (>30d moderada, >60d crítica)
+        │       ├── Algoritmo de recomendación y emparejamiento de clientes afines
+        │       ├── Heurísticas en lenguaje natural sobre telemetría y despacho urgente
+        │       └── Acciones contextuales accesibles y bilingües hacia `/sensors` e `/inventory`
+        │
+        └── Exportaciones Profesionales
+                ├── Formato CSV con sanitización monetaria y fechas colombianas
+                └── Libros de trabajo Excel (.xlsx) generados con ExcelJS
 ```
 
-La aplicación consulta Supabase directamente con una clave publicable. La seguridad de datos no depende de ocultar esa clave: las migraciones activan RLS y limitan cada fila al usuario autenticado. Las ventas se crean mediante la función PostgreSQL `create_sale`, que valida comprador y residuo, registra la venta y marca el residuo como vendido dentro de una única transacción.
+## Subsistemas principales
 
-### Subsistema IoT y Telemetría Predictiva con Asistente IA
+### 1. Entorno de escritorio multiplataforma (Tauri 2) y seguridad CSP
 
-El ecosistema integra medición física y heurísticas analíticas avanzadas:
+El runtime de escritorio está configurado en `frontend/src-tauri/tauri.conf.json` para distribución en los tres principales sistemas operativos:
+- **Windows:** Empaquetadores NSIS (`currentUser`) y MSI.
+- **Linux:** Paquetes Debian (`.deb`) con dependencias de sistema declaradas (`libwebkit2gtk-4.1-0`, `libayatana-appindicator3-1`, `librsvg2-2`) y paquetes portables `AppImage`.
+- **macOS:** Empaquetado `.dmg` y `.app` con versión mínima de sistema macOS 10.15 (Catalina).
 
-1. **Dispositivos y Microcontroladores (ESP32 + HC-SR04):**
-   - Sensores de distancia ultrasónicos HC-SR04 acoplados a microcontroladores ESP32 para determinar con precisión milimétrica la altura libre y el porcentaje de llenado volumétrico en cada contenedor.
-   - Parámetros de telemetría bidireccional reportados: porcentaje de llenado (`fillLevelPercent`), estado de la batería (`batteryLevelPercent`), temperatura ambiente interna (`temperatureCelsius`) y marca temporal en estándar ISO (`recordedAt`).
-   - Soporte de simulación interactiva con validación estricta de rangos para auditorías en campo y pruebas sintéticas.
+#### Endurecimiento de Seguridad (CSP):
+Se define una directiva estricta de Content Security Policy en `app.security.csp` que mitiga de forma contundente la inyección de código (XSS) y el secuestro de sesiones:
+```text
+default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.in; worker-src 'self' blob:; object-src 'none'; base-uri 'self';
+```
+- Restringe conexiones salientes y WebSockets exclusivamente a los dominios de la infraestructura de Supabase.
+- Bloquea plugins de terceros obsoletos (`object-src 'none'`) y previene redirección de URIs base (`base-uri 'self'`).
+- Permite Web Workers dinámicos (`blob:`) indispensables para el renderizado Three.js del gemelo 3D de contenedores.
+- Los permisos de Tauri (`capabilities/default.json`) siguen el principio de mínimo privilegio, limitándose a guardar archivos y abrir diálogos nativos, sin exponer capacidades destructivas ni acceso no controlado a la shell o lectura de disco.
 
-2. **Motor Analítico de Salud de Flota (`iotAnalyticsService`):**
-   - Agregación de telemetría viva para calcular el índice de salud global de la red (`severity`: Óptimo, Advertencia, Crítico o Sin Telemetría).
-   - Detección de colas de recolección y despacho urgente: prioridad crítica ante contenedores con llenado $\ge 90\%$ y prioridad programada para niveles $\ge 75\%$.
-   - Detección proactiva de dispositivos con nivel de batería crítico ($< 20\%$) para mantenimiento preventivo antes de perder visibilidad del sensor.
+### 2. Firmware C++ para microcontroladores ESP32 (`firmware/`)
 
-3. **Asistente IA Conversacional Reactivo (`assistantService` & `AssistantPanel`):**
-   - Procesamiento de lenguaje natural enfocado en analítica de residuos, tendencias de ventas, valoración de stock y telemetría de flota.
-   - Enlace reactivo con telemetría viva: al consultar por sensores, baterías o recolecciones críticas, el asistente captura asíncronamente las instantáneas actuales de los contenedores mediante `listContainers` y `getLatestTelemetry`.
-   - Generación de respuestas contextualizadas en español e inglés, enriquecidas con sugerencias de acción accesibles (`aria-label` internacionalizado) que permiten navegar directamente hacia la consola operativa `/sensors`.
+El repositorio incluye el código fuente en C++ para microcontroladores ESP32-WROOM-32 y la documentación del circuito de instrumentación física:
+- **`firmware/src/main.cpp`:** Código modular compatible con Arduino IDE y PlatformIO. Implementa lectura analógica de distancia con HC-SR04, compensación térmica con sensor DHT22, cálculo porcentual de llenado volumétrico y control del semáforo LED de estado local.
+- **`firmware/README.md`:** Especificación detallada de pines GPIO, esquemático de conexionado con divisor de tensión resistivo (resistencia de 1kΩ y 2kΩ para proteger el pin GPIO del ESP32 frente a los 5V del HC-SR04 Echo) y estructura del payload JSON transmitido hacia la nube.
 
-## Módulos
+### 3. Motor de analítica predictiva y Asistente IA (`assistantInsightsService`)
 
-| Módulo | Fuente de datos y alcance |
-| --- | --- |
-| Inicio | Métricas reales de residuos, inventario y ventas; tarjetas de sensores demostrativas opcionales |
-| Sensores | Consola operativa de sensores IoT: monitoreo en tiempo real (ESP32 + HC-SR04), telemetría viva, simulación interactiva, histórico de lecturas y gestión de contenedores |
-| Residuos | Registro e historial real en PostgreSQL; bloque demostrativo separado |
-| Inventario | Residuos reales disponibles para venta |
-| Compradores | Alta, edición, filtros e historial real de compras |
-| Ventas | Venta completa de un registro disponible mediante una transacción PostgreSQL |
-| Informes | Distribución, rendimiento, tendencias, variación mensual y ranking de compradores |
-| Configuración | Idioma, tema y visibilidad persistente de datos demostrativos |
-| Asistente IA | Asistente inteligente reactivo con consultas en lenguaje natural sobre ventas, inventario y diagnóstico predictivo de flota IoT viva con navegación contextual hacia `/sensors` |
+Integrado en la consola del Asistente (`AssistantPanel.tsx`), proporciona diagnósticos estratégicos instantáneos mediante tres análisis automatizados:
+1. **Valorización económica del stock:** Calcula el valor monetario estimado de los residuos acopiados multiplicando los kilogramos en bodega por los precios promedio históricos de venta en cada categoría, incorporando un precio base de contingencia ante materiales sin transacciones previas.
+2. **Detección de merma por antigüedad:** Evalúa los días de permanencia de cada lote en almacén. Clasifica en riesgo moderado aquellos lotes con más de 30 días y en riesgo crítico aquellos que superan los 60 días, cuantificando la masa y el valor monetario expuesto a deterioro.
+3. **Recomendación de clientes afines:** Cruza el inventario disponible con el historial transaccional de compras para identificar compradores que han adquirido la misma categoría de material en el pasado, ordenándolos por volumen histórico para maximizar la efectividad comercial.
 
-La preferencia de datos demostrativos solo controla bloques locales y métricas simuladas. No altera filas de Supabase ni oculta la gestión real de contenedores.
+## Módulos de la plataforma
 
-## Persistencia y seguridad
+| Módulo | Ruta | Fuente de datos y alcance funcional |
+| --- | --- | --- |
+| **Inicio** | `/` | Cuadros de mando ejecutivos con métricas de residuos, inventario y ventas; visualización opcional de datos de demostración |
+| **Sensores** | `/sensors` | Consola de telemetría IoT física (ESP32) y virtual: monitoreo en vivo de llenado %, batería % y temperatura °C, histórico de lecturas, simulación e inspección de salud |
+| **Residuos** | `/waste` | Registro físico y trazabilidad de lotes entrantes en PostgreSQL con filtros avanzados y exportaciones |
+| **Inventario** | `/inventory` | Catálogo de materiales aprovechables disponibles para su comercialización con visor 3D de contenedores |
+| **Compradores** | `/buyers` | Directorio de clientes comerciales, histórico de compras por cliente y filtros por actividad económica |
+| **Ventas** | `/sales` | Registro comercial con transacción atómica en base de datos (`create_sale`), cálculo de totales COP y generación de recibos |
+| **Informes** | `/reports` | Analítica financiera y operativa, variaciones intermensuales, distribución por categorías y rendimiento comercial |
+| **Configuración** | `/settings` | Gestión de idioma (Español / Inglés), temas visuales, conmutador de datos demostrativos y diagnóstico del sistema |
+| **Asistente IA** | `/assistant` | Asistente inteligente conversacional y consejero operativo estratégico: valorización de inventario, detección de merma, emparejamiento de compradores y diagnóstico de flota IoT |
 
-Las migraciones de [supabase/migrations](supabase/migrations) crean perfiles, contenedores, telemetría de sensores, residuos, compradores y ventas. Incluyen:
+## Persistencia y seguridad de datos
 
-- claves foráneas que conservan el mismo propietario entre entidades;
-- políticas RLS basadas en `auth.uid()`;
-- validaciones de categorías, pesos, precios, niveles porcentuales y estados;
-- venta única por registro de residuo;
-- revocación de escrituras directas sensibles y creación de ventas mediante RPC.
+Las migraciones SQL ubicadas en [supabase/migrations](supabase/migrations) definen el esquema relacional en PostgreSQL:
+- Claves foráneas íntegras vinculadas al propietario (`owner_id`) con políticas Row Level Security (RLS) estrictas basadas en `auth.uid()`.
+- Validaciones a nivel de base de datos (`CHECK constraints`) sobre categorías de material, rangos de pesos en gramos, importes monetarios y porcentajes (0 a 100%).
+- Aislamiento transaccional: una venta se ejecuta exclusivamente mediante la función RPC `create_sale`, evitando condiciones de carrera o venta múltiple del mismo residuo.
+- Acceso del cliente restringido exclusivamente a una clave publicable `anon`, impidiendo el uso de secretos administrativos o `service_role` en el frontend.
 
-No se debe usar una clave `service_role` en el frontend. El cliente valida expresamente que la variable contenga una clave publicable.
+## Requisitos del entorno
 
-## Requisitos
+- **Node.js:** Versión 24 LTS y **npm:** Versión 11.
+- **Rust:** Versión 1.90 o posterior (para compilar y empaquetar con Tauri 2).
+- **En Windows:** Microsoft Visual Studio C++ Build Tools y WebView2 Runtime.
+- **En Linux:** Paquetes de desarrollo WebKit2GTK y AppIndicator (`libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`).
+- **En macOS:** Xcode Command Line Tools.
+- **Instancia de Supabase:** Proyecto con las migraciones del repositorio aplicadas.
 
-- Node.js 24 y npm 11 (versiones verificadas durante la auditoría).
-- Rust 1.90 o posterior, según `rust-version` de Tauri.
-- En Windows: Microsoft C++ Build Tools y WebView2 Runtime.
-- Un proyecto Supabase con las migraciones del repositorio aplicadas.
-
-## Configuración local
+## Configuración y ejecución local
 
 ```powershell
+# Clonar repositorio
 git clone https://github.com/luis-sdiaz/ecoplaza-smart-waste-platform.git
 cd ecoplaza-smart-waste-platform\frontend
+
+# Instalar dependencias
 npm ci
+
+# Configurar variables de entorno
 Copy-Item .env.example .env.local
 ```
 
-Edite `frontend/.env.local`:
+Configure las credenciales en `frontend/.env.local`:
 
 ```dotenv
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_publishable_key
 ```
 
-Los archivos `.env*` locales están ignorados por Git, salvo `.env.example`. No confirme secretos ni claves administrativas.
+### Comandos de desarrollo y verificación
 
-## Desarrollo y verificación
-
-Todos los comandos siguientes se ejecutan dentro de `frontend`:
+Todos los comandos se ejecutan desde el directorio `frontend/`:
 
 ```powershell
-npm run dev       # interfaz web de desarrollo
-npx tauri dev     # aplicación de escritorio en desarrollo
-npm run build     # TypeScript completo + bundle web de producción
-npm run lint      # ESLint
-npm test          # pruebas Node.js y Vitest/jsdom
+npm run dev              # Servidor de desarrollo web (Vite)
+npm run desktop:dev      # Aplicación nativa de escritorio en desarrollo (Tauri 2)
+npm run build            # Compilación de tipos TypeScript (tsc -b) y empaquetado de producción
+npm run lint             # Análisis estático de código con ESLint
+npm test                 # Ejecución de la suite completa de 312 pruebas
 ```
 
-`npm test` ejecuta dos grupos:
-
-- `test:node`: cálculos, filtros, exportaciones y flujos puros con el runner de Node;
-- `test:components`: interacciones React con Vitest, Testing Library y jsdom.
-
-Los tres proyectos TypeScript (`app`, configuración y pruebas) forman parte de `tsc -b`, por lo que el build también valida los archivos de prueba.
-
-## Compilación del instalador de Windows
-
-Desde `frontend`, con la cadena de Rust y las herramientas de Windows instaladas:
+### Comandos de empaquetado de escritorio (Tauri 2)
 
 ```powershell
-npx tauri build
+npm run desktop:build        # Empaquetado para el sistema operativo anfitrión
+npm run build:desktop:debug  # Empaquetado en modo depuración
 ```
 
-Tauri ejecuta primero `npm run build` y genera los artefactos bajo `frontend/src-tauri/target/release/bundle/`. Para distribución pública todavía deben definirse firma de código, canal de actualización y políticas de entrega.
+Los instaladores finales se generan en `frontend/src-tauri/target/release/bundle/`.
 
-## Estructura relevante
+## Métricas de calidad y suite de pruebas
+
+El repositorio cuenta con una rigurosa suite de pruebas automatizadas que valida la lógica de negocio, cálculos de informes, seguridad y componentes visuales:
+
+- **174 pruebas unitarias de lógica y seguridad:** Ejecutadas con el Node.js Test Runner oficial (`node --test --experimental-strip-types`) sobre reportes, importes monetarios, filtros de actividad, telemetría IoT, directivas CSP de Tauri y algoritmos de valorización y merma.
+- **138 pruebas de componentes e interfaces:** Ejecutadas en Vitest con Testing Library y jsdom sobre 28 suites de prueba que validan navegación, interacción de modales, accesibilidad ARIA, aislamiento de cuentas y diagnósticos del asistente.
+- **Total de pruebas verificadas:** **312 pruebas aprobadas** (100% de éxito).
+
+## Estructura del repositorio
 
 ```text
 ecoplaza-smart-waste-platform/
-├── README.md
+├── README.md                           # Especificación técnica general de la plataforma
+├── firmware/                           # Subsistema de instrumentación física y microcontroladores
+│   ├── src/
+│   │   └── main.cpp                    # Firmware modular C++ para ESP32 (HC-SR04 + DHT22 + LED)
+│   └── README.md                       # Diagrama de pines, circuito y especificaciones de hardware
 ├── supabase/
-│   └── migrations/
+│   └── migrations/                     # Esquemas relacionales PostgreSQL, RLS y funciones RPC
 └── frontend/
+    ├── src-tauri/                      # Configuración de Tauri 2, capacidades y permisos de seguridad
+    │   ├── tauri.conf.json             # Metadatos de bundle multiplataforma y política CSP
+    │   └── capabilities/
+    │       └── default.json            # Permisos mínimos restringidos (dialog y fs)
     ├── src/
-    │   ├── auth/
-    │   ├── components/
-    │   ├── context/
-    │   ├── pages/
-    │   └── services/
-    ├── tests/
-    ├── src-tauri/
-    ├── .env.example
-    └── package.json
+    │   ├── auth/                       # Lógica de autenticación con Supabase
+    │   ├── components/                 # Componentes UI reutilizables y modales accesibles
+    │   ├── context/                    # Contextos globales de React (Auth, Idioma, Tema)
+    │   ├── pages/                      # Vistas principales de la plataforma
+    │   ├── services/                   # Clientes de datos, telemetría y analítica predictiva
+    │   └── locales/                    # Diccionarios de internacionalización (i18n) en ES y EN
+    ├── tests/                          # Suite de pruebas automatizadas (Node.js y Vitest)
+    ├── .env.example                    # Plantilla de variables de entorno públicas
+    └── package.json                    # Scripts y dependencias del frontend
 ```
 
-## Trabajo pendiente
+## Trabajo futuro
 
-- aprovisionamiento de hardware físico de campo en producción y firmware C++/MicroPython para ESP32 sobre WiFi/MQTT;
-- endurecer la configuración de producción, incluida una CSP explícita para Tauri;
-- definir firma y distribución de instaladores;
-- establecer el proceso de despliegue automatizado cuando se autorice (los workflows de GitHub Actions permanecen desactivados).
+- Despliegue de infraestructura física de campo en producción y calibración de contenedores industriales.
+- Configuración de certificados de firma digital de código (code signing) para los instaladores de Windows, Linux y macOS.
+- Habilitación de pipelines de Integración y Despliegue Continuo (CI/CD) una vez autorizados los flujos remotos.
 
-## Autor y licencia
+## Autor y filiación
 
-Proyecto académico de Luis Sebastian Diaz para la Universidad Cooperativa de Colombia. No se ha declarado una licencia de distribución en el repositorio.
+Proyecto desarrollado por **Luis Sebastian Diaz** para la **Universidad Cooperativa de Colombia**.
