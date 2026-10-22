@@ -789,6 +789,12 @@ const en = {
   errors: {
     notFound: "Page not found", notFoundDescription: "The section you are trying to open does not exist in EcoPlaza.",
   },
+  windowControls: {
+    toolbarLabel: "Window controls",
+    minimize: "Minimize",
+    maximize: "Maximize or restore",
+    close: "Close application",
+  },
 } as const;
 
 export default en;
