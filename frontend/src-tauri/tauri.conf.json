@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "EcoPlaza",
+  "productName": "EcoPlaza — Smart Waste & IoT Platform",
   "version": "1.0.0",
-  "identifier": "com.ecoplaza.desktop",
+  "identifier": "com.ecoplaza.platform",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -28,11 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis"
-    ],
-    "publisher": "Luis Diaz",
-    "shortDescription": "Plataforma inteligente para la gestión de residuos.",
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -40,8 +36,28 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "android": {
-      "debugApplicationIdSuffix": ".debug"
+    "publisher": "EcoPlaza Team",
+    "shortDescription": "Smart Waste & IoT Platform",
+    "longDescription": "Plataforma integral de gestión de residuos, telemetría IoT y trazabilidad comercial",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libayatana-appindicator3-1",
+          "librsvg2-2"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
     }
   }
 }

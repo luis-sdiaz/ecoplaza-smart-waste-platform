@@ -12,7 +12,9 @@
     "test:components": "vitest run",
     "preview": "vite preview",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "desktop:build": "tauri build",
+    "build:desktop": "tauri build",
+    "build:desktop:debug": "tauri build --debug"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

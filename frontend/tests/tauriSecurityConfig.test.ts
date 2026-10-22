@@ -21,9 +21,11 @@ test("a) tauri.conf.json existe y es un JSON sintácticamente válido", () => {
   }, "tauri.conf.json debe ser un archivo JSON sintácticamente válido");
 
   const config = JSON.parse(rawContent);
-  assert.equal(config.productName, "EcoPlaza");
+  assert.equal(config.productName, "EcoPlaza — Smart Waste & IoT Platform");
   assert.equal(config.version, "1.0.0");
-  assert.equal(config.identifier, "com.ecoplaza.desktop");
+  assert.equal(config.identifier, "com.ecoplaza.platform");
+  assert.equal(config.bundle?.targets, "all");
+  assert.equal(config.bundle?.publisher, "EcoPlaza Team");
 });
 
 test("b) app.security.csp está estrictamente configurado con directivas seguras para EcoPlaza", () => {
