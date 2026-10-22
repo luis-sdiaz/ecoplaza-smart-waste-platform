@@ -795,6 +795,12 @@ const es = {
     maximize: "Maximizar o restaurar",
     close: "Cerrar aplicación",
   },
+  desktopDiagnostics: {
+    title: "Diagnóstico de Plataforma y Entorno",
+    openButtonAria: "Ver información de la plataforma y entorno",
+    minDimensions: "Dimensiones mínimas de ventana: 1024 x 700 px",
+    close: "Cerrar diagnóstico",
+  },
 } as const;
 
 export default es;
