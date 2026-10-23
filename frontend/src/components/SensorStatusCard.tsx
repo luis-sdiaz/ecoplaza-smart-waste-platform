@@ -32,46 +32,58 @@ function SensorStatusCard({
   const isCritical = validFillLevel !== null && validFillLevel > 80;
 
   return (
-    <article className="rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
-      <div className="flex items-start justify-between gap-4">
+    <article className="glass-card group rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-ecoplaza-text">{name}</p>
-          <p className="mt-1 text-xs text-ecoplaza-text-muted">{category}</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{name}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{category}</p>
         </div>
 
         <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-2xs backdrop-blur-md ${
             !isDataAvailable
-              ? "bg-ecoplaza-background text-ecoplaza-text-muted border border-ecoplaza-border"
+              ? "border border-slate-300/60 bg-slate-500/10 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
               : isCritical
-              ? "bg-ecoplaza-danger/15 text-ecoplaza-danger border border-ecoplaza-danger/30"
-              : "bg-ecoplaza-background text-ecoplaza-primary"
+              ? "border border-rose-300/60 bg-rose-500/10 text-rose-800 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300"
+              : "border border-emerald-300/60 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
           }`}
         >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              !isDataAvailable
+                ? "bg-slate-400"
+                : isCritical
+                ? "animate-pulse bg-rose-500"
+                : "bg-emerald-500"
+            }`}
+            aria-hidden="true"
+          />
           {status}
         </span>
       </div>
 
-      <div className="mt-5">
+      <div className="mt-4">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-ecoplaza-text-muted">{t("sensors.fillLevel")}</span>
+          <span className="text-slate-500 dark:text-slate-400">{t("sensors.fillLevel")}</span>
           <span
-            className={`font-semibold ${
-              isCritical ? "text-ecoplaza-danger" : "text-ecoplaza-text"
+            className={`font-bold ${
+              isCritical
+                ? "text-rose-600 dark:text-rose-400"
+                : "text-slate-900 dark:text-slate-100"
             }`}
           >
             {validFillLevel !== null ? `${validFillLevel}%` : "—"}
           </span>
         </div>
 
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-ecoplaza-background">
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/10">
           <div
             className={`h-full rounded-full transition-all duration-300 ${
               !isDataAvailable
-                ? "w-0 bg-ecoplaza-border"
+                ? "w-0 bg-slate-400"
                 : isCritical
-                ? "bg-ecoplaza-danger"
-                : "bg-ecoplaza-primary"
+                ? "bg-gradient-to-r from-amber-500 to-rose-500"
+                : "bg-gradient-to-r from-emerald-500 to-teal-400"
             }`}
             style={{ width: validFillLevel !== null ? `${validFillLevel}%` : "0%" }}
           />

@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
+import {
+  AlertTriangle,
+  Boxes,
+  Info,
+  LoaderCircle,
+  Radio,
+  RefreshCw,
+  Trash2,
+  TrendingUp,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
-import PageHeader from "../components/PageHeader";
 import SensorStatusCard from "../components/SensorStatusCard";
 import WasteSummaryCard from "../components/WasteSummaryCard";
 import {
@@ -240,29 +248,36 @@ function UserDashboardPage({ userId }: { userId: string }) {
 
   return (
     <section className="p-8">
-      <PageHeader
-        eyebrow={t("dashboard.eyebrow")}
-        title={t("dashboard.title")}
-        description={t("dashboard.description")}
-      />
+      <header className="mb-8">
+        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-700 backdrop-blur-sm dark:text-emerald-400 mb-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+          {t("dashboard.eyebrow")}
+        </span>
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
+          {t("dashboard.title")}
+        </h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          {t("dashboard.description")}
+        </p>
+      </header>
 
       {isLoading && (
-        <div role="status" className="mt-6 flex items-center gap-3 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-text-muted">
-          <LoaderCircle className="animate-spin text-ecoplaza-primary" size={18} strokeWidth={1.8} aria-hidden="true" />
+        <div role="status" className="glass-panel mt-6 flex items-center gap-3 rounded-2xl p-4 text-sm text-slate-600 dark:text-slate-300">
+          <LoaderCircle className="animate-spin text-emerald-600 dark:text-emerald-400" size={18} strokeWidth={1.8} aria-hidden="true" />
           {t("dashboard.loadingStatistics")}
         </div>
       )}
 
       {!isLoading && loadError && (
-        <div role="alert" className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-ecoplaza-danger/30 bg-ecoplaza-danger/10 px-4 py-3">
-          <div className="flex items-center gap-3 text-sm text-ecoplaza-danger">
+        <div role="alert" className="glass-panel mt-6 flex items-center justify-between gap-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
+          <div className="flex items-center gap-3 text-sm text-rose-700 dark:text-rose-400">
             <AlertTriangle size={18} strokeWidth={1.8} aria-hidden="true" />
             <span>{t(loadError)}</span>
           </div>
           <button
             type="button"
             onClick={() => void loadStatistics()}
-            className="flex shrink-0 items-center gap-2 rounded-lg border border-ecoplaza-danger/30 px-3 py-2 text-sm font-medium text-ecoplaza-danger"
+            className="flex shrink-0 items-center gap-2 rounded-lg border border-rose-500/30 px-3 py-2 text-sm font-medium text-rose-700 dark:text-rose-400"
           >
             <RefreshCw size={15} strokeWidth={1.8} aria-hidden="true" />
             {t("dashboard.retry")}
@@ -271,17 +286,22 @@ function UserDashboardPage({ userId }: { userId: string }) {
       )}
 
       {hasNoCommercialActivity && (
-        <div role="status" className="mt-6 rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text-muted">
-          {t("dashboard.emptyCommercialActivity")}
+        <div
+          role="status"
+          className="glass-panel mt-6 flex items-center gap-2 rounded-2xl border border-dashed border-emerald-500/30 p-4 text-sm text-slate-600 dark:text-slate-300"
+        >
+          <Info size={18} className="shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+          <span>{t("dashboard.emptyCommercialActivity")}</span>
         </div>
       )}
 
-      <div className={`mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 ${showDemoData ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
+      <div className={`mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 ${showDemoData ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
         <MetricCard
           title={t("dashboard.registeredWaste")}
           value={metricValue((data) => formatWeight(data.totalRegisteredWeightKg))}
           description={t("dashboard.realWasteDescription")}
           badge={realBadge}
+          icon={<Trash2 size={22} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
         />
         {showDemoData && (
           <MetricCard
@@ -289,6 +309,8 @@ function UserDashboardPage({ userId }: { userId: string }) {
             value="8"
             description={t("dashboard.registeredSensors", { count: 10 })}
             badge={demoBadge}
+            badgeVariant="demo"
+            icon={<Radio size={22} className="text-sky-600 dark:text-sky-400" aria-hidden="true" />}
           />
         )}
         <MetricCard
@@ -296,33 +318,42 @@ function UserDashboardPage({ userId }: { userId: string }) {
           value={metricValue((data) => formatWeight(data.availableWeightKg))}
           description={t("dashboard.materialForSale")}
           badge={realBadge}
+          icon={<Boxes size={22} className="text-amber-600 dark:text-amber-400" aria-hidden="true" />}
         />
         <MetricCard
           title={t("dashboard.revenue")}
           value={metricValue((data) => currencyFormatter.format(data.grossSalesValue))}
           description={t("dashboard.accumulatedSales")}
           badge={realBadge}
+          icon={<TrendingUp size={22} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
         />
       </div>
 
-      <div className="mt-8 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+      <div className="glass-panel mt-8 rounded-2xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.materialStatus")}</h2>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.materialStatusDescription")}</p>
           </div>
-          <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{realBadge}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+            {realBadge}
+          </span>
         </div>
         {realValueUnavailable || materialStatus === null ? (
-          <p className="mt-4 text-sm text-ecoplaza-text-muted">{realValueUnavailable ? "—" : t("dashboard.materialStatusUnavailable")}</p>
+          <p className="mt-4 rounded-xl border border-dashed border-slate-200/80 bg-slate-100/40 p-4 text-center text-sm text-ecoplaza-text-muted dark:border-white/10 dark:bg-white/5">
+            {realValueUnavailable ? "—" : t("dashboard.materialStatusUnavailable")}
+          </p>
         ) : materialStatus.totalWeightKg === 0 ? (
-          <p className="mt-4 text-sm text-ecoplaza-text-muted">{t("dashboard.materialStatusEmpty")}</p>
+          <p className="mt-4 rounded-xl border border-dashed border-slate-200/80 bg-slate-100/40 p-4 text-center text-sm text-ecoplaza-text-muted dark:border-white/10 dark:bg-white/5">
+            {t("dashboard.materialStatusEmpty")}
+          </p>
         ) : (
           <>
-            <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-ecoplaza-background" aria-label={t("dashboard.materialStatusChart")}>
-              <span className="bg-ecoplaza-primary" style={{ width: `${materialStatus.availablePercentage}%` }} />
-              <span className="bg-ecoplaza-secondary" style={{ width: `${materialStatus.soldPercentage}%` }} />
-              <span className="bg-ecoplaza-text-muted/30" style={{ width: `${materialStatus.otherPercentage}%` }} />
+            <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/10" aria-label={t("dashboard.materialStatusChart")}>
+              <span className="bg-gradient-to-r from-emerald-500 to-teal-400" style={{ width: `${materialStatus.availablePercentage}%` }} />
+              <span className="bg-gradient-to-r from-teal-500 to-cyan-400" style={{ width: `${materialStatus.soldPercentage}%` }} />
+              <span className="bg-slate-300 dark:bg-white/20" style={{ width: `${materialStatus.otherPercentage}%` }} />
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {([
@@ -330,7 +361,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
                 ["sold", materialStatus.soldWeightKg, materialStatus.soldPercentage],
                 ["other", materialStatus.otherWeightKg, materialStatus.otherPercentage],
               ] as const).map(([status, weight, percentage]) => (
-                <div key={status} className="rounded-xl bg-ecoplaza-background p-3">
+                <div key={status} className="glass-card rounded-xl p-3 transition-all duration-200 hover:-translate-y-0.5">
                   <p className="text-xs text-ecoplaza-text-muted">{t(`dashboard.materialStatus${status[0].toUpperCase()}${status.slice(1)}`)}</p>
                   <p className="mt-1 text-sm font-semibold text-ecoplaza-text">{formatWeight(weight)} · {formatPercentage(percentage)}</p>
                 </div>
@@ -340,13 +371,16 @@ function UserDashboardPage({ userId }: { userId: string }) {
         )}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+      <div className="glass-panel mt-8 rounded-2xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.recentSales")}</h2>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesDescription")}</p>
           </div>
-          <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{realBadge}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+            {realBadge}
+          </span>
         </div>
         {areRecentSalesLoading ? (
           <div role="status" className="mt-4 flex min-h-24 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
@@ -361,12 +395,12 @@ function UserDashboardPage({ userId }: { userId: string }) {
             </button>
           </div>
         ) : recentSales.length === 0 ? (
-          <p className="mt-4 rounded-xl bg-ecoplaza-background px-4 py-6 text-center text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesEmpty")}</p>
+          <p className="mt-4 rounded-xl border border-dashed border-slate-200/80 bg-slate-100/40 p-4 text-center text-sm text-ecoplaza-text-muted dark:border-white/10 dark:bg-white/5">{t("dashboard.recentSalesEmpty")}</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[720px]">
               <thead>
-                <tr className="text-left text-xs text-ecoplaza-text-muted">
+                <tr className="border-b border-slate-200/60 text-left text-xs text-ecoplaza-text-muted dark:border-white/10">
                   <th className="px-3 py-2 font-semibold">{t("common.date")}</th>
                   <th className="px-3 py-2 font-semibold">{t("buyers.buyer")}</th>
                   <th className="px-3 py-2 font-semibold">{t("common.category")}</th>
@@ -376,7 +410,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
               </thead>
               <tbody>
                 {recentSales.map((sale) => (
-                  <tr key={sale.id} className="border-t border-ecoplaza-border" title={sale.id}>
+                  <tr key={sale.id} className="border-t border-slate-200/40 transition-colors hover:bg-white/30 dark:border-white/5 dark:hover:bg-white/5" title={sale.id}>
                     <td className="px-3 py-3 text-sm text-ecoplaza-text-muted">{dateFormatter.format(new Date(sale.soldAt))}</td>
                     <td className="px-3 py-3 text-sm text-ecoplaza-text">{sale.buyerName}</td>
                     <td className="px-3 py-3 text-sm text-ecoplaza-text">{t(`common.${sale.category}`)}</td>
@@ -390,34 +424,37 @@ function UserDashboardPage({ userId }: { userId: string }) {
         )}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5" data-testid="top-revenue-category-card">
+      <div className="glass-panel mt-8 rounded-2xl p-6" data-testid="top-revenue-category-card">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 id="top-revenue-category-title" className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.topRevenueCategory")}</h2>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryDescription")}</p>
           </div>
-          <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{realBadge}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+            {realBadge}
+          </span>
         </div>
 
         {realValueUnavailable || topRevenueCategory === null ? (
-          <p className="mt-4 rounded-xl bg-ecoplaza-background px-4 py-6 text-center text-sm text-ecoplaza-text-muted">
+          <p className="mt-4 rounded-xl border border-dashed border-slate-200/80 bg-slate-100/40 p-4 text-center text-sm text-ecoplaza-text-muted dark:border-white/10 dark:bg-white/5">
             {realValueUnavailable ? "—" : t("dashboard.topRevenueCategoryEmpty")}
           </p>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl bg-ecoplaza-background p-4">
+            <div className="glass-card rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5">
               <p className="text-xs text-ecoplaza-text-muted">{t("common.category")}</p>
               <p className="mt-1 text-base font-bold text-ecoplaza-text">{t(`common.${topRevenueCategory.category}`)}</p>
             </div>
-            <div className="rounded-xl bg-ecoplaza-background p-4">
+            <div className="glass-card rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5">
               <p className="text-xs text-ecoplaza-text-muted">{t("dashboard.revenue")}</p>
               <p className="mt-1 text-base font-bold text-ecoplaza-primary">{currencyFormatter.format(topRevenueCategory.grossSalesValue)}</p>
             </div>
-            <div className="rounded-xl bg-ecoplaza-background p-4">
+            <div className="glass-card rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5">
               <p className="text-xs text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryParticipation")}</p>
               <p className="mt-1 text-base font-bold text-ecoplaza-text">{formatPercentage(topRevenueCategory.revenuePercentage)}</p>
             </div>
-            <div className="rounded-xl bg-ecoplaza-background p-4">
+            <div className="glass-card rounded-xl p-4 transition-all duration-200 hover:-translate-y-0.5">
               <p className="text-xs text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryVolume")}</p>
               <p className="mt-1 text-sm font-semibold text-ecoplaza-text">
                 {formatWeight(topRevenueCategory.soldWeightKg)} · {t("reports.buyerPurchases", { count: topRevenueCategory.salesCount })}
@@ -427,13 +464,16 @@ function UserDashboardPage({ userId }: { userId: string }) {
         )}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+      <div className="glass-panel mt-8 rounded-2xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.oldestInventory")}</h2>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.oldestInventoryDescription")}</p>
           </div>
-          <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{realBadge}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+            {realBadge}
+          </span>
         </div>
         {isOldestInventoryLoading ? (
           <div role="status" className="mt-4 flex min-h-24 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
@@ -448,26 +488,28 @@ function UserDashboardPage({ userId }: { userId: string }) {
             </button>
           </div>
         ) : oldestInventory.length === 0 ? (
-          <p className="mt-4 rounded-xl bg-ecoplaza-background px-4 py-6 text-center text-sm text-ecoplaza-text-muted">{t("dashboard.oldestInventoryEmpty")}</p>
+          <p className="mt-4 rounded-xl border border-dashed border-slate-200/80 bg-slate-100/40 p-4 text-center text-sm text-ecoplaza-text-muted dark:border-white/10 dark:bg-white/5">{t("dashboard.oldestInventoryEmpty")}</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[680px]">
-              <thead><tr className="text-left text-xs text-ecoplaza-text-muted">
-                <th className="px-3 py-2 font-semibold">{t("waste.record")}</th>
-                <th className="px-3 py-2 font-semibold">{t("common.category")}</th>
-                <th className="px-3 py-2 font-semibold">{t("inventory.weight")}</th>
-                <th className="px-3 py-2 font-semibold">{t("inventory.container")}</th>
-                <th className="px-3 py-2 text-right font-semibold">{t("inventory.storageAge")}</th>
-              </tr></thead>
+              <thead>
+                <tr className="border-b border-slate-200/60 text-left text-xs text-ecoplaza-text-muted dark:border-white/10">
+                  <th className="px-3 py-2 font-semibold">{t("waste.record")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("common.category")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("inventory.weight")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("inventory.container")}</th>
+                  <th className="px-3 py-2 text-right font-semibold">{t("inventory.storageAge")}</th>
+                </tr>
+              </thead>
               <tbody>
                 {oldestInventory.map((item) => (
-                  <tr key={item.id} data-testid="aging-inventory-row" className="border-t border-ecoplaza-border" title={item.id}>
+                  <tr key={item.id} data-testid="aging-inventory-row" className="border-t border-slate-200/40 transition-colors hover:bg-white/30 dark:border-white/5 dark:hover:bg-white/5" title={item.id}>
                     <td className="px-3 py-3 text-sm font-medium text-ecoplaza-text">{item.reference}</td>
                     <td className="px-3 py-3 text-sm text-ecoplaza-text">{t(`common.${item.category}`)}</td>
                     <td className="px-3 py-3 text-sm text-ecoplaza-text">{formatWeight(item.weightKg)}</td>
                     <td className="px-3 py-3 text-sm text-ecoplaza-text">{item.containerCode ?? t("inventory.unknownContainer")}</td>
                     <td className="px-3 py-3 text-right text-sm">
-                      <span className={item.ageDays > 30 ? "rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-800" : "text-ecoplaza-text"}>
+                      <span className={item.ageDays > 30 ? "inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-800 shadow-2xs backdrop-blur-md dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300" : "text-ecoplaza-text"}>
                         {t("inventory.storageAgeDays", { count: item.ageDays })}
                       </span>
                     </td>
@@ -483,16 +525,19 @@ function UserDashboardPage({ userId }: { userId: string }) {
       </div>
 
       {showDemoData && (
-        <div className="mt-8">
+        <div className="glass-panel mt-8 rounded-2xl p-6">
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
-              <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{demoBadge}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-800 shadow-2xs backdrop-blur-md dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" aria-hidden="true" />
+                {demoBadge}
+              </span>
             </div>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.sensorMonitoringDemo")}</p>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-4">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <SensorStatusCard name={`${t("waste.container")} 01`} category={t("common.wasteOrganic")} fillLevel={68} status={t("common.active")} />
             <SensorStatusCard name={`${t("waste.container")} 02`} category={t("common.wasteRecyclable")} fillLevel={42} status={t("common.active")} />
             <SensorStatusCard name={`${t("waste.container")} 03`} category={t("common.wasteNonRecyclable")} fillLevel={81} status={t("common.active")} />
@@ -500,16 +545,19 @@ function UserDashboardPage({ userId }: { userId: string }) {
         </div>
       )}
 
-      <div className="mt-8">
+      <div className="glass-panel mt-8 rounded-2xl p-6">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.wasteByCategory")}</h2>
-            <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{t("dashboard.realData")}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+              {t("dashboard.realData")}
+            </span>
           </div>
           <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.realWasteDistribution")}</p>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <WasteSummaryCard
             title={t("common.organic")}
             amount={realValueUnavailable ? "—" : formatWeight(categoryValue("organic", "weightKg"))}
