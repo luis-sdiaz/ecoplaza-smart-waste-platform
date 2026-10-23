@@ -1,12 +1,13 @@
 import { useContext } from "react";
-import { ThemeContext } from "./ThemeContext";
+import { ThemeContext, type ThemeContextValue } from "./ThemeContext";
 
-export function useTheme() {
+const DEFAULT_THEME_VALUE: ThemeContextValue = {
+  theme: "light",
+  setTheme: () => {},
+  toggleTheme: () => {},
+};
+
+export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext);
-
-  if (context === null) {
-    throw new Error("useTheme must be used within a ThemeProvider.");
-  }
-
-  return context;
+  return context ?? DEFAULT_THEME_VALUE;
 }

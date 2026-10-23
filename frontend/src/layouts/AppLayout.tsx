@@ -3,6 +3,7 @@ import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Sidebar from "../components/Sidebar";
 import DesktopDiagnosticsModal from "../components/DesktopDiagnosticsModal";
+import { useTheme } from "../theme/useTheme";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -10,13 +11,17 @@ interface AppLayoutProps {
 
 function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
 
   return (
-    <div className="ecoplaza-app-layout flex h-screen overflow-hidden bg-ecoplaza-background">
+    <div
+      data-theme={theme}
+      className="ecoplaza-app-layout flex h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-150 dark:bg-[#0b130e] dark:text-slate-100"
+    >
       <Sidebar />
 
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-slate-50 text-slate-900 transition-colors duration-150 dark:bg-[#0b130e] dark:text-slate-100">
         <button
           type="button"
           onClick={() => setIsDiagnosticsOpen(true)}
@@ -26,7 +31,7 @@ function AppLayout({ children }: AppLayoutProps) {
           <Info size={16} aria-hidden="true" />
         </button>
 
-        <main className="ecoplaza-app-main min-h-0 min-w-0 flex-1 overflow-y-auto bg-ecoplaza-background">
+        <main className="ecoplaza-app-main min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50 text-slate-900 transition-colors duration-150 dark:bg-[#0b130e] dark:text-slate-100">
           {children}
         </main>
       </div>

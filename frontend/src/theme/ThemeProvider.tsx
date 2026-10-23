@@ -4,7 +4,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { ThemeContext, THEME_STORAGE_KEY } from "./ThemeContext";
+import { ThemeContext, THEME_STORAGE_KEY, applyThemeToDom } from "./ThemeContext";
 import type { Theme } from "./ThemeContext";
 
 function readStoredTheme(): Theme {
@@ -28,15 +28,20 @@ function storeTheme(theme: Theme): void {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(readStoredTheme);
+  const [theme, setThemeState] = useState<Theme>(() => {
+    const initialTheme = readStoredTheme();
+    applyThemeToDom(initialTheme);
+    return initialTheme;
+  });
 
   useLayoutEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
+    applyThemeToDom(theme);
   }, [theme]);
 
   const setTheme = useCallback((nextTheme: Theme): void => {
-    setThemeState(nextTheme);
+    applyThemeToDom(nextTheme);
     storeTheme(nextTheme);
+    setThemeState(nextTheme);
   }, []);
 
   const toggleTheme = useCallback((): void => {
