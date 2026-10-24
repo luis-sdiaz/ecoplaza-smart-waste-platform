@@ -11,6 +11,8 @@ import {
   Settings,
   LogOut,
   UserRound,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -33,6 +35,7 @@ function Sidebar() {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const isSigningOutRef = useRef(false);
@@ -68,21 +71,65 @@ function Sidebar() {
   };
 
   return (
-    <aside className="ecoplaza-sidebar h-screen w-64 flex flex-col justify-between select-none relative z-20 overflow-x-hidden rounded-none bg-gradient-to-b from-[#064e3b] via-[#065f46] to-[#043927] text-white dark:from-[#042f24] dark:via-[#03221a] dark:to-[#021812] transition-colors duration-150">
-      {/* Encabezado de marca con caja translúcida y hoja esmeralda */}
-      <div className="px-5 pt-5 pb-3 flex items-center gap-3">
-        <div className="ecoplaza-sidebar-logo flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 border border-white/20 p-2.5 text-emerald-200 shadow-sm">
-          <Leaf size={20} strokeWidth={2.4} />
+    <aside
+      className={`ecoplaza-sidebar h-screen ${
+        isCollapsed ? "w-20" : "w-64"
+      } flex flex-col justify-between select-none relative z-20 overflow-x-hidden rounded-none bg-gradient-to-b from-[#064e3b] via-[#065f46] to-[#043927] text-white dark:from-[#042f24] dark:via-[#03221a] dark:to-[#021812] transition-[width] duration-300 ease-in-out`}
+    >
+      {/* Encabezado con marca y botón de toggle colapsable */}
+      <div
+        className={`pt-5 pb-3 flex items-center transition-all duration-300 ${
+          isCollapsed
+            ? "flex-col gap-2 px-3 justify-center"
+            : "justify-between gap-2 px-4"
+        }`}
+      >
+        <div
+          className={`flex items-center gap-3 min-w-0 ${
+            isCollapsed ? "justify-center" : ""
+          }`}
+        >
+          <div className="ecoplaza-sidebar-logo flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 border border-white/20 p-2.5 text-emerald-200 shadow-sm">
+            <Leaf size={20} strokeWidth={2.4} />
+          </div>
+
+          <div
+            className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
+              isCollapsed
+                ? "max-w-0 opacity-0 pointer-events-none"
+                : "max-w-xs opacity-100"
+            }`}
+          >
+            <span className="ecoplaza-sidebar-title block truncate text-lg font-bold leading-tight tracking-tight text-white">
+              EcoPlaza
+            </span>
+            <span className="ecoplaza-sidebar-secondary block truncate text-xs font-medium text-emerald-200/75">
+              {t("navigation.tagline")}
+            </span>
+          </div>
         </div>
 
-        <div className="min-w-0">
-          <span className="ecoplaza-sidebar-title block truncate text-lg font-bold leading-tight tracking-tight text-white">
-            EcoPlaza
-          </span>
-          <span className="ecoplaza-sidebar-secondary block truncate text-xs font-medium text-emerald-200/75">
-            {t("navigation.tagline")}
-          </span>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          aria-label={
+            isCollapsed
+              ? t("navigation.expandSidebar", "Expandir barra lateral")
+              : t("navigation.collapseSidebar", "Colapsar barra lateral")
+          }
+          className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-emerald-100 transition-colors"
+          title={
+            isCollapsed
+              ? t("navigation.expandSidebar", "Expandir")
+              : t("navigation.collapseSidebar", "Colapsar")
+          }
+        >
+          {isCollapsed ? (
+            <ChevronRight size={18} strokeWidth={2.4} aria-hidden="true" />
+          ) : (
+            <ChevronLeft size={18} strokeWidth={2.4} aria-hidden="true" />
+          )}
+        </button>
       </div>
 
       {/* Lista de navegación con pestaña activa conectada y curvas cóncavas */}
@@ -92,11 +139,20 @@ function Sidebar() {
             key={to}
             to={to}
             end={end}
+            title={isCollapsed ? t(labelKey) : undefined}
             className={({ isActive }) =>
-              `ecoplaza-sidebar-link group flex items-center gap-3 transition-all duration-200 ${
+              `ecoplaza-sidebar-link group flex items-center transition-all duration-200 ${
                 isActive
-                  ? "ecoplaza-sidebar-link-active ml-3 mr-0 pl-4 pr-5 py-2.5 rounded-l-full relative z-10 font-bold bg-[#eef7f2] text-[#064e3b] dark:bg-[#0b140e] dark:text-emerald-400 text-sm shadow-sm"
-                  : "ecoplaza-sidebar-link-inactive mx-3 px-4 py-2 rounded-full text-emerald-100/80 hover:text-white hover:bg-white/10 text-sm font-medium"
+                  ? `ecoplaza-sidebar-link-active mr-0 rounded-l-full relative z-10 font-bold bg-[#eef7f2] text-[#064e3b] dark:bg-[#0b140e] dark:text-emerald-400 text-sm shadow-sm ${
+                      isCollapsed
+                        ? "ml-2 px-0 py-2.5 justify-center"
+                        : "ml-3 pl-4 pr-5 py-2.5"
+                    }`
+                  : `ecoplaza-sidebar-link-inactive rounded-full text-emerald-100/80 hover:text-white hover:bg-white/10 text-sm font-medium ${
+                      isCollapsed
+                        ? "mx-2 px-0 py-2 justify-center"
+                        : "mx-3 px-4 py-2"
+                    }`
               }`
             }
           >
@@ -109,7 +165,7 @@ function Sidebar() {
                   </>
                 )}
                 <Icon
-                  size={19}
+                  size={20}
                   strokeWidth={isActive ? 2.5 : 2.2}
                   className={`shrink-0 transition-colors duration-200 ${
                     isActive
@@ -118,7 +174,15 @@ function Sidebar() {
                   }`}
                   aria-hidden="true"
                 />
-                <span className="truncate">{t(labelKey)}</span>
+                <span
+                  className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
+                    isCollapsed
+                      ? "max-w-0 opacity-0 ml-0 pointer-events-none"
+                      : "max-w-xs opacity-100 ml-3 truncate"
+                  }`}
+                >
+                  {t(labelKey)}
+                </span>
               </>
             )}
           </NavLink>
@@ -126,13 +190,20 @@ function Sidebar() {
       </nav>
 
       {/* Tarjeta inferior de Perfil y Cerrar sesión */}
-      <div className="ecoplaza-sidebar-user-section mx-3 mb-3 p-3 rounded-2xl bg-black/20 border border-white/10 backdrop-blur-md">
+      <div
+        className={`ecoplaza-sidebar-user-section mb-3 rounded-2xl bg-black/20 border border-white/10 backdrop-blur-md transition-all duration-300 ${
+          isCollapsed ? "mx-2 p-2 flex flex-col items-center gap-2" : "mx-3 p-3"
+        }`}
+      >
         {user && (
           <NavLink
             to="/profile"
             aria-label={t("navigation.profile")}
+            title={isCollapsed ? user.name : undefined}
             className={({ isActive }) =>
-              `ecoplaza-sidebar-profile group flex min-w-0 items-center gap-3 rounded-xl p-1.5 transition-all duration-150 ${
+              `ecoplaza-sidebar-profile group flex min-w-0 items-center rounded-xl p-1.5 transition-all duration-150 ${
+                isCollapsed ? "justify-center w-full" : "gap-3"
+              } ${
                 isActive
                   ? "ecoplaza-sidebar-profile-active bg-white/15"
                   : "hover:bg-white/10"
@@ -150,7 +221,13 @@ function Sidebar() {
                 <UserRound size={18} strokeWidth={2} aria-hidden="true" />
               )}
             </div>
-            <div className="min-w-0 flex-1 text-left">
+            <div
+              className={`min-w-0 flex-1 text-left overflow-hidden transition-all duration-300 ${
+                isCollapsed
+                  ? "max-w-0 opacity-0 pointer-events-none hidden"
+                  : "max-w-xs opacity-100"
+              }`}
+            >
               <p
                 className="ecoplaza-sidebar-user-name truncate text-xs font-semibold text-white"
                 title={user.name}
@@ -167,19 +244,34 @@ function Sidebar() {
           </NavLink>
         )}
 
-        <div className={`flex items-center justify-between ${user ? "border-t border-white/10 pt-2 mt-2" : ""}`}>
+        <div
+          className={`flex items-center justify-between ${
+            user ? "border-t border-white/10 pt-2 mt-2" : ""
+          } ${isCollapsed ? "w-full justify-center" : ""}`}
+        >
           <button
             type="button"
             onClick={handleSignOut}
             disabled={isSigningOut}
             aria-busy={isSigningOut}
-            className="ecoplaza-sidebar-sign-out flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-1.5 text-xs font-medium text-emerald-100/85 hover:bg-rose-500/20 hover:text-rose-200 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            title={
+              isCollapsed
+                ? isSigningOut
+                  ? t("auth.signingOut")
+                  : t("navigation.signOut")
+                : undefined
+            }
+            className={`ecoplaza-sidebar-sign-out flex cursor-pointer items-center rounded-xl text-xs font-medium text-emerald-100/85 hover:bg-rose-500/20 hover:text-rose-200 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              isCollapsed
+                ? "w-full justify-center p-2"
+                : "w-full justify-between px-3 py-1.5"
+            }`}
           >
-            <span className="truncate">
+            <span className={isCollapsed ? "sr-only" : "truncate"}>
               {isSigningOut ? t("auth.signingOut") : t("navigation.signOut")}
             </span>
             <LogOut
-              size={15}
+              size={16}
               strokeWidth={2.2}
               aria-hidden="true"
               className="shrink-0 text-emerald-200/70 group-hover:text-rose-200 transition-colors"
@@ -187,7 +279,12 @@ function Sidebar() {
           </button>
         </div>
         {signOutError && (
-          <p role="alert" className="mt-1 text-xs leading-4 text-rose-300">
+          <p
+            role="alert"
+            className={`text-xs leading-4 text-rose-300 ${
+              isCollapsed ? "sr-only" : "mt-1"
+            }`}
+          >
             {t(signOutError)}
           </p>
         )}
