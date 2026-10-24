@@ -185,8 +185,8 @@ function ContainerManagementPanel() {
   const hasActiveStockFilter = stockFilter !== "all";
   const hasAppliedStockFilter = hasActiveStockFilter && !isStockLoading && !stockLoadError;
   const feedbackClass = feedback?.tone === "success"
-    ? "border-ecoplaza-primary/30 bg-ecoplaza-primary/10 text-ecoplaza-primary"
-    : "border-ecoplaza-danger/30 bg-ecoplaza-danger/10 text-ecoplaza-danger";
+    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+    : "border-rose-500/30 bg-rose-500/10 text-rose-800 dark:text-rose-300";
   const formatWeight = (weightKg: number): string =>
     `${new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(weightKg)} ${t("common.kg")}`;
 
@@ -247,73 +247,73 @@ function ContainerManagementPanel() {
   };
 
   return (
-    <section className="mt-10" aria-labelledby="user-containers-title">
-      <div className="flex items-end justify-between gap-4">
+    <section className="glass-panel rounded-2xl p-6 shadow-sm" aria-labelledby="user-containers-title">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 id="user-containers-title" className="text-lg font-semibold text-ecoplaza-text">
+            <h2 id="user-containers-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               {t("containers.title")}
             </h2>
-            <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">
+            <span className="rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
               {t("containers.remoteData")}
             </span>
           </div>
-          <p className="mt-1 text-sm text-ecoplaza-text-muted">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {t("containers.description")}
           </p>
         </div>
         {!isLoading && !loadError && (
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="text-sm font-medium text-ecoplaza-text-muted">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
               {t("containers.count", { count: visibleContainers.length })}
             </span>
             <button
               type="button"
               disabled={visibleContainers.length === 0 || exportKind !== null}
               onClick={() => void exportContainers()}
-              className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-border px-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {exportKind === "csv"
-                ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
-                : <Download size={16} aria-hidden="true" />}
+                ? <LoaderCircle className="animate-spin text-emerald-600 dark:text-emerald-400" size={15} aria-hidden="true" />
+                : <Download size={15} className="text-slate-500 dark:text-slate-400" aria-hidden="true" />}
               {exportKind === "csv" ? t("containers.exporting") : t("containers.exportCsv")}
             </button>
             <button
               type="button"
               disabled={visibleContainers.length === 0 || exportKind !== null}
               onClick={() => void exportContainersExcel()}
-              className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-primary px-3 text-sm font-semibold text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-2xs transition-all hover:border-emerald-500 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {exportKind === "excel"
-                ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
-                : <Download size={16} aria-hidden="true" />}
+                ? <LoaderCircle className="animate-spin text-emerald-600 dark:text-emerald-400" size={15} aria-hidden="true" />
+                : <Download size={15} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
               {exportKind === "excel" ? t("containers.exportingExcel") : t("containers.exportExcel")}
             </button>
           </div>
         )}
       </div>
 
-      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-4">
-        <div className="min-h-48 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-6">
+        <div className="min-h-48 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 p-5 backdrop-blur-sm">
           {!isLoading && !loadError && containers.length > 0 && (
             <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_190px_190px]">
               <div className="relative">
                 <label htmlFor="container-search" className="sr-only">{t("containers.searchLabel")}</label>
-                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ecoplaza-text-muted" size={17} strokeWidth={1.8} aria-hidden="true" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} strokeWidth={1.8} aria-hidden="true" />
                 <input
                   id="container-search"
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder={t("containers.searchPlaceholder")}
-                  className="h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 pl-10 pr-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted/75 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  className="h-11 w-full rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-black/20 pl-10 pr-10 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:outline-none"
                 />
                 {hasActiveSearch && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
                     aria-label={t("containers.clearSearch")}
-                    className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text"
+                    className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-slate-200"
                   >
                     <X size={16} strokeWidth={1.8} aria-hidden="true" />
                   </button>
@@ -326,7 +326,7 @@ function ContainerManagementPanel() {
                   value={stockFilter}
                   disabled={isStockLoading || stockLoadError}
                   onChange={(event) => setStockFilter(event.target.value as ContainerStockFilter)}
-                  className="h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 px-3 text-sm text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  className="h-11 w-full rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-[#121c15] px-3 text-sm text-slate-900 dark:text-slate-100 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:border-emerald-500 focus-visible:outline-none"
                 >
                   <option value="all">{t("containers.allStock")}</option>
                   <option value="withStock">{t("containers.withStock")}</option>
@@ -339,7 +339,7 @@ function ContainerManagementPanel() {
                   id="container-sort"
                   value={sortOption}
                   onChange={(event) => setSortOption(event.target.value as ContainerSortOption)}
-                  className="h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 px-3 text-sm text-ecoplaza-text focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                  className="h-11 w-full rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-[#121c15] px-3 text-sm text-slate-900 dark:text-slate-100 focus-visible:border-emerald-500 focus-visible:outline-none"
                 >
                   <option value="codeAsc">{t("containers.sortCodeAsc")}</option>
                   <option value="codeDesc">{t("containers.sortCodeDesc")}</option>
@@ -350,82 +350,84 @@ function ContainerManagementPanel() {
             </div>
           )}
           {isLoading ? (
-            <div role="status" className="flex min-h-38 items-center justify-center gap-3 text-sm text-ecoplaza-text-muted">
-              <LoaderCircle className="animate-spin text-ecoplaza-primary" size={20} strokeWidth={1.8} aria-hidden="true" />
+            <div role="status" className="flex min-h-38 items-center justify-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+              <LoaderCircle className="animate-spin text-emerald-600 dark:text-emerald-400" size={20} strokeWidth={1.8} aria-hidden="true" />
               {t("containers.loading")}
             </div>
           ) : loadError ? (
             <div role="alert" className="flex min-h-38 flex-col items-center justify-center text-center">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ecoplaza-danger/10 text-ecoplaza-danger">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
                 <AlertTriangle size={20} strokeWidth={1.8} aria-hidden="true" />
               </span>
-              <p className="mt-3 max-w-md text-sm text-ecoplaza-text-muted">{t(loadError)}</p>
+              <p className="mt-3 max-w-md text-sm text-slate-600 dark:text-slate-300">{t(loadError)}</p>
               <button
                 type="button"
                 onClick={() => void loadUserContainers()}
-                className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
               >
                 <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" />
                 {t("containers.retry")}
               </button>
             </div>
           ) : containers.length === 0 ? (
-            <div className="flex min-h-38 flex-col items-center justify-center text-center">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ecoplaza-background text-ecoplaza-primary">
+            <div className="flex min-h-38 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-6 text-center gap-2">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <Box size={22} strokeWidth={1.8} aria-hidden="true" />
               </span>
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">{t("containers.emptyTitle")}</h3>
-              <p className="mt-1 max-w-md text-xs leading-5 text-ecoplaza-text-muted">{t("containers.emptyDescription")}</p>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("containers.emptyTitle")}</h3>
+              <p className="max-w-md text-xs leading-5 text-slate-500 dark:text-slate-400">{t("containers.emptyDescription")}</p>
             </div>
           ) : visibleContainers.length === 0 ? (
-            <div className="flex min-h-38 flex-col items-center justify-center text-center">
-              <Search size={22} strokeWidth={1.8} className="text-ecoplaza-primary" aria-hidden="true" />
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">
+            <div className="flex min-h-38 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-6 text-center gap-2">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-400">
+                <Search size={22} strokeWidth={1.8} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+              </span>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {t(hasAppliedStockFilter ? "containers.noFilteredResultsTitle" : "containers.noSearchResultsTitle")}
               </h3>
-              <p className="mt-1 max-w-md text-xs leading-5 text-ecoplaza-text-muted">
+              <p className="max-w-md text-xs leading-5 text-slate-500 dark:text-slate-400">
                 {t(hasAppliedStockFilter ? "containers.noFilteredResultsDescription" : "containers.noSearchResultsDescription")}
               </p>
             </div>
           ) : (
             <div>
               {stockLoadError && (
-                <div role="status" className="mb-4 flex items-start gap-2 rounded-xl border border-ecoplaza-warning/30 bg-ecoplaza-warning/10 px-3 py-2 text-xs leading-5 text-ecoplaza-text">
-                  <AlertTriangle className="mt-0.5 shrink-0 text-ecoplaza-warning" size={15} strokeWidth={1.8} aria-hidden="true" />
+                <div role="status" className="mb-4 flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-300">
+                  <AlertTriangle className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" size={15} strokeWidth={1.8} aria-hidden="true" />
                   <span>{t("containers.stockLoadError")}</span>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {visibleContainers.map((container) => (
-                <article key={container.id} className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background/55 p-4">
+                <article key={container.id} className="glass-card rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-white/5 p-4 hover:border-emerald-500/40 transition-all">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ecoplaza-primary/10 text-ecoplaza-primary">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                       <Database size={18} strokeWidth={1.8} aria-hidden="true" />
                     </span>
                     <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-ecoplaza-text">{container.code}</h3>
-                      <p className="mt-1 text-xs text-ecoplaza-text-muted">
+                      <h3 className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{container.code}</h3>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                         {t("containers.createdAt", {
                           date: new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(container.createdAt)),
                         })}
                       </p>
                     </div>
                   </div>
-                  <p className="mt-3 break-all font-mono text-[10px] leading-4 text-ecoplaza-text-muted" title={container.id}>
+                  <p className="mt-3 break-all font-mono text-[10px] leading-4 text-slate-400 dark:text-slate-500" title={container.id}>
                     {container.id}
                   </p>
-                  <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-ecoplaza-border pt-3">
+                  <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200/60 dark:border-white/10 pt-3">
                     <div>
-                      <dt className="text-[11px] text-ecoplaza-text-muted">{t("containers.availableRecords")}</dt>
-                      <dd className="mt-1 text-sm font-semibold text-ecoplaza-text">
+                      <dt className="text-[11px] text-slate-500 dark:text-slate-400">{t("containers.availableRecords")}</dt>
+                      <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {isStockLoading || stockLoadError
                           ? "—"
                           : (stockByContainer.get(container.id)?.availableRecordCount ?? 0)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[11px] text-ecoplaza-text-muted">{t("containers.availableWeight")}</dt>
-                      <dd className="mt-1 text-sm font-semibold text-ecoplaza-text">
+                      <dt className="text-[11px] text-slate-500 dark:text-slate-400">{t("containers.availableWeight")}</dt>
+                      <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {isStockLoading || stockLoadError
                           ? "—"
                           : formatWeight(stockByContainer.get(container.id)?.availableWeightKg ?? 0)}
@@ -439,10 +441,10 @@ function ContainerManagementPanel() {
           )}
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="self-start rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
-          <h3 className="text-base font-semibold text-ecoplaza-text">{t("containers.registerTitle")}</h3>
-          <p className="mt-1 text-xs leading-5 text-ecoplaza-text-muted">{t("containers.registerDescription")}</p>
-          <label htmlFor="container-code" className="mt-4 block text-sm font-medium text-ecoplaza-text">
+        <form onSubmit={handleSubmit} noValidate className="self-start rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-white/5 p-5 backdrop-blur-sm shadow-sm">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("containers.registerTitle")}</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{t("containers.registerDescription")}</p>
+          <label htmlFor="container-code" className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-300">
             {t("containers.codeLabel")}
           </label>
           <input
@@ -459,10 +461,10 @@ function ContainerManagementPanel() {
             placeholder={t("containers.codePlaceholder")}
             aria-invalid={feedback?.tone === "error"}
             aria-describedby={feedback ? "container-form-feedback" : "container-code-help"}
-            className="mt-2 h-11 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background/70 px-3 font-mono text-sm uppercase text-ecoplaza-text transition-colors placeholder:font-sans placeholder:normal-case placeholder:text-ecoplaza-text-muted/75 focus-visible:border-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 h-11 w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-black/20 px-3 font-mono text-sm uppercase text-slate-900 dark:text-slate-100 transition-colors placeholder:font-sans placeholder:normal-case placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           />
           {!feedback && (
-            <p id="container-code-help" className="mt-1.5 text-xs leading-4 text-ecoplaza-text-muted">
+            <p id="container-code-help" className="mt-1.5 text-xs leading-4 text-slate-500 dark:text-slate-400">
               {t("containers.codeHelp")}
             </p>
           )}
@@ -481,7 +483,7 @@ function ContainerManagementPanel() {
           <button
             type="submit"
             disabled={isFormUnavailable}
-            className="mt-4 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-ecoplaza-primary px-4 text-sm font-semibold text-ecoplaza-on-primary transition-colors hover:bg-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-65"
+            className="mt-4 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
           >
             {isCreating
               ? <LoaderCircle className="animate-spin" size={17} strokeWidth={1.8} aria-hidden="true" />

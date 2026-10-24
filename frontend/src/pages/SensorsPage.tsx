@@ -187,7 +187,7 @@ function SensorsPageView({
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
 
   return (
-    <section className="p-8">
+    <section className="p-8 space-y-8">
       <PageHeader
         eyebrow={t("sensors.eyebrow")}
         title={t("sensors.title")}
@@ -195,24 +195,24 @@ function SensorsPageView({
       />
 
       {showDemoData && (
-        <>
-          <div className="mt-8 flex items-end justify-between gap-4">
+        <section className="glass-panel rounded-2xl p-6 shadow-sm">
+          <div className="flex items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-ecoplaza-text">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   {t("sensors.demoTitle")}
                 </h2>
-                <span className="rounded-full bg-ecoplaza-warning/12 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-warning">
+                <span className="rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
                   {t("sensors.demoBadge")}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {t("sensors.demoDescription")}
               </p>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-4">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               title={t("sensors.registered")}
               value="10"
@@ -238,18 +238,18 @@ function SensorsPageView({
             />
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 border-t border-slate-200/60 dark:border-white/10 pt-6">
             <div>
-              <h2 className="text-lg font-semibold text-ecoplaza-text">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 {t("sensors.demoDevices")}
-              </h2>
+              </h3>
 
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {t("sensors.deviceDescription")}
               </p>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-4">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               <SensorDeviceCard
                 name={`${t("waste.container")} 01`}
                 sensorId="SEN-001"
@@ -281,40 +281,41 @@ function SensorsPageView({
               />
             </div>
           </div>
-        </>
+        </section>
       )}
 
       {user && (
-        <div className="mt-10" aria-labelledby="real-telemetry-title">
-          <div className="flex items-end justify-between gap-4">
+        <section className="glass-panel rounded-2xl p-6 shadow-sm" aria-labelledby="real-telemetry-title">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <h2
                   id="real-telemetry-title"
-                  className="text-lg font-semibold text-ecoplaza-text"
+                  className="text-lg font-semibold text-slate-900 dark:text-slate-100"
                 >
                   {t("sensors.realTelemetryTitle")}
                 </h2>
-                <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">
+                <span className="rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
                   {t("containers.remoteData")}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {t("sensors.realTelemetryDescription")}
               </p>
             </div>
 
-            <div className="flex shrink-0 items-center gap-3">
+            {/* Barra de Controles en micro-isla de cristal esmerilado */}
+            <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 backdrop-blur-md">
               {/* Toggle de Auto-refresco en vivo */}
               <button
                 type="button"
                 role="switch"
                 aria-checked={isAutoRefreshEnabled}
                 onClick={() => setIsAutoRefreshEnabled((current) => !current)}
-                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary ${
+                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 ${
                   isAutoRefreshEnabled
-                    ? "border-ecoplaza-primary/40 bg-ecoplaza-primary/10 text-ecoplaza-primary"
-                    : "border-ecoplaza-border bg-ecoplaza-surface text-ecoplaza-text-muted hover:border-ecoplaza-border/80 hover:text-ecoplaza-text"
+                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shadow-sm"
+                    : "border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:border-emerald-500/30 hover:text-emerald-600 dark:hover:text-emerald-400"
                 }`}
                 aria-label={t("sensors.autoRefreshAriaLabel")}
                 title={t("sensors.refreshEvery10s")}
@@ -322,15 +323,15 @@ function SensorsPageView({
                 <span className="relative flex h-2.5 w-2.5 items-center justify-center">
                   {isAutoRefreshEnabled && (
                     <span
-                      className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ecoplaza-primary opacity-75"
+                      className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"
                       aria-hidden="true"
                     />
                   )}
                   <span
                     className={`relative inline-flex h-2 w-2 rounded-full transition-colors ${
                       isAutoRefreshEnabled
-                        ? "bg-ecoplaza-primary"
-                        : "bg-ecoplaza-border"
+                        ? "bg-emerald-500"
+                        : "bg-slate-400 dark:bg-slate-600"
                     }`}
                     aria-hidden="true"
                   />
@@ -351,11 +352,11 @@ function SensorsPageView({
                   setIsSimulateModalOpen(true);
                 }}
                 disabled={isLoading || containers.length === 0}
-                className="flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label={t("sensors.simulateReading")}
                 title={t("sensors.simulateReading")}
               >
-                <Activity size={15} aria-hidden="true" />
+                <Activity size={15} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                 <span className="hidden sm:inline">
                   {t("sensors.simulateReading")}
                 </span>
@@ -366,12 +367,12 @@ function SensorsPageView({
                 type="button"
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label={t("sensors.refreshTelemetry")}
               >
                 <RefreshCw
                   size={15}
-                  className={isLoading ? "animate-spin" : ""}
+                  className={`text-emerald-600 dark:text-emerald-400 ${isLoading ? "animate-spin" : ""}`}
                   aria-hidden="true"
                 />
                 <span className="hidden sm:inline">
@@ -384,10 +385,10 @@ function SensorsPageView({
           {isLoading ? (
             <div
               role="status"
-              className="mt-4 flex min-h-36 items-center justify-center gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6 text-sm text-ecoplaza-text-muted"
+              className="mt-6 flex min-h-36 items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-6 text-sm text-slate-500 dark:text-slate-400"
             >
               <LoaderCircle
-                className="animate-spin text-ecoplaza-primary"
+                className="animate-spin text-emerald-600 dark:text-emerald-400"
                 size={20}
                 strokeWidth={1.8}
                 aria-hidden="true"
@@ -397,38 +398,38 @@ function SensorsPageView({
           ) : loadError ? (
             <div
               role="alert"
-              className="mt-4 flex min-h-36 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6 text-center"
+              className="mt-6 flex min-h-36 flex-col items-center justify-center rounded-2xl border border-rose-200/80 dark:border-rose-900/30 bg-rose-50/50 dark:bg-rose-950/10 p-6 text-center"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ecoplaza-danger/10 text-ecoplaza-danger">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
                 <AlertTriangle size={20} strokeWidth={1.8} aria-hidden="true" />
               </span>
-              <p className="mt-3 max-w-md text-sm text-ecoplaza-text-muted">
+              <p className="mt-3 max-w-md text-sm text-slate-600 dark:text-slate-300">
                 {t(loadError)}
               </p>
               <button
                 type="button"
                 onClick={handleRefresh}
-                className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
               >
                 <RefreshCw size={16} strokeWidth={1.8} aria-hidden="true" />
                 {t("containers.retry")}
               </button>
             </div>
           ) : containers.length === 0 ? (
-            <div className="mt-4 flex min-h-36 flex-col items-center justify-center rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6 text-center">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ecoplaza-background text-ecoplaza-text-muted">
-                <Radio size={22} strokeWidth={1.8} aria-hidden="true" />
+            <div className="mt-6 flex min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-8 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Radio size={24} strokeWidth={1.8} aria-hidden="true" />
               </span>
-              <h3 className="mt-3 text-sm font-semibold text-ecoplaza-text">
+              <h3 className="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {t("sensors.noContainersTitle")}
               </h3>
-              <p className="mt-1 max-w-md text-xs leading-5 text-ecoplaza-text-muted">
+              <p className="mt-1 max-w-md text-xs leading-5 text-slate-500 dark:text-slate-400">
                 {t("sensors.noContainersDescription")}
               </p>
             </div>
           ) : (
             <div
-              className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
               data-testid="real-telemetry-grid"
             >
               {containers.map((container) => {
@@ -475,7 +476,7 @@ function SensorsPageView({
               })}
             </div>
           )}
-        </div>
+        </section>
       )}
 
       {user && <ContainerManagementPanel key={user.id} />}
