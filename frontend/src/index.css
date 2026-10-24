@@ -5,6 +5,7 @@
 :root {
   color-scheme: light;
 
+  --app-canvas-bg: #eef7f2;
   --ecoplaza-primary: #1f7a4d;
   --ecoplaza-primary-dark: #155d3a;
   --ecoplaza-secondary: #2cb67d;
@@ -30,6 +31,7 @@ html.dark,
 body.dark {
   color-scheme: dark;
 
+  --app-canvas-bg: #0b140e;
   --ecoplaza-primary: #63c98d;
   --ecoplaza-primary-dark: #3faa72;
   --ecoplaza-secondary: #46c98e;
@@ -117,106 +119,70 @@ body[data-theme="dark"] {
 }
 
 .ecoplaza-app-layout,
-.ecoplaza-app-main {
-  background-color: var(--color-ecoplaza-background);
+.ecoplaza-app-main,
+.ecoplaza-app-content-wrapper {
+  background-color: var(--app-canvas-bg);
   color: var(--color-ecoplaza-text);
-}
-
-.ecoplaza-app-main {
-  background-image:
-    radial-gradient(ellipse 80% 80% at 50% -20%, rgba(16, 185, 129, 0.12), rgba(255, 255, 255, 0)),
-    radial-gradient(ellipse 60% 60% at 95% 35%, rgba(6, 182, 212, 0.08), rgba(255, 255, 255, 0)),
-    radial-gradient(ellipse 60% 60% at 5% 85%, rgba(16, 185, 129, 0.06), rgba(255, 255, 255, 0));
-  background-attachment: fixed;
 }
 
 [data-theme="dark"] .ecoplaza-app-layout,
 [data-theme="dark"] .ecoplaza-app-main,
+[data-theme="dark"] .ecoplaza-app-content-wrapper,
 html.dark .ecoplaza-app-layout,
-html.dark .ecoplaza-app-main {
-  background-color: var(--ecoplaza-background);
+html.dark .ecoplaza-app-main,
+html.dark .ecoplaza-app-content-wrapper {
+  background-color: var(--app-canvas-bg);
   color: var(--ecoplaza-text-primary);
-}
-
-[data-theme="dark"] .ecoplaza-app-main,
-html.dark .ecoplaza-app-main {
-  background-image:
-    radial-gradient(ellipse 80% 80% at 50% -20%, rgba(16, 185, 129, 0.15), rgba(11, 19, 14, 0)),
-    radial-gradient(ellipse 60% 60% at 95% 35%, rgba(6, 182, 212, 0.10), rgba(11, 19, 14, 0)),
-    radial-gradient(ellipse 60% 60% at 5% 85%, rgba(16, 185, 129, 0.08), rgba(11, 19, 14, 0));
-  background-attachment: fixed;
 }
 
 [data-theme="light"] .ecoplaza-app-layout,
 [data-theme="light"] .ecoplaza-app-main,
+[data-theme="light"] .ecoplaza-app-content-wrapper,
 html.light .ecoplaza-app-layout,
-html.light .ecoplaza-app-main {
-  background-color: var(--ecoplaza-background);
+html.light .ecoplaza-app-main,
+html.light .ecoplaza-app-content-wrapper {
+  background-color: var(--app-canvas-bg);
   color: var(--ecoplaza-text-primary);
 }
 
-[data-theme="dark"] .ecoplaza-sidebar {
-  border-color: var(--ecoplaza-sidebar-border);
-  background-color: var(--ecoplaza-sidebar-background);
-  box-shadow: 10px 0 30px rgb(0 0 0 / 14%);
+/* Utilidad para ocultar barras de scroll nativas */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-[data-theme="dark"] .ecoplaza-sidebar-logo {
-  background-color: var(--ecoplaza-sidebar-active);
-  box-shadow: 0 8px 22px rgb(22 133 82 / 26%);
-  color: #ffffff;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-[data-theme="dark"] .ecoplaza-sidebar-title,
-[data-theme="dark"] .ecoplaza-sidebar-user-name {
-  color: var(--ecoplaza-sidebar-text);
+/* Curvas Cóncavas Invertidas para la Pestaña Activa Conectada (Seamless Scoop Corners) */
+.sidebar-curve-top {
+  position: absolute;
+  top: -16px;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  border-bottom-right-radius: 16px;
+  box-shadow: 6px 6px 0 6px var(--app-canvas-bg);
+  pointer-events: none;
 }
 
-[data-theme="dark"] .ecoplaza-sidebar-secondary,
-[data-theme="dark"] .ecoplaza-sidebar-link-inactive,
-[data-theme="dark"] .ecoplaza-sidebar-sign-out {
-  color: var(--ecoplaza-sidebar-text-secondary);
+.sidebar-curve-bottom {
+  position: absolute;
+  bottom: -16px;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  border-top-right-radius: 16px;
+  box-shadow: 6px -6px 0 6px var(--app-canvas-bg);
+  pointer-events: none;
 }
 
-[data-theme="dark"] .ecoplaza-sidebar-link-inactive svg,
-[data-theme="dark"] .ecoplaza-sidebar-sign-out svg {
-  color: var(--ecoplaza-sidebar-icon);
-}
-
-[data-theme="dark"] .ecoplaza-sidebar-link-active {
-  background-color: var(--ecoplaza-sidebar-active);
-  box-shadow: 0 8px 20px rgb(6 61 35 / 28%);
-  color: #ffffff;
-}
-
-[data-theme="dark"] .ecoplaza-sidebar-link-active:hover {
-  background-color: var(--ecoplaza-sidebar-active-hover);
-}
-
-[data-theme="dark"] .ecoplaza-sidebar-link-inactive:hover,
-[data-theme="dark"] .ecoplaza-sidebar-profile:hover,
-[data-theme="dark"] .ecoplaza-sidebar-profile-active,
-[data-theme="dark"] .ecoplaza-sidebar-sign-out:hover {
-  background-color: var(--ecoplaza-sidebar-surface);
-  color: var(--ecoplaza-sidebar-text);
-}
-
-[data-theme="dark"] .ecoplaza-sidebar-link:focus-visible,
-[data-theme="dark"] .ecoplaza-sidebar-profile:focus-visible,
-[data-theme="dark"] .ecoplaza-sidebar-sign-out:focus-visible {
+.ecoplaza-sidebar-link:focus-visible,
+.ecoplaza-sidebar-profile:focus-visible,
+.ecoplaza-sidebar-sign-out:focus-visible {
   outline: 2px solid var(--ecoplaza-interactive-focus);
   outline-offset: 2px;
-}
-
-[data-theme="dark"] .ecoplaza-sidebar-user-section {
-  border-color: var(--ecoplaza-sidebar-border);
-}
-
-[data-theme="dark"] .ecoplaza-sidebar-avatar {
-  border: 1px solid var(--ecoplaza-sidebar-border);
-  background-color: var(--ecoplaza-sidebar-surface);
-  color: var(--ecoplaza-sidebar-icon);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
 }
 
 @media (prefers-reduced-motion: no-preference) {
