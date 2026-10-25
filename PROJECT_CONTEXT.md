@@ -19,9 +19,10 @@
    - Requiere y valida que los lotes de inventario asociados se encuentren en estado `'available'`.
    - Actualiza de forma atómica el estado del material a `'sold'`, impidiendo venta concurrente doble (*double-spending* de lotes).
 
-3. **Precisión de Pesaje y Telemetría:**
+3. **Precisión de Pesaje y Telemetría IoT:**
    - La captura de peso en residuos e inventario se valida con precisión exacta al gramo (`0.001 kg`), rechazando valores no numéricos, negativos o con pérdida silenciosa de precisión.
-   - Los sensores IoT reportan nivel de llenado (`fill_level` 0-100%), nivel de batería (`battery_level` 0-100%) y temperatura ambiental en grados Celsius. Un nivel de llenado superior al 80% detona alertas visuales críticas inmediatas y prioridad en la cola de despacho de recolección.
+   - Los sensores IoT reportan nivel de llenado (`fill_level` 0-100%), nivel de batería (`battery_level` 0-100%) y temperatura ambiental en grados Celsius.
+   - Escala semafórica estandarizada: Estado Óptimo (`< 60%`), Advertencia (`60% - 84%`) y Estado Crítico (`>= 85%`), el cual detona alertas visuales y sonoras inmediatas en la interfaz y en el actuador del contenedor físico.
 
 ---
 
@@ -41,7 +42,7 @@
 | **Exportación de Datos** | **ExcelJS + CSV Nativo** | Generación de libros Excel (.xlsx) formateados y archivos CSV con BOM UTF-8 y fecha colombiana. |
 | **Pruebas Unitarias** | **Node.js Test Runner (`node --test`)** | Pruebas de lógica pura, cálculos de reportes, formateadores y validación de esquemas sin dependencias externas. |
 | **Pruebas de Componentes** | **Vitest + Testing Library** | Pruebas de integración visual, accesibilidad (ARIA), reactividad de formularios y aislamiento de cuentas. |
-| **Hardware IoT (Proyección)** | **ESP32 + Sensores** | Nodos con microcontrolador ESP32, sensor ultrasónico HC-SR04 (llenado), celda de carga HX711 (peso) y DHT22 (temperatura/humedad). |
+| **Hardware IoT (Firmware Implementado)** | **ESP32 + Sensores** | Código C++ implementado en `firmware/src/main.cpp` con guía en `firmware/README.md` para nodos ESP32 con sensor ultrasónico HC-SR04 (llenado), celda de carga HX711 (peso) y DHT22 (temperatura/humedad) conectados vía REST a Supabase. |
 
 ---
 
@@ -51,38 +52,48 @@ La solución adopta una arquitectura desacoplada **Frontend-First / Service-Laye
 
 ```text
 ecoplaza-smart-waste-platform/
-├── .github/                      # Workflows de CI/CD e integración continua
-├── firmware/                     # Código fuente C++/Arduino para microcontroladores ESP32 IoT
-├── supabase/                     # Configuración de base de datos y migraciones PostgreSQL
-│   └── migrations/               # Esquemas SQL, tablas, políticas RLS y procedimientos RPC
-└── frontend/                     # Aplicación cliente React 19 + TypeScript + Tauri 2
-    ├── public/                   # Activos estáticos públicos (logos, favicons, texturas)
-    ├── src-tauri/                # Contenedor nativo de Tauri 2 en lenguaje Rust
-    │   ├── capabilities/         # Permisos y directivas de seguridad nativas
-    │   ├── src/                  # Punto de entrada y comandos nativos en Rust
-    │   └── tauri.conf.json       # Configuración oficial de la aplicación de escritorio
+├── .github/                       # Workflows de CI/CD e integración continua
+├── .vscode/                       # Configuración de workspace (supresión de squiggles C++ ESP32)
+│   └── settings.json
+├── firmware/                      # Firmware C++ para microcontroladores ESP32 IoT
+│   ├── README.md                  # Guía de conexión física, dependencias PlatformIO/Arduino y calibración
+│   └── src/
+│       └── main.cpp               # Implementación C++ de lectura de sensores y despacho HTTP REST
+├── supabase/                      # Configuración de base de datos y migraciones PostgreSQL
+│   └── migrations/                # Esquemas SQL, tablas, políticas RLS y procedimientos RPC
+│       ├── 20261012000000_initial_database_schema.sql
+│       ├── 20261013000000_create_buyers.sql
+│       ├── 20261013010000_create_sales.sql
+│       └── 20261014000000_create_telemetry.sql
+└── frontend/                      # Aplicación cliente React 19 + TypeScript + Tauri 2
+    ├── public/                    # Activos estáticos públicos (logos, favicons, texturas e imágenes)
+    ├── src-tauri/                 # Contenedor nativo de Tauri 2 en lenguaje Rust
+    │   ├── capabilities/          # Permisos y directivas de seguridad nativas
+    │   ├── src/                   # Punto de entrada y comandos nativos en Rust
+    │   └── tauri.conf.json        # Configuración oficial de escritorio (CSP estricto activado)
     ├── src/
-    │   ├── auth/                 # Contexto de autenticación, sesión y guards de ruta
-    │   ├── components/           # Componentes UI reutilizables (Sidebar, MetricCard, Modales)
-    │   ├── hooks/                # Custom React Hooks para estado y comportamiento compartido
-    │   ├── i18n/                 # Sistema de internacionalización bilingüe (Español / Inglés)
-    │   ├── layouts/              # Plantillas estructurales de la aplicación (AppLayout, AuthLayout)
-    │   ├── pages/                # Vistas principales y rutas del sistema
-    │   ├── services/             # Capa de servicios desacoplados (Supabase, IoT, Exportación, Asistente)
-    │   ├── theme/                # Contexto y lógica reactiva de temas Claro / Oscuro
-    │   ├── types/                # Definiciones de tipos TypeScript globales y contratos de dominio
-    │   ├── utils/                # Utilidades puras de fecha, moneda colombiana (COP) y formateo
-    │   ├── App.tsx               # Enrutamiento principal y proveedores de contexto
-    │   ├── index.css             # Estilos globales, variables CSS del lienzo y utilidades personalizadas
-    │   └── main.tsx              # Punto de entrada del cliente web/escritorio
-    └── tests/                    # Suite de 315 pruebas automatizadas (Node.js y Vitest)
+    │   ├── auth/                  # Contexto de autenticación, sesión, avatares y guards de ruta
+    │   ├── components/            # Componentes UI reutilizables (Sidebar, MetricCard, Modales)
+    │   ├── context/               # Proveedores de estado global compartidos (DemoVisibility)
+    │   ├── hooks/                 # Custom React Hooks para accesibilidad y trampa de foco (useDialogFocus)
+    │   ├── i18n/                  # Sistema de internacionalización bilingüe (config.ts, es.ts, en.ts)
+    │   ├── layouts/               # Plantillas estructurales de la aplicación (AppLayout)
+    │   ├── lib/                   # Clientes base configurados (supabase.ts)
+    │   ├── pages/                 # Vistas principales y rutas del sistema (12 vistas)
+    │   ├── services/              # Capa de servicios desacoplados (49 archivos de servicio modular)
+    │   ├── theme/                 # Contexto y lógica reactiva de temas Claro / Oscuro
+    │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
+    │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
+    │   └── main.tsx               # Punto de entrada del cliente web/escritorio
+    └── tests/                     # Suite de 315 pruebas automatizadas (Node.js y Vitest en 59 archivos)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
+El directorio contiene **49 archivos de servicios especializados** que encapsulan el acceso a datos, analítica y utilidades operativas:
 - `assistantInsightsService.ts`: Generador de diagnósticos estratégicos de valorización de inventario, compradores afines y riesgos de stock.
 - `assistantService.ts`: Procesamiento de lenguaje natural básico y respuestas operativas del asistente inteligente.
-- `buyerService.ts`: Gestión de directorio de compradores y cálculo de métricas de recurrencia de compras.
-- `excelWorkbookService.ts`: Construcción de libros Excel profesionales tipados con estilos corporativos.
+- `buyerService.ts` / `buyerFilters.ts`: Gestión de directorio de compradores y métricas de recurrencia comercial.
+- `excelService.ts` / `excelWorkbook.ts`: Motor base y generador tipado de hojas de cálculo con ExcelJS, respaldado por exportadores especializados (`buyerExcelService.ts`, `buyerPurchaseExcelService.ts`, `containerExcelService.ts`, `inventoryExcelService.ts`, `reportExcelService.ts`, `salesExcelService.ts`, `wasteExcelService.ts`).
 - `iotAnalyticsService.ts`: Diagnóstico de salud de flota de contenedores IoT y colas de despacho urgente.
 - `reportService.ts`: Agregación cronológica de ventas, variabilidad mensual e ingresos por categoría.
 - `salesService.ts`: Orquestación de ventas atómicas mediante llamadas RPC a Supabase.
@@ -92,14 +103,14 @@ ecoplaza-smart-waste-platform/
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 218)
+### 4. Estado Actual (Snapshot al Commit 219)
 
-- **Hito Alcanzado:** Commit `218` en la rama principal `origin/main`.
-- **Cobertura de Pruebas Automatizadas:** **315 pruebas aprobadas al 100%** (174 pruebas en Node.js Native Runner + 141 pruebas en Vitest / RTL).
+- **Hito Alcanzado:** Commit `219` en la rama principal `origin/main`.
+- **Cobertura de Pruebas Automatizadas:** **315 pruebas aprobadas al 100%** distribuidas en **59 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 29 suites `.component.test.tsx` en Vitest con 141 pruebas).
 - **Módulos Culminados y Operativos:**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
-  3. **Monitoreo de Sensores y Telemetría IoT:** Tarjetas de contenedores con indicadores de llenado, alertas visuales críticas (> 80%), selector de simulación manual contextual, auto-refresco periódico de 10s y modal accesible de historial de telemetría.
+  3. **Monitoreo de Sensores y Telemetría IoT:** Tarjetas de contenedores con indicadores de llenado, alertas visuales críticas (>= 85%), selector de simulación manual contextual, auto-refresco periódico de 10s y modal accesible de historial de telemetría.
   4. **Gestión de Residuos:** Formulario de registro con precisión al gramo, popover inteligente de rango de fechas en formato colombiano (`DD/MM/YYYY`) y tabla interactiva.
   5. **Almacenamiento e Inventario:** Detección de antigüedad de lotes en riesgo moderado y crítico, valorización económica en pesos colombianos (COP) y filtro progresivo por rango de peso.
   6. **Directorio de Compradores:** Segmentación comercial por actividad (con compras / sin compras), resumen porcentual y vínculos directos hacia ventas.
@@ -113,12 +124,13 @@ ecoplaza-smart-waste-platform/
       - Pestaña activa conectada con curvas cóncavas invertidas (*scoop corners*) sincronizada con la variable `--app-canvas-bg`.
       - Mecanismo colapsable suave con transición CSS de `w-64` a `w-20` mediante botón toggle, adaptando logotipo, enlaces y perfil inferior sin provocar barras de scroll.
   12. **Diagnóstico Nativo Tauri:** Detección automática del entorno de ejecución (Web vs Tauri 2) y modal informativo con dimensiones de ventana y capacidades de archivo.
+  13. **Seguridad CSP en Tauri 2:** Directivas Content Security Policy (CSP) estrictamente configuradas en `frontend/src-tauri/tauri.conf.json` y verificadas mediante pruebas automatizadas en `frontend/tests/tauriSecurityConfig.test.ts`.
+  14. **Firmware de Telemetría IoT (ESP32):** Sketch C++ implementado en `firmware/src/main.cpp` y documentado en `firmware/README.md` para lectura periódica de sensores HC-SR04, HX711 y DHT22 con despacho de telemetría vía HTTP REST hacia Supabase.
 
 #### Roadmap Inmediato de Tareas Pendientes
-1. **Endurecimiento de CSP (Content Security Policy):** Ajustar y validar directivas estrictas en `tauri.conf.json` para empaquetado nativo final.
-2. **Generación del Instalador de Escritorio:** Compilar y generar el instalador ejecutable de Windows (.msi / .exe) mediante `npx tauri build`.
-3. **Firmware de Telemetría ESP32:** Implementar el sketch final en C++ para el microcontrolador ESP32 con cliente HTTP/WebSocket hacia la API de telemetría.
-4. **Documentación Final de Sustentación:** Elaboración de manuales de usuario, arquitectura de base de datos y memoria técnica para sustentación académica.
+1. **Cobertura de Pruebas de Componente para Navegación Colapsable:** Incorporar pruebas automatizadas en Vitest para validar el estado colapsable (`w-64` a `w-20`), accesibilidad ARIA y enlace activo en `Sidebar.tsx`.
+2. **Empaquetado y Validación del Instalador Nativo de Windows:** Compilar y verificar el instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
+3. **Pruebas de Integración Física y Guía Final de Sustentación:** Validación en vivo del nodo físico ESP32 y consolidación del protocolo de demostración para la entrega académica.
 
 ---
 
@@ -144,4 +156,3 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
   4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**141 / 141 pasadas**).
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
-
