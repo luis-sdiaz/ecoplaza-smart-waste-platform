@@ -31,7 +31,12 @@ const navItems = [
   { to: "/settings", end: false, icon: Settings, labelKey: "navigation.settings" },
 ];
 
-function Sidebar() {
+export interface SidebarProps {
+  currentTab?: string;
+  onTabChange?: ((tab: string) => void) | unknown;
+}
+
+function Sidebar({ currentTab, onTabChange }: SidebarProps = {}) {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -134,59 +139,77 @@ function Sidebar() {
 
       {/* Lista de navegación con pestaña activa conectada y curvas cóncavas */}
       <nav className="flex-1 flex flex-col justify-center gap-1 py-2 overflow-y-auto no-scrollbar">
-        {navItems.map(({ to, end, icon: Icon, labelKey }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            title={isCollapsed ? t(labelKey) : undefined}
-            className={({ isActive }) =>
-              `ecoplaza-sidebar-link group flex items-center transition-all duration-200 ${
-                isActive
-                  ? `ecoplaza-sidebar-link-active mr-0 rounded-l-full relative z-10 font-bold bg-[#eef7f2] text-[#064e3b] dark:bg-[#0b140e] dark:text-emerald-400 text-sm shadow-sm ${
-                      isCollapsed
-                        ? "ml-2 px-0 py-2.5 justify-center"
-                        : "ml-3 pl-4 pr-5 py-2.5"
-                    }`
-                  : `ecoplaza-sidebar-link-inactive rounded-full text-emerald-100/80 hover:text-white hover:bg-white/10 text-sm font-medium ${
-                      isCollapsed
-                        ? "mx-2 px-0 py-2 justify-center"
-                        : "mx-3 px-4 py-2"
-                    }`
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
+        {navItems.map(({ to, end, icon: Icon, labelKey }) => {
+          const tabKey = to.replace(/^\//, "") || "dashboard";
+          const isTabActive = currentTab
+            ? currentTab === tabKey || (tabKey === "dashboard" && currentTab === "home")
+            : false;
+
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              role="button"
+              aria-current={isTabActive ? "page" : undefined}
+              onClick={() => {
+                if (typeof onTabChange === "function") {
+                  onTabChange(tabKey);
+                }
+              }}
+              title={isCollapsed ? t(labelKey) : undefined}
+              className={({ isActive: navIsActive }) => {
+                const isActive = navIsActive || isTabActive;
+                return `ecoplaza-sidebar-link group flex items-center transition-all duration-200 ${
+                  isActive
+                    ? `ecoplaza-sidebar-link-active active mr-0 rounded-l-full relative z-10 font-bold bg-[#eef7f2] text-[#064e3b] dark:bg-[#0b140e] dark:text-emerald-400 text-sm shadow-sm ${
+                        isCollapsed
+                          ? "ml-2 px-0 py-2.5 justify-center"
+                          : "ml-3 pl-4 pr-5 py-2.5"
+                      }`
+                    : `ecoplaza-sidebar-link-inactive rounded-full text-emerald-100/80 hover:text-white hover:bg-white/10 text-sm font-medium ${
+                        isCollapsed
+                          ? "mx-2 px-0 py-2 justify-center"
+                          : "mx-3 px-4 py-2"
+                      }`
+                }`;
+              }}
+            >
+              {({ isActive: navIsActive }) => {
+                const isActive = navIsActive || isTabActive;
+                return (
                   <>
-                    <span aria-hidden="true" className="sidebar-curve-top" />
-                    <span aria-hidden="true" className="sidebar-curve-bottom" />
+                    {isActive && (
+                      <>
+                        <span aria-hidden="true" className="sidebar-curve-top" />
+                        <span aria-hidden="true" className="sidebar-curve-bottom" />
+                      </>
+                    )}
+                    <Icon
+                      size={20}
+                      strokeWidth={isActive ? 2.5 : 2.2}
+                      className={`shrink-0 transition-colors duration-200 ${
+                        isActive
+                          ? "text-[#064e3b] dark:text-emerald-400"
+                          : "text-emerald-200/70 group-hover:text-white"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
+                        isCollapsed
+                          ? "max-w-0 opacity-0 ml-0 pointer-events-none"
+                          : "max-w-xs opacity-100 ml-3 truncate"
+                      }`}
+                    >
+                      {t(labelKey)}
+                    </span>
                   </>
-                )}
-                <Icon
-                  size={20}
-                  strokeWidth={isActive ? 2.5 : 2.2}
-                  className={`shrink-0 transition-colors duration-200 ${
-                    isActive
-                      ? "text-[#064e3b] dark:text-emerald-400"
-                      : "text-emerald-200/70 group-hover:text-white"
-                  }`}
-                  aria-hidden="true"
-                />
-                <span
-                  className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
-                    isCollapsed
-                      ? "max-w-0 opacity-0 ml-0 pointer-events-none"
-                      : "max-w-xs opacity-100 ml-3 truncate"
-                  }`}
-                >
-                  {t(labelKey)}
-                </span>
-              </>
-            )}
-          </NavLink>
-        ))}
+                );
+              }}
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* Tarjeta inferior de Perfil y Cerrar sesión */}
