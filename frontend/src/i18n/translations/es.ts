@@ -794,6 +794,8 @@ const es = {
     resetDialogTitle: "¿Restablecer preferencias?",
     resetDialogDescription: "Se restaurarán las preferencias predeterminadas de idioma, unidad de peso, contenedor de demostración y apariencia. Tus datos personales no se eliminarán.",
     resetCancel: "Cancelar", resetConfirm: "Restablecer",
+    resetClose: "Cerrar diálogo de restablecimiento",
+    resetting: "Restableciendo...",
     resetSuccessTitle: "Preferencias restablecidas",
     resetSuccessDescription: "La configuración predeterminada se restauró correctamente.",
     dismissNotification: "Cerrar notificación",
