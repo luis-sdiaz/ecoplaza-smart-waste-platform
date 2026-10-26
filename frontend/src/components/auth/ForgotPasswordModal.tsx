@@ -21,12 +21,13 @@ import "./RegisterModal.css";
 type RecoveryStep = "email" | "otp" | "password";
 type Feedback = { tone: "error" | "success"; key: string };
 
-type ForgotPasswordModalProps = {
+export interface ForgotPasswordModalProps {
   isOpen: boolean;
   initialEmail: string;
   onClose: () => void;
   onSuccess: () => void;
-};
+  testId?: string;
+}
 
 const OTP_LENGTH = 8;
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -68,6 +69,7 @@ function ForgotPasswordModal({
   initialEmail,
   onClose,
   onSuccess,
+  testId,
 }: ForgotPasswordModalProps) {
   const { t, i18n } = useTranslation();
   const {
@@ -289,11 +291,23 @@ function ForgotPasswordModal({
 
     setEmail(normalizeEmail(initialEmail));
     const previousFocus = document.activeElement;
-    dialog.showModal();
+    if (typeof dialog.showModal === "function") {
+      try {
+        dialog.showModal();
+      } catch {
+        // Fallback defensivo para jsdom
+      }
+    }
     requestAnimationFrame(() => emailInputRef.current?.focus({ preventScroll: true }));
 
     return () => {
-      dialog.close();
+      if (typeof dialog.close === "function") {
+        try {
+          dialog.close();
+        } catch {
+          // Fallback defensivo para jsdom
+        }
+      }
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
   }, [initialEmail, isOpen]);
@@ -343,6 +357,13 @@ function ForgotPasswordModal({
       lang={i18n.resolvedLanguage === "en" ? "en" : "es"}
       className="ecoplaza-register-modal px-8 py-7 text-ecoplaza-text"
       onCancel={(event) => { event.preventDefault(); handleClose(); }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          handleClose();
+        }
+      }}
+      data-testid={testId}
     >
       <button
         type="button"
@@ -394,14 +415,16 @@ function ForgotPasswordModal({
           </div>
           {fieldError && <p id={`${modalId}-email-error`} className="mt-1 text-xs leading-4 text-ecoplaza-danger">{t(fieldError)}</p>}
           {feedback && <p role="alert" className={`mt-4 rounded-xl border px-3 py-2 text-xs leading-5 ${feedbackClass}`}>{t(feedback.key)}</p>}
-          <button type="submit" disabled={isPending || resendSeconds > 0}
+          <button type="submit" disabled={isPending || resendSeconds > 0} aria-busy={isPending}
             className="mt-5 flex h-13 w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-ecoplaza-primary text-sm font-semibold text-ecoplaza-on-primary transition-colors hover:bg-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-65">
             {isPending ? <LoaderCircle className="animate-spin" size={18} strokeWidth={1.8} aria-hidden="true" /> : <ArrowRight size={18} strokeWidth={1.8} aria-hidden="true" />}
-            {isPending
-              ? t("recovery.sending")
-              : resendSeconds > 0
-                ? t("recovery.retryIn", { seconds: resendSeconds })
-                : t("recovery.sendCode")}
+            <span role={isPending ? "status" : undefined}>
+              {isPending
+                ? t("recovery.sending")
+                : resendSeconds > 0
+                  ? t("recovery.retryIn", { seconds: resendSeconds })
+                  : t("recovery.sendCode")}
+            </span>
           </button>
         </form>
       )}
