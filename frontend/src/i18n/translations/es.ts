@@ -311,6 +311,7 @@ const es = {
     localRecords: "Historial demostrativo y local", localData: "Sólo este dispositivo",
     localDescription: "Datos de demostración y registros creados anteriormente en este dispositivo. No están sincronizados con PostgreSQL.",
     loading: "Cargando tus residuos...", retry: "Reintentar",
+    noRecords: "No hay registros disponibles",
     emptyTitle: "Todavía no tienes residuos registrados",
     emptyDescription: "Registra tu primer residuo para guardarlo de forma segura en PostgreSQL.",
     statusFilter: "Estado", allStatuses: "Todos los estados",

@@ -311,6 +311,7 @@ const en = {
     localRecords: "Demo and local history", localData: "This device only",
     localDescription: "Demo data and records previously created on this device. They are not synchronized with PostgreSQL.",
     loading: "Loading your waste records...", retry: "Try again",
+    noRecords: "No waste records available",
     emptyTitle: "You don't have any waste records yet",
     emptyDescription: "Register your first waste record to store it securely in PostgreSQL.",
     statusFilter: "Status", allStatuses: "All statuses",
