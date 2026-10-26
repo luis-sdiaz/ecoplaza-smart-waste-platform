@@ -10,7 +10,11 @@ import type { AuthErrorCode } from "../../auth/authErrors";
 import { resendSignUpOtp, signUpWithPassword } from "../../auth/supabaseAuth";
 import "./RegisterModal.css";
 
-type RegisterModalProps = { isOpen: boolean; onClose: () => void };
+export type RegisterModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  testId?: string;
+};
 type RegisterFieldName = "fullName" | "email" | "password" | "confirmPassword";
 type RegisterValues = Record<RegisterFieldName, string>;
 type RegisterErrorKey =
@@ -82,7 +86,7 @@ function getResendErrorKey(code: AuthErrorCode): string {
   return "register.resendError";
 }
 
-function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
+function RegisterModal({ isOpen, onClose, testId }: RegisterModalProps) {
   const { t, i18n } = useTranslation();
   const { verifySignUpOtp } = useAuth();
   const formId = useId();
@@ -274,10 +278,22 @@ function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
     const dialog = dialogRef.current;
     if (!isOpen || !dialog) return;
     const previousFocus = document.activeElement;
-    dialog.showModal();
+    if (typeof dialog.showModal === "function") {
+      try {
+        dialog.showModal();
+      } catch {
+        // Fallback defensivo para jsdom
+      }
+    }
     firstInputRef.current?.focus();
     return () => {
-      dialog.close();
+      if (typeof dialog.close === "function") {
+        try {
+          dialog.close();
+        } catch {
+          // Fallback defensivo para jsdom
+        }
+      }
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
   }, [isOpen]);
@@ -320,6 +336,13 @@ function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
       lang={i18n.resolvedLanguage === "en" ? "en" : "es"}
       className="ecoplaza-register-modal px-8 py-7 text-ecoplaza-text"
       onCancel={(event) => { event.preventDefault(); handleClose(); }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          handleClose();
+        }
+      }}
+      data-testid={testId}
     >
       <button type="button" aria-label={t("register.close")} onClick={handleClose}
         className="absolute top-5 right-5 flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary">
@@ -378,10 +401,12 @@ function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
           </div>
 
           {feedback && <p role="alert" className={`mt-4 rounded-xl border px-3 py-2 text-xs leading-5 ${feedbackClass}`}>{t(feedback.key)}</p>}
-          <button type="submit" disabled={isSignUpPending}
+          <button type="submit" disabled={isSignUpPending} aria-busy={isSignUpPending}
             className="mt-5 flex h-13 w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-ecoplaza-primary text-sm font-semibold text-ecoplaza-on-primary transition-colors hover:bg-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-65">
             {isSignUpPending ? <LoaderCircle className="animate-spin" size={18} strokeWidth={1.8} aria-hidden="true" /> : <ArrowRight size={18} strokeWidth={1.8} aria-hidden="true" />}
-            {t(isSignUpPending ? "register.creatingAccount" : "register.submit")}
+            <span role={isSignUpPending ? "status" : undefined}>
+              {t(isSignUpPending ? "register.creatingAccount" : "register.submit")}
+            </span>
           </button>
         </form>
       ) : (

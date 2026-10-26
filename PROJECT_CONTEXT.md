@@ -85,7 +85,7 @@ ecoplaza-smart-waste-platform/
     │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
     │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
     │   └── main.tsx               # Punto de entrada del cliente web/escritorio
-    └── tests/                     # Suite de 439 pruebas automatizadas (Node.js y Vitest en 81 archivos)
+    └── tests/                     # Suite de 445 pruebas automatizadas (Node.js y Vitest en 82 archivos)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
@@ -103,10 +103,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 243)
+### 4. Estado Actual (Snapshot al Commit 244)
 
-- **Hito Alcanzado:** Commit `243` en preparación sobre la rama principal `main`.
-- **Cobertura de Pruebas Automatizadas:** **439 pruebas aprobadas al 100%** distribuidas en **81 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 51 suites `.component.test.tsx` en Vitest con 265 pruebas).
+- **Hito Alcanzado:** Commit `244` en preparación sobre la rama principal `main`.
+- **Cobertura de Pruebas Automatizadas:** **445 pruebas aprobadas al 100%** distribuidas en **82 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 52 suites `.component.test.tsx` en Vitest con 271 pruebas).
 - **Módulos Culminados y Operativos:**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
@@ -145,6 +145,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
   31. **Desempeño y Desglose Comercial por Categoría (`SalesCategoryPerformance.tsx`):** Componente de visualización analítica accesible (`role="region"` y `aria-label`), tarjetas individuales por categoría con desglose cuantitativo de ventas, peso vendido en kg, ingresos brutos en COP y precio promedio por kg, barra de progreso de participación porcentual con atributos accesibles (`role="progressbar"`, `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax="100"`), representación accesible oculta (`sr-only`) para tecnologías asistivas, estado de carga accesible con `role="status"` y spinner `LoaderCircle`, y estado vacío informativo ante períodos sin operaciones registradas.
   32. **Tabla de Resumen de Stock por Contenedor (`ContainerStockSummaryTable.tsx`):** Componente tabular accesible con contenedor semántico (`role="region"`, `aria-label`, foco por teclado `tabIndex={0}`), tabla estructurada con `<caption className="sr-only">`, encabezados con `scope="col"` y celdas de identificador con `scope="row"`, formateo cuantitativo de peso en kilogramos con `t("common.kg")`, badges visuales de existencias (`withStock` / `withoutStock`), soporte de estado de carga accesible con `role="status"` y spinner `LoaderCircle`, y estado vacío informativo (`inventory.noRegisteredContainers`) con total retrocompatibilidad con `InventoryPage.tsx`.
   33. **Tarjeta Operativa de Dispositivo IoT y Telemetría de Contenedores (`SensorDeviceCard.tsx`):** Componente de visualización y monitoreo accesible (`role="region"`, `aria-label`, foco visual) con nivel de llenado cuantitativo y barra de progreso ARIA (`role="progressbar"`, `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax="100"`), detección de capacidad crítica (>80%) con alerta visual (`AlertTriangle`) y descripción auditiva accesible (`sr-only`), etiquetas de telemetría en tiempo real (batería con iconografía dinámica, temperatura ambiental en °C, pesaje en kg y fecha de última lectura), botones interactivos de acción contextual accesible (ver historial, simular telemetría y gestionar contenedor con `aria-label` descriptivo) y soporte de estado de carga accesible con `role="status"`, `aria-live="polite"` y spinner `LoaderCircle`.
+  34. **Modal de Registro de Usuarios y Flujo de Verificación (`RegisterModal.tsx`):** Diálogo modal accesible (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con renderizado condicional por `isOpen`, captura de tecla Escape y botón de descarte accesible con `aria-label`, validación en tiempo real de campos obligatorios (`fullName`, `email`, `password`, `confirmPassword`), alternancia de visibilidad de contraseñas (`Eye`/`EyeOff`), prevención de doble envío con estados `aria-busy` y spinner `LoaderCircle`, y transición reactiva al paso de verificación con código OTP de 8 dígitos.
 
 #### Roadmap Inmediato de Tareas Pendientes
 1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Modales Transaccionales - Bloque A (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx`, `frontend/tests/successToastFeedback.component.test.tsx`, `frontend/tests/settingsPanelPreferences.component.test.tsx`, `frontend/tests/wasteRegistrationModal.component.test.tsx`, `frontend/tests/saleRegistrationModal.component.test.tsx`, `frontend/tests/buyerFormModal.component.test.tsx` y `frontend/tests/saleDetailsModal.component.test.tsx`.
@@ -163,6 +164,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
    - **Desempeño y Desglose Comercial por Categoría (`SalesCategoryPerformance.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/salesCategoryPerformance.component.test.tsx`.
    - **Tabla de Resumen de Stock por Contenedor (`ContainerStockSummaryTable.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/containerStockSummaryTable.component.test.tsx`.
    - **Tarjeta Operativa de Dispositivo IoT (`SensorDeviceCard.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/sensorDeviceCard.component.test.tsx`.
+   - **Modal de Registro de Usuarios (`RegisterModal.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/registerModal.component.test.tsx`.
 3. **Empaquetado y Validación del Instalador Nativo de Windows:** Compilar y verificar el instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
 4. **Pruebas de Integración Física y Guía Final de Sustentación:** Validación en vivo del nodo físico ESP32 y consolidación del protocolo de demostración para la entrega académica.
 
@@ -183,10 +185,10 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
 - El usuario revisa los resultados y ejecuta personalmente todas las operaciones de Git desde su terminal de PowerShell.
 
 #### Política de Pruebas Automatizadas y Cero Errores
-- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **439 pruebas automatizadas**.
+- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **445 pruebas automatizadas**.
 - **Comandos de Validación Obligatorios (desde `frontend/`):**
   1. `npm run lint`: Verificación estricta con ESLint (**0 errores, 0 warnings**).
   2. `npm run build`: Validación integral de tipado TypeScript (`tsc -b`) y empaquetado de producción de Vite (**0 errores**).
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
-  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**265 / 265 pasadas**).
+  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**271 / 271 pasadas**).
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
