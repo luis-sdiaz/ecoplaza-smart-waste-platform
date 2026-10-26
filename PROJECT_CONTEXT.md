@@ -85,7 +85,7 @@ ecoplaza-smart-waste-platform/
     │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
     │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
     │   └── main.tsx               # Punto de entrada del cliente web/escritorio
-    └── tests/                     # Suite de 451 pruebas automatizadas (Node.js y Vitest en 83 archivos)
+    └── tests/                     # Suite de 457 pruebas automatizadas (Node.js y Vitest en 84 archivos)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
@@ -103,10 +103,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 245)
+### 4. Estado Actual (Snapshot al Commit 246)
 
-- **Hito Alcanzado:** Commit `245` en preparación sobre la rama principal `main`.
-- **Cobertura de Pruebas Automatizadas:** **451 pruebas aprobadas al 100%** distribuidas en **83 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 53 suites `.component.test.tsx` en Vitest con 277 pruebas).
+- **Hito Alcanzado:** Commit `246` en preparación sobre la rama principal `main`.
+- **Cobertura de Pruebas Automatizadas:** **457 pruebas aprobadas al 100%** distribuidas en **84 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 54 suites `.component.test.tsx` en Vitest con 283 pruebas).
 - **Módulos Culminados y Operativos:**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
@@ -147,6 +147,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
   33. **Tarjeta Operativa de Dispositivo IoT y Telemetría de Contenedores (`SensorDeviceCard.tsx`):** Componente de visualización y monitoreo accesible (`role="region"`, `aria-label`, foco visual) con nivel de llenado cuantitativo y barra de progreso ARIA (`role="progressbar"`, `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax="100"`), detección de capacidad crítica (>80%) con alerta visual (`AlertTriangle`) y descripción auditiva accesible (`sr-only`), etiquetas de telemetría en tiempo real (batería con iconografía dinámica, temperatura ambiental en °C, pesaje en kg y fecha de última lectura), botones interactivos de acción contextual accesible (ver historial, simular telemetría y gestionar contenedor con `aria-label` descriptivo) y soporte de estado de carga accesible con `role="status"`, `aria-live="polite"` y spinner `LoaderCircle`.
   34. **Modal de Registro de Usuarios y Flujo de Verificación (`RegisterModal.tsx`):** Diálogo modal accesible (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con renderizado condicional por `isOpen`, captura de tecla Escape y botón de descarte accesible con `aria-label`, validación en tiempo real de campos obligatorios (`fullName`, `email`, `password`, `confirmPassword`), alternancia de visibilidad de contraseñas (`Eye`/`EyeOff`), prevención de doble envío con estados `aria-busy` y spinner `LoaderCircle`, y transición reactiva al paso de verificación con código OTP de 8 dígitos.
   35. **Modal de Recuperación de Contraseña (`ForgotPasswordModal.tsx`):** Diálogo modal accesible (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con control condicional de visibilidad `isOpen`, captura de tecla Escape y botón de descarte accesible con `aria-label`, flujo multi-etapa resiliente (solicitud de código vía email, verificación de código OTP de 8 dígitos y actualización de contraseña), validaciones en tiempo real de email y contraseña, alternancia de visibilidad de contraseña (`Eye`/`EyeOff`), estados `aria-busy` y anuncio accesible `role="status"` durante las peticiones asíncronas a Supabase Auth.
+  36. **Modal de Historial Operativo de Compras de Comprador (`BuyerPurchaseHistoryModal.tsx`):** Diálogo modal accesible (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con control condicional de visibilidad `isOpen`, captura de tecla Escape y botón interactivo de descarte con `aria-label`, filtrado interactivo por rango de fechas con validación sintáctica (`role="alert"` ante rangos inconsistentes) y botón de limpieza de fechas, resumen cuantitativo comercial (conteo de compras, peso total acumulado en kg y facturación total en COP), estructura de tabla semántica accesible (`<table>`, `<caption className="sr-only">`, `<th scope="col">`), estado de error con reintento accesible (`onRetry`), estado de carga con anuncio accesible `role="status"` y estados `aria-busy` durante las operaciones de exportación a CSV y Excel.
 
 #### Roadmap Inmediato de Tareas Pendientes
 1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Modales Transaccionales - Bloque A (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx`, `frontend/tests/successToastFeedback.component.test.tsx`, `frontend/tests/settingsPanelPreferences.component.test.tsx`, `frontend/tests/wasteRegistrationModal.component.test.tsx`, `frontend/tests/saleRegistrationModal.component.test.tsx`, `frontend/tests/buyerFormModal.component.test.tsx` y `frontend/tests/saleDetailsModal.component.test.tsx`.
@@ -167,6 +168,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
    - **Tarjeta Operativa de Dispositivo IoT (`SensorDeviceCard.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/sensorDeviceCard.component.test.tsx`.
    - **Modal de Registro de Usuarios (`RegisterModal.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/registerModal.component.test.tsx`.
    - **Modal de Recuperación de Contraseña (`ForgotPasswordModal.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/forgotPasswordModal.component.test.tsx`.
+   - **Modal de Historial Operativo de Compras de Comprador (`BuyerPurchaseHistoryModal.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/buyerPurchaseHistoryModal.component.test.tsx`.
 3. **Empaquetado y Validación del Instalador Nativo de Windows:** Compilar y verificar el instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
 4. **Pruebas de Integración Física y Guía Final de Sustentación:** Validación en vivo del nodo físico ESP32 y consolidación del protocolo de demostración para la entrega académica.
 
@@ -187,10 +189,10 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
 - El usuario revisa los resultados y ejecuta personalmente todas las operaciones de Git desde su terminal de PowerShell.
 
 #### Política de Pruebas Automatizadas y Cero Errores
-- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **451 pruebas automatizadas**.
+- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **457 pruebas automatizadas**.
 - **Comandos de Validación Obligatorios (desde `frontend/`):**
   1. `npm run lint`: Verificación estricta con ESLint (**0 errores, 0 warnings**).
   2. `npm run build`: Validación integral de tipado TypeScript (`tsc -b`) y empaquetado de producción de Vite (**0 errores**).
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
-  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**277 / 277 pasadas**).
+  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**283 / 283 pasadas**).
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.

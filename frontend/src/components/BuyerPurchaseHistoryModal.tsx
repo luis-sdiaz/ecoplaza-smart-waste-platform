@@ -16,13 +16,15 @@ import {
   type BuyerPurchaseExcelLabels,
 } from "../services/buyerPurchaseExcelService";
 
-interface BuyerPurchaseHistoryModalProps {
+export interface BuyerPurchaseHistoryModalProps {
   buyer: Buyer;
   sales: SaleHistoryItem[];
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
   onClose: () => void;
+  isOpen?: boolean;
+  testId?: string;
 }
 
 function BuyerPurchaseHistoryModal({
@@ -32,6 +34,8 @@ function BuyerPurchaseHistoryModal({
   error,
   onRetry,
   onClose,
+  isOpen = true,
+  testId = "buyer-purchase-history-modal",
 }: BuyerPurchaseHistoryModalProps) {
   const { t, i18n } = useTranslation();
   const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
@@ -52,6 +56,10 @@ function BuyerPurchaseHistoryModal({
   const visibleSales = sortSalesHistory(filteredResult.data, sortOption);
   const purchaseSummary = filteredResult.valid ? summarizeBuyerPurchases(visibleSales) : null;
   const hasDateFilter = startDate !== "" || endDate !== "";
+
+  if (!isOpen) {
+    return null;
+  }
 
   const exportPurchases = async (): Promise<void> => {
     if (exportKind !== null || isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0) return;
@@ -117,17 +125,33 @@ function BuyerPurchaseHistoryModal({
   };
 
   return (
-    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby="buyer-history-title">
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      data-testid={testId}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="buyer-history-title"
+      aria-describedby="buyer-history-description"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          onClose();
+        }
+      }}
+    >
       <section className="max-h-[85vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-ecoplaza-border p-5">
           <div>
             <h2 id="buyer-history-title" className="text-lg font-semibold text-ecoplaza-text">{t("buyers.purchaseHistoryTitle")}</h2>
-            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.purchaseHistoryDescription", { name: buyer.name })}</p>
+            <p id="buyer-history-description" className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.purchaseHistoryDescription", { name: buyer.name })}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0 || exportKind !== null}
+              aria-busy={exportKind === "csv"}
               onClick={() => void exportPurchases()}
               className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-border px-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -139,6 +163,7 @@ function BuyerPurchaseHistoryModal({
             <button
               type="button"
               disabled={isLoading || error !== null || !filteredResult.valid || visibleSales.length === 0 || exportKind !== null}
+              aria-busy={exportKind === "excel"}
               onClick={() => void exportPurchasesExcel()}
               className="flex h-10 items-center gap-2 rounded-xl border border-ecoplaza-primary px-3 text-sm font-semibold text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -256,12 +281,13 @@ function BuyerPurchaseHistoryModal({
               </dl>
               <div className="overflow-x-auto rounded-xl border border-ecoplaza-border">
               <table className="w-full min-w-[680px]">
+                <caption className="sr-only">{t("buyers.purchaseHistoryTitle")}</caption>
                 <thead className="bg-ecoplaza-background">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("common.date")}</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("common.material")}</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("sales.soldWeight")}</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("sales.total")}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("common.date")}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("common.material")}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("sales.soldWeight")}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-ecoplaza-text-muted">{t("sales.total")}</th>
                   </tr>
                 </thead>
                 <tbody>
