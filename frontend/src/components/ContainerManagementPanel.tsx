@@ -86,10 +86,6 @@ function ContainerManagementPanel({
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const isFormUnavailable = isCreating || isLoading || loadError !== null;
 
-  if (!isOpen) {
-    return null;
-  }
-
   const applyLoadResults = useCallback(
     (
       containersResult: Awaited<ReturnType<typeof listContainers>>,
@@ -294,6 +290,10 @@ function ContainerManagementPanel({
       setExportKind(null);
     }
   };
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <section
