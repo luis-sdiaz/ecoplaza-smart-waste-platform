@@ -845,6 +845,25 @@ const es = {
     minDimensions: "Dimensiones mínimas de ventana: 1024 x 700 px",
     close: "Cerrar diagnóstico",
   },
+  environmentalImpact: {
+    title: "Impacto Ambiental Positivo",
+    description: "Equivalencias ecológicas generadas por la valorización y reciclaje de residuos.",
+    co2Saved: "Emisiones de CO₂ evitadas",
+    co2Unit: "kg CO₂e",
+    treesPreserved: "Árboles salvados",
+    treesUnit: "árboles",
+    waterSaved: "Agua preservada",
+    waterUnit: "litros",
+    energySaved: "Energía conservada",
+    energyUnit: "kWh",
+    recyclingRate: "Tasa de aprovechamiento",
+    accessibleCo2: "{{value}} kilogramos de CO₂ evitados a la atmósfera",
+    accessibleTrees: "{{value}} árboles protegidos de la tala",
+    accessibleWater: "{{value}} litros de agua potable preservados",
+    accessibleEnergy: "{{value}} kWh de energía eléctrica conservados",
+    loading: "Calculando equivalencias de impacto ecológico...",
+    realBadge: "Impacto ecológico real",
+  },
 } as const;
 
 export default es;

@@ -85,7 +85,7 @@ ecoplaza-smart-waste-platform/
     │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
     │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
     │   └── main.tsx               # Punto de entrada del cliente web/escritorio
-    └── tests/                     # Suite de 403 pruebas automatizadas (Node.js y Vitest en 75 archivos)
+    └── tests/                     # Suite de 409 pruebas automatizadas (Node.js y Vitest en 76 archivos)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
@@ -103,10 +103,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 237)
+### 4. Estado Actual (Snapshot al Commit 238)
 
-- **Hito Alcanzado:** Commit `237` en preparación sobre la rama principal `main`.
-- **Cobertura de Pruebas Automatizadas:** **403 pruebas aprobadas al 100%** distribuidas en **75 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 45 suites `.component.test.tsx` en Vitest con 229 pruebas).
+- **Hito Alcanzado:** Commit `238` en preparación sobre la rama principal `main`.
+- **Cobertura de Pruebas Automatizadas:** **409 pruebas aprobadas al 100%** distribuidas en **76 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 46 suites `.component.test.tsx` en Vitest con 235 pruebas).
 - **Módulos Culminados y Operativos:**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
@@ -139,6 +139,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
   25. **Gráfico de Distribución de Residuos (`WasteDistributionChart.tsx`):** Componente de visualización analítica accesible con contenedor semántico (`role="region"`, `aria-label`), soporte dual de datos (`data: ReportCategoryDistributionItem[]` o props de peso directo `organicWeight`, `recyclableWeight`, `nonRecyclableWeight`), leyenda cromática estandarizada por material, barras de distribución cuantitativa con `role="progressbar"`, formateo numérico de kilogramos y porcentajes, resumen textual oculto (`sr-only`) para lectores de pantalla, estado de carga accesible con `role="status"` y estado vacío informativo ante registros en cero o filtros sin resultados.
   26. **Tarjeta Reutilizable de Métricas y KPIs (`MetricCard.tsx`):** Componente base de KPIs accesible y resiliente con soporte de tendencias porcentuales e iconografía de subida/bajada (`TrendingUp`/`TrendingDown`), textos explicativos ocultos (`sr-only`) para tecnologías asistivas, soporte interactivo por teclado (`Enter`/`Espacio`, `role="button"` y foco visual) ante la prop `onClick`, estado de carga con `role="status"` y spinner `LoaderCircle`, y retrocompatibilidad total con todas las vistas operativas de la plataforma.
   27. **Tarjeta de Estado y Telemetría de Contenedores IoT (`SensorStatusCard.tsx`):** Componente de telemetría en tiempo real con contenedor accesible (`role="region"` o `role="button"` cuando es interactivo vía teclado/clic con `tabIndex={0}`), barra de nivel de llenado cuantitativa con atributos de accesibilidad (`role="progressbar"`, `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax="100"`), alerta sonora/textual para lectores de pantalla (`sr-only`) ante umbrales críticos (>= 85%), estado de carga accesible con `role="status"` y spinner `LoaderCircle`, y retrocompatibilidad total con `DashboardPage.tsx`.
+  28. **Tarjeta de Impacto y Equivalencias Ecológicas (`EnvironmentalImpactCard.tsx`):** Componente de visualización analítica accesible (`role="region"` o `role="button"` interactivo con navegación por teclado `Enter`/`Espacio` y `tabIndex={0}`), métricas de equivalencias ecológicas calculadas (emisiones de CO₂ evitadas, árboles protegidos de la tala, agua potable preservada y energía conservada en kWh), barra cuantitativa de tasa de aprovechamiento (`role="progressbar"`, `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax="100"`), descripciones completas ocultas para tecnologías asistivas (`sr-only`), estado de carga accesible con `role="status"` y spinner `LoaderCircle`, y resiliencia matemática total ante valores nulos, indefinidos o en cero sin arrojar `NaN`.
 
 #### Roadmap Inmediato de Tareas Pendientes
 1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Modales Transaccionales - Bloque A (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx`, `frontend/tests/successToastFeedback.component.test.tsx`, `frontend/tests/settingsPanelPreferences.component.test.tsx`, `frontend/tests/wasteRegistrationModal.component.test.tsx`, `frontend/tests/saleRegistrationModal.component.test.tsx`, `frontend/tests/buyerFormModal.component.test.tsx` y `frontend/tests/saleDetailsModal.component.test.tsx`.
@@ -151,6 +152,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
    - **Gráfico de Distribución de Residuos (`WasteDistributionChart.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/wasteDistributionChart.component.test.tsx`.
    - **Tarjeta Reutilizable de Métricas y KPIs (`MetricCard.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/metricCard.component.test.tsx`.
    - **Tarjeta de Telemetría de Sensores IoT (`SensorStatusCard.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/sensorStatusCard.component.test.tsx`.
+   - **Tarjeta de Impacto Ambiental y Equivalencias Ecológicas (`EnvironmentalImpactCard.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/environmentalImpactCard.component.test.tsx`.
 3. **Empaquetado y Validación del Instalador Nativo de Windows:** Compilar y verificar el instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
 4. **Pruebas de Integración Física y Guía Final de Sustentación:** Validación en vivo del nodo físico ESP32 y consolidación del protocolo de demostración para la entrega académica.
 
@@ -171,10 +173,10 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
 - El usuario revisa los resultados y ejecuta personalmente todas las operaciones de Git desde su terminal de PowerShell.
 
 #### Política de Pruebas Automatizadas y Cero Errores
-- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **403 pruebas automatizadas**.
+- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **409 pruebas automatizadas**.
 - **Comandos de Validación Obligatorios (desde `frontend/`):**
   1. `npm run lint`: Verificación estricta con ESLint (**0 errores, 0 warnings**).
   2. `npm run build`: Validación integral de tipado TypeScript (`tsc -b`) y empaquetado de producción de Vite (**0 errores**).
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
-  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**229 / 229 pasadas**).
+  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**235 / 235 pasadas**).
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
