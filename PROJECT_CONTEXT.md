@@ -85,7 +85,7 @@ ecoplaza-smart-waste-platform/
     │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
     │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
     │   └── main.tsx               # Punto de entrada del cliente web/escritorio
-    └── tests/                     # Suite de 475 pruebas automatizadas (Node.js y Vitest en 87 archivos)
+    └── tests/                     # Suite de 481 pruebas automatizadas (Node.js y Vitest en 88 archivos)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
@@ -103,10 +103,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 249)
+### 4. Estado Actual (Snapshot al Commit 251)
 
-- **Hito Alcanzado:** Commit `249` en preparación sobre la rama principal `main`.
-- **Cobertura de Pruebas Automatizadas:** **475 pruebas aprobadas al 100%** distribuidas en **87 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 57 suites `.component.test.tsx` en Vitest con 301 pruebas).
+- **Hito Alcanzado:** Commit `251` en preparación sobre la rama principal `main` (Línea base `adde8a4`).
+- **Cobertura de Pruebas Automatizadas:** **481 pruebas aprobadas al 100%** distribuidas en **88 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 58 suites `.component.test.tsx` en Vitest con 307 pruebas).
 - **Módulos Culminados y Operativos:**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
@@ -151,6 +151,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
   37. **Diálogo de Confirmación de Restablecimiento de Preferencias (`ResetPreferencesDialog.tsx`):** Diálogo modal accesible (`<dialog>`, `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con control condicional de visibilidad `isOpen`, captura de evento de teclado Escape y botón interactivo de descarte con `aria-label`, foco automático inicial en el botón secundario Cancelar, prevención de descarte durante el procesamiento `isSubmitting`, confirmación segura de restablecimiento a valores de fábrica, botón principal con estado `aria-busy` y anuncio auditivo accesible `role="status"` con spinner `LoaderCircle`.
   38. **Panel de Gestión Operativa de Contenedores y Existencias (`ContainerManagementPanel.tsx`):** Panel modular accesible (`role="region"`, `aria-labelledby`) con control condicional de visibilidad `isOpen`, captura de tecla Escape y botón interactivo de descarte con `aria-label`, formulario accesible para alta de contenedores con etiquetas vinculadas (`<label htmlFor="container-code">`), validaciones de duplicidad e invalidación sintáctica (`aria-invalid="true"` y mensajes `role="alert"`), anuncios accesibles de éxito (`role="status"`), indicador de procesamiento asíncrono con `aria-busy` y spinner `LoaderCircle`, catálogo con búsqueda reactiva, filtrado avanzado por existencias (con stock / vacíos) y ordenamiento cronológico y alfabético, y exportación dual (CSV y Excel) con notificaciones accesibles.
   39. **Modal de Historial Operativo de Telemetría de Sensores IoT (`SensorTelemetryHistoryModal.tsx`):** Diálogo modal accesible (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con control condicional de visibilidad `isOpen`, captura de tecla Escape y botón interactivo de descarte con `aria-label`, tabla semántica accesible con `aria-label`, columnas descriptivas (`scope="col"`), métricas cuantitativas de llenado con barra de progreso cromática, badge de alerta crítica ante llenado > 80%, nivel de batería con iconografía dinámica según carga (baja, media, óptima), temperatura en grados Celsius con tolerancia a valores nulos (`"—"`), formateo de fecha con soporte bilingüe (`formatHistoryDate`), estado de carga accesible `role="status"` con spinner `LoaderCircle`, estado de error con alerta accesible `role="alert"` y botón de reintento (`containers.retry`), y estado vacío informativo (`sensors.noHistory`).
+  40. **Tabla de Directorio de Compradores en Demostración (`DemoBuyerTable.tsx`):** Componente tabular accesible con contenedor semántico (`role="region"`, `aria-label`, foco por teclado `tabIndex={0}` para scroll horizontal accesible), tabla estructurada con `<caption className="sr-only">`, encabezados con `scope="col"`, identificadores formateados, traducción reactiva de tipos de comprador (empresa recicladora, productor de compost, comerciante, asociación), categorías de material aprovechable (orgánicos, reciclables), badges de estado interactivo y estado vacío accesible con `role="status"` ante colecciones sin registros demo.
 
 #### Roadmap Inmediato de Tareas Pendientes
 1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Modales Transaccionales - Bloque A (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx`, `frontend/tests/successToastFeedback.component.test.tsx`, `frontend/tests/settingsPanelPreferences.component.test.tsx`, `frontend/tests/wasteRegistrationModal.component.test.tsx`, `frontend/tests/saleRegistrationModal.component.test.tsx`, `frontend/tests/buyerFormModal.component.test.tsx` y `frontend/tests/saleDetailsModal.component.test.tsx`.
@@ -175,6 +176,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
    - **Diálogo de Confirmación de Restablecimiento de Preferencias (`ResetPreferencesDialog.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/resetPreferencesDialog.component.test.tsx`.
    - **Panel de Gestión Operativa de Contenedores y Existencias (`ContainerManagementPanel.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/containerManagementPanel.component.test.tsx`.
    - **Modal de Historial Operativo de Telemetría de Sensores IoT (`SensorTelemetryHistoryModal.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/sensorTelemetryHistoryModal.component.test.tsx`.
+   - **Tabla de Directorio de Compradores en Demostración (`DemoBuyerTable.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/demoBuyerTable.component.test.tsx`.
 3. **Empaquetado y Validación del Instalador Nativo de Windows:** Compilar y verificar el instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
 4. **Pruebas de Integración Física y Guía Final de Sustentación:** Validación en vivo del nodo físico ESP32 y consolidación del protocolo de demostración para la entrega académica.
 
@@ -195,10 +197,10 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
 - El usuario revisa los resultados y ejecuta personalmente todas las operaciones de Git desde su terminal de PowerShell.
 
 #### Política de Pruebas Automatizadas y Cero Errores
-- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **475 pruebas automatizadas**.
+- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **481 pruebas automatizadas**.
 - **Comandos de Validación Obligatorios (desde `frontend/`):**
   1. `npm run lint`: Verificación estricta con ESLint (**0 errores, 0 warnings**).
   2. `npm run build`: Validación integral de tipado TypeScript (`tsc -b`) y empaquetado de producción de Vite (**0 errores**).
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
-  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**301 / 301 pasadas**).
+  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**307 / 307 pasadas**).
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
