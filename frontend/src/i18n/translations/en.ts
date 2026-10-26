@@ -148,7 +148,8 @@ const en = {
     wasteNonRecyclable: "Non-recyclable waste", kg: "kg", category: "Category",
     wasteNonRecoverable: "Non-recoverable waste",
     status: "Status", quantity: "Quantity", date: "Date", material: "Material",
-    loadingPage: "Loading page...",
+    loadingPage: "Loading page...", loading: "Loading...",
+    increase: "Increase", decrease: "Decrease",
   },
   dashboard: {
     eyebrow: "General overview", title: "Dashboard",
@@ -312,6 +313,7 @@ const en = {
     localDescription: "Demo data and records previously created on this device. They are not synchronized with PostgreSQL.",
     loading: "Loading your waste records...", retry: "Try again",
     noRecords: "No waste records available",
+    summaryTitle: "Waste summary",
     emptyTitle: "You don't have any waste records yet",
     emptyDescription: "Register your first waste record to store it securely in PostgreSQL.",
     statusFilter: "Status", allStatuses: "All statuses",

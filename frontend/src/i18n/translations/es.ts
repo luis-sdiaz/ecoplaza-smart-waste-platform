@@ -148,7 +148,8 @@ const es = {
     wasteNonRecyclable: "Residuos no aprovechables", kg: "kg", category: "Categoría",
     wasteNonRecoverable: "Residuos no aprovechables",
     status: "Estado", quantity: "Cantidad", date: "Fecha", material: "Material",
-    loadingPage: "Cargando página...",
+    loadingPage: "Cargando página...", loading: "Cargando...",
+    increase: "Incremento", decrease: "Reducción",
   },
   dashboard: {
     eyebrow: "Resumen general", title: "Panel de control",
@@ -312,6 +313,7 @@ const es = {
     localDescription: "Datos de demostración y registros creados anteriormente en este dispositivo. No están sincronizados con PostgreSQL.",
     loading: "Cargando tus residuos...", retry: "Reintentar",
     noRecords: "No hay registros disponibles",
+    summaryTitle: "Resumen de residuos",
     emptyTitle: "Todavía no tienes residuos registrados",
     emptyDescription: "Registra tu primer residuo para guardarlo de forma segura en PostgreSQL.",
     statusFilter: "Estado", allStatuses: "Todos los estados",
