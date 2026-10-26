@@ -261,6 +261,7 @@ const es = {
     title: "Mis contenedores",
     remoteData: "Datos reales",
     description: "Contenedores asociados de forma segura a tu cuenta de EcoPlaza.",
+    closePanel: "Cerrar panel de contenedores",
     count_one: "{{count}} contenedor",
     count_other: "{{count}} contenedores",
     loading: "Cargando tus contenedores...",

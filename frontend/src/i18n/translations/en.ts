@@ -261,6 +261,7 @@ const en = {
     title: "My containers",
     remoteData: "Database data",
     description: "Containers securely associated with your EcoPlaza account.",
+    closePanel: "Close container panel",
     count_one: "{{count}} container",
     count_other: "{{count}} containers",
     loading: "Loading your containers...",

@@ -46,7 +46,17 @@ function getContainerErrorKey(code: ContainerErrorCode): string {
   return "containers.databaseError";
 }
 
-function ContainerManagementPanel() {
+export type ContainerManagementPanelProps = {
+  isOpen?: boolean;
+  onClose?: () => void;
+  testId?: string;
+};
+
+function ContainerManagementPanel({
+  isOpen = true,
+  onClose,
+  testId = "container-management-panel",
+}: ContainerManagementPanelProps = {}) {
   const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
   const isCreatingRef = useRef(false);
@@ -246,21 +256,48 @@ function ContainerManagementPanel() {
     }
   };
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <section className="glass-panel rounded-2xl p-6 shadow-sm" aria-labelledby="user-containers-title">
+    <section
+      role="region"
+      data-testid={testId}
+      className="glass-panel rounded-2xl p-6 shadow-sm"
+      aria-labelledby="user-containers-title"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && onClose) {
+          event.stopPropagation();
+          onClose();
+        }
+      }}
+    >
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 id="user-containers-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              {t("containers.title")}
-            </h2>
-            <span className="rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
-              {t("containers.remoteData")}
-            </span>
+        <div className="flex items-start justify-between gap-4 w-full sm:w-auto">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 id="user-containers-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {t("containers.title")}
+              </h2>
+              <span className="rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
+                {t("containers.remoteData")}
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {t("containers.description")}
+            </p>
           </div>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {t("containers.description")}
-          </p>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("containers.closePanel")}
+              className="cursor-pointer rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          )}
         </div>
         {!isLoading && !loadError && (
           <div className="flex flex-wrap items-center gap-3">
@@ -270,6 +307,7 @@ function ContainerManagementPanel() {
             <button
               type="button"
               disabled={visibleContainers.length === 0 || exportKind !== null}
+              aria-busy={exportKind === "csv"}
               onClick={() => void exportContainers()}
               className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -281,6 +319,7 @@ function ContainerManagementPanel() {
             <button
               type="button"
               disabled={visibleContainers.length === 0 || exportKind !== null}
+              aria-busy={exportKind === "excel"}
               onClick={() => void exportContainersExcel()}
               className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-2xs transition-all hover:border-emerald-500 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -483,6 +522,7 @@ function ContainerManagementPanel() {
           <button
             type="submit"
             disabled={isFormUnavailable}
+            aria-busy={isCreating}
             className="mt-4 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
           >
             {isCreating
