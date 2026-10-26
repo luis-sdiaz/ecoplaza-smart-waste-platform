@@ -215,6 +215,8 @@ const en = {
     battery: "Battery",
     temperature: "Temperature",
     criticalFillAlert: "Critical capacity (>80%)",
+    criticalAlertDescription: "Critical alert: fill level above 80%",
+    loadingCard: "Loading sensor information...",
     alertStatus: "Alert",
     viewHistory: "View history",
     viewHistoryFor: "View history for {{name}}",

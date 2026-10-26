@@ -5,6 +5,7 @@ import {
   BatteryWarning,
   ExternalLink,
   History,
+  LoaderCircle,
   Radio,
   Scale,
   Thermometer,
@@ -27,6 +28,11 @@ export interface SensorDeviceCardProps {
   onViewHistory?: () => void;
   onManageContainer?: (containerId: string) => void;
   onSimulateTelemetry?: (containerId: string) => void;
+  isLoading?: boolean;
+  className?: string;
+  role?: string;
+  ariaLabel?: string;
+  testId?: string;
 }
 
 function SensorDeviceCard({
@@ -43,8 +49,30 @@ function SensorDeviceCard({
   onViewHistory,
   onManageContainer,
   onSimulateTelemetry,
+  isLoading = false,
+  className,
+  role,
+  ariaLabel,
+  testId,
 }: SensorDeviceCardProps) {
   const { t } = useTranslation();
+
+  if (isLoading) {
+    return (
+      <article
+        role="status"
+        aria-live="polite"
+        aria-label={ariaLabel ?? t("sensors.loadingCard", "Cargando información del sensor...")}
+        data-testid={testId ? `${testId}-loading` : "sensor-device-card-loading"}
+        className={`glass-card flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-slate-200/70 p-6 text-center dark:border-white/10 ${className ?? ""}`.trim()}
+      >
+        <LoaderCircle className="h-6 w-6 animate-spin text-emerald-500" aria-hidden="true" />
+        <span className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+          {t("sensors.loadingCard", "Cargando información del sensor...")}
+        </span>
+      </article>
+    );
+  }
 
   const isDataAvailable =
     hasTelemetry ??
@@ -111,8 +139,16 @@ function SensorDeviceCard({
     );
   };
 
+  const cardRole = role ?? "region";
+  const cardLabel = ariaLabel ?? name;
+
   return (
-    <article className="glass-card rounded-2xl p-5 relative overflow-hidden transition-all duration-300 ease-out transform-gpu hover:scale-[1.03] hover:-translate-y-1.5 hover:z-20 hover:shadow-2xl hover:shadow-emerald-500/15 border border-slate-200/70 dark:border-white/10 hover:border-emerald-500/40 flex flex-col justify-between">
+    <article
+      role={cardRole}
+      aria-label={cardLabel}
+      data-testid={testId}
+      className={`glass-card rounded-2xl p-5 relative overflow-hidden transition-all duration-300 ease-out transform-gpu hover:scale-[1.03] hover:-translate-y-1.5 hover:z-20 hover:shadow-2xl hover:shadow-emerald-500/15 border border-slate-200/70 dark:border-white/10 hover:border-emerald-500/40 flex flex-col justify-between ${className ?? ""}`.trim()}
+    >
       <div>
         {/* Encabezado: Código del contenedor y Badge translúcido con micro-punto */}
         <div className="flex items-start justify-between gap-3">
@@ -167,7 +203,19 @@ function SensorDeviceCard({
             </span>
           </div>
 
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/10">
+          <div
+            role="progressbar"
+            aria-label={t("sensors.fillLevel")}
+            aria-valuenow={validFillLevel !== null ? validFillLevel : 0}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuetext={
+              validFillLevel !== null
+                ? `${validFillLevel}%`
+                : t("sensors.noTelemetry")
+            }
+            className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/10"
+          >
             <div
               className={`h-full rounded-full transition-all duration-300 ${
                 !isDataAvailable
@@ -186,6 +234,9 @@ function SensorDeviceCard({
             <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
               <AlertTriangle size={13} className="shrink-0" aria-hidden="true" />
               <span>{t("sensors.criticalFillAlert")}</span>
+              <span className="sr-only">
+                {t("sensors.criticalAlertDescription", "Alerta crítica: capacidad por encima del 80%")}
+              </span>
             </div>
           )}
 

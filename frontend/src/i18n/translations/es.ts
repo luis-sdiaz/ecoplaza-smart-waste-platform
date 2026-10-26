@@ -215,6 +215,8 @@ const es = {
     battery: "Batería",
     temperature: "Temperatura",
     criticalFillAlert: "Capacidad crítica (>80%)",
+    criticalAlertDescription: "Alerta crítica: capacidad por encima del 80%",
+    loadingCard: "Cargando información del sensor...",
     alertStatus: "Alerta",
     viewHistory: "Ver historial",
     viewHistoryFor: "Ver historial de {{name}}",
