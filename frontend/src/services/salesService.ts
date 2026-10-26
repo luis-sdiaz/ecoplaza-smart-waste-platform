@@ -26,12 +26,14 @@ export type Sale = {
   unitPrice: number;
   totalValue: number;
   soldAt: string;
+  notes?: string;
 };
 
 export type SaleHistoryItem = Sale & {
   buyerName: string;
   wasteRecordNumber: string;
   category: WasteCategory;
+  notes?: string;
 };
 
 export type SaleFormData = {

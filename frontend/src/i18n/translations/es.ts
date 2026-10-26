@@ -541,7 +541,7 @@ const es = {
     detailsDescription: "Información de solo consulta guardada para esta venta completada.", closeDetails: "Cerrar detalle de la venta",
     detailReference: "Referencia real", detailDate: "Fecha de realización", detailBuyer: "Comprador",
     detailMaterial: "Material", detailWeight: "Peso vendido", detailUnitPrice: "Precio por kilogramo",
-    detailTotal: "Valor total",
+    detailTotal: "Valor total", detailNotes: "Notas", noNotes: "Sin notas registradas",
     createSuccessTitle: "Venta registrada", createSuccessDescription: "La venta fue confirmada y el material salió del inventario disponible.",
     confirmedAfterRefresh: "La venta fue encontrada en PostgreSQL después de actualizar los datos.",
     createErrorTitle: "No se registró la venta", confirmationPendingTitle: "Confirmación pendiente",

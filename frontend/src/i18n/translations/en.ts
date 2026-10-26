@@ -541,7 +541,7 @@ const en = {
     detailsDescription: "Read-only information stored for this completed sale.", closeDetails: "Close sale details",
     detailReference: "Real reference", detailDate: "Completion date", detailBuyer: "Buyer",
     detailMaterial: "Material", detailWeight: "Weight sold", detailUnitPrice: "Price per kilogram",
-    detailTotal: "Total value",
+    detailTotal: "Total value", detailNotes: "Notes", noNotes: "No notes recorded",
     createSuccessTitle: "Sale registered", createSuccessDescription: "The sale was confirmed and the material left available inventory.",
     confirmedAfterRefresh: "The sale was found in PostgreSQL after refreshing the data.",
     createErrorTitle: "Sale not registered", confirmationPendingTitle: "Confirmation pending",
