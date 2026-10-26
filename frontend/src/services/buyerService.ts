@@ -7,12 +7,16 @@ export type Buyer = {
   phone: string | null;
   createdAt: string;
   updatedAt: string;
+  documentNumber?: string;
+  address?: string;
 };
 
 export type BuyerInput = {
   name: string;
   email: string;
   phone: string;
+  documentNumber?: string;
+  address?: string;
 };
 
 export type BuyerErrorCode =
