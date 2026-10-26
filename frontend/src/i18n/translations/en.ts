@@ -4,6 +4,9 @@ const en = {
     buyers: "Buyers", sales: "Sales", reports: "Reports", assistant: "AI Assistant",
     settings: "Settings", tagline: "Smart management", signOut: "Sign out",
     profile: "My profile",
+    openMobileMenu: "Open navigation menu",
+    closeMobileMenu: "Close navigation menu",
+    mobileMenu: "Mobile navigation menu",
   },
   login: {
     brandTagline: "Technology + sustainability",

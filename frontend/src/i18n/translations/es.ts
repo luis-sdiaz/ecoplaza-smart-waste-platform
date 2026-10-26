@@ -4,6 +4,9 @@ const es = {
     buyers: "Compradores", sales: "Ventas", reports: "Informes", assistant: "Asistente IA",
     settings: "Configuración", tagline: "Gestión inteligente", signOut: "Cerrar sesión",
     profile: "Mi perfil",
+    openMobileMenu: "Abrir menú de navegación",
+    closeMobileMenu: "Cerrar menú de navegación",
+    mobileMenu: "Menú de navegación móvil",
   },
   login: {
     brandTagline: "Tecnología + sostenibilidad",
