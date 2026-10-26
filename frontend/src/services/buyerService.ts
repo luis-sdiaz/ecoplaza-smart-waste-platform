@@ -9,6 +9,7 @@ export type Buyer = {
   updatedAt: string;
   documentNumber?: string;
   address?: string;
+  status?: string;
 };
 
 export type BuyerInput = {
@@ -17,6 +18,7 @@ export type BuyerInput = {
   phone: string;
   documentNumber?: string;
   address?: string;
+  status?: string;
 };
 
 export type BuyerErrorCode =

@@ -458,6 +458,8 @@ const en = {
     purchaseHistoryPermissionError: "You do not have permission to view these purchases.",
     purchaseHistoryError: "The purchase history could not be loaded.",
     loading: "Loading your buyers...", retry: "Try again",
+    noBuyers: "No registered buyers available",
+    documentNumber: "Document / Tax ID",
     emptyTitle: "You don't have any buyers yet",
     emptyDescription: "Register your first buyer to prepare it for future sales.",
     registerButton: "Register buyer", createModalTitle: "Register buyer",

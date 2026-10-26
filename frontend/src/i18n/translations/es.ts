@@ -458,6 +458,8 @@ const es = {
     purchaseHistoryPermissionError: "No tienes permiso para consultar estas compras.",
     purchaseHistoryError: "No fue posible cargar el historial de compras.",
     loading: "Cargando tus compradores...", retry: "Reintentar",
+    noBuyers: "No hay compradores registrados",
+    documentNumber: "Documento / NIT",
     emptyTitle: "Todavía no tienes compradores",
     emptyDescription: "Registra tu primer comprador para prepararlo para futuras ventas.",
     registerButton: "Registrar comprador", createModalTitle: "Registrar comprador",
