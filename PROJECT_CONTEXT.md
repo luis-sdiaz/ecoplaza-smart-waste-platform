@@ -85,7 +85,7 @@ ecoplaza-smart-waste-platform/
     │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
     │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
     │   └── main.tsx               # Punto de entrada del cliente web/escritorio
-    └── tests/                     # Suite de 469 pruebas automatizadas (Node.js y Vitest en 86 archivos)
+    └── tests/                     # Suite de 475 pruebas automatizadas (Node.js y Vitest en 87 archivos)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
@@ -103,10 +103,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 248)
+### 4. Estado Actual (Snapshot al Commit 249)
 
-- **Hito Alcanzado:** Commit `248` en preparación sobre la rama principal `main`.
-- **Cobertura de Pruebas Automatizadas:** **469 pruebas aprobadas al 100%** distribuidas en **86 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 56 suites `.component.test.tsx` en Vitest con 295 pruebas).
+- **Hito Alcanzado:** Commit `249` en preparación sobre la rama principal `main`.
+- **Cobertura de Pruebas Automatizadas:** **475 pruebas aprobadas al 100%** distribuidas en **87 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 57 suites `.component.test.tsx` en Vitest con 301 pruebas).
 - **Módulos Culminados y Operativos:**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
@@ -150,6 +150,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
   36. **Modal de Historial Operativo de Compras de Comprador (`BuyerPurchaseHistoryModal.tsx`):** Diálogo modal accesible (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con control condicional de visibilidad `isOpen`, captura de tecla Escape y botón interactivo de descarte con `aria-label`, filtrado interactivo por rango de fechas con validación sintáctica (`role="alert"` ante rangos inconsistentes) y botón de limpieza de fechas, resumen cuantitativo comercial (conteo de compras, peso total acumulado en kg y facturación total en COP), estructura de tabla semántica accesible (`<table>`, `<caption className="sr-only">`, `<th scope="col">`), estado de error con reintento accesible (`onRetry`), estado de carga con anuncio accesible `role="status"` y estados `aria-busy` durante las operaciones de exportación a CSV y Excel.
   37. **Diálogo de Confirmación de Restablecimiento de Preferencias (`ResetPreferencesDialog.tsx`):** Diálogo modal accesible (`<dialog>`, `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con control condicional de visibilidad `isOpen`, captura de evento de teclado Escape y botón interactivo de descarte con `aria-label`, foco automático inicial en el botón secundario Cancelar, prevención de descarte durante el procesamiento `isSubmitting`, confirmación segura de restablecimiento a valores de fábrica, botón principal con estado `aria-busy` y anuncio auditivo accesible `role="status"` con spinner `LoaderCircle`.
   38. **Panel de Gestión Operativa de Contenedores y Existencias (`ContainerManagementPanel.tsx`):** Panel modular accesible (`role="region"`, `aria-labelledby`) con control condicional de visibilidad `isOpen`, captura de tecla Escape y botón interactivo de descarte con `aria-label`, formulario accesible para alta de contenedores con etiquetas vinculadas (`<label htmlFor="container-code">`), validaciones de duplicidad e invalidación sintáctica (`aria-invalid="true"` y mensajes `role="alert"`), anuncios accesibles de éxito (`role="status"`), indicador de procesamiento asíncrono con `aria-busy` y spinner `LoaderCircle`, catálogo con búsqueda reactiva, filtrado avanzado por existencias (con stock / vacíos) y ordenamiento cronológico y alfabético, y exportación dual (CSV y Excel) con notificaciones accesibles.
+  39. **Modal de Historial Operativo de Telemetría de Sensores IoT (`SensorTelemetryHistoryModal.tsx`):** Diálogo modal accesible (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`) con control condicional de visibilidad `isOpen`, captura de tecla Escape y botón interactivo de descarte con `aria-label`, tabla semántica accesible con `aria-label`, columnas descriptivas (`scope="col"`), métricas cuantitativas de llenado con barra de progreso cromática, badge de alerta crítica ante llenado > 80%, nivel de batería con iconografía dinámica según carga (baja, media, óptima), temperatura en grados Celsius con tolerancia a valores nulos (`"—"`), formateo de fecha con soporte bilingüe (`formatHistoryDate`), estado de carga accesible `role="status"` con spinner `LoaderCircle`, estado de error con alerta accesible `role="alert"` y botón de reintento (`containers.retry`), y estado vacío informativo (`sensors.noHistory`).
 
 #### Roadmap Inmediato de Tareas Pendientes
 1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Modales Transaccionales - Bloque A (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx`, `frontend/tests/successToastFeedback.component.test.tsx`, `frontend/tests/settingsPanelPreferences.component.test.tsx`, `frontend/tests/wasteRegistrationModal.component.test.tsx`, `frontend/tests/saleRegistrationModal.component.test.tsx`, `frontend/tests/buyerFormModal.component.test.tsx` y `frontend/tests/saleDetailsModal.component.test.tsx`.
@@ -173,6 +174,7 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
    - **Modal de Historial Operativo de Compras de Comprador (`BuyerPurchaseHistoryModal.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/buyerPurchaseHistoryModal.component.test.tsx`.
    - **Diálogo de Confirmación de Restablecimiento de Preferencias (`ResetPreferencesDialog.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/resetPreferencesDialog.component.test.tsx`.
    - **Panel de Gestión Operativa de Contenedores y Existencias (`ContainerManagementPanel.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/containerManagementPanel.component.test.tsx`.
+   - **Modal de Historial Operativo de Telemetría de Sensores IoT (`SensorTelemetryHistoryModal.tsx`):** Completado con 6 pruebas automatizadas en `frontend/tests/sensorTelemetryHistoryModal.component.test.tsx`.
 3. **Empaquetado y Validación del Instalador Nativo de Windows:** Compilar y verificar el instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
 4. **Pruebas de Integración Física y Guía Final de Sustentación:** Validación en vivo del nodo físico ESP32 y consolidación del protocolo de demostración para la entrega académica.
 
@@ -193,10 +195,10 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
 - El usuario revisa los resultados y ejecuta personalmente todas las operaciones de Git desde su terminal de PowerShell.
 
 #### Política de Pruebas Automatizadas y Cero Errores
-- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **469 pruebas automatizadas**.
+- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **475 pruebas automatizadas**.
 - **Comandos de Validación Obligatorios (desde `frontend/`):**
   1. `npm run lint`: Verificación estricta con ESLint (**0 errores, 0 warnings**).
   2. `npm run build`: Validación integral de tipado TypeScript (`tsc -b`) y empaquetado de producción de Vite (**0 errores**).
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
-  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**295 / 295 pasadas**).
+  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**301 / 301 pasadas**).
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.

@@ -23,6 +23,7 @@ export interface SensorTelemetryHistoryModalProps {
   containerName: string;
   isOpen: boolean;
   onClose: () => void;
+  testId?: string;
 }
 
 function formatHistoryDate(isoDateStr: string, locale: string): string {
@@ -43,6 +44,7 @@ function SensorTelemetryHistoryModal({
   containerName,
   isOpen,
   onClose,
+  testId = "sensor-telemetry-history-modal",
 }: SensorTelemetryHistoryModalProps) {
   const { t, i18n } = useTranslation();
   const dialogRef = useDialogFocus(onClose, isOpen);
@@ -137,6 +139,14 @@ function SensorTelemetryHistoryModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="telemetry-history-title"
+        aria-describedby="telemetry-history-subtitle"
+        data-testid={testId}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.stopPropagation();
+            onClose();
+          }
+        }}
         className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6 shadow-2xl"
       >
         {/* Encabezado */}
@@ -153,7 +163,7 @@ function SensorTelemetryHistoryModal({
                 {t("sensors.historyModalTitle")}
               </h2>
             </div>
-            <p className="mt-1 truncate text-xs text-ecoplaza-text-muted">
+            <p id="telemetry-history-subtitle" className="mt-1 truncate text-xs text-ecoplaza-text-muted">
               {t("sensors.historyModalSubtitle", { name: containerName })}
             </p>
           </div>
@@ -197,7 +207,9 @@ function SensorTelemetryHistoryModal({
               <button
                 type="button"
                 onClick={() => void loadHistory(true)}
-                className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3.5 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                disabled={isLoading}
+                aria-busy={isLoading}
+                className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-ecoplaza-border px-3.5 py-2 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw size={15} strokeWidth={2} aria-hidden="true" />
                 <span>{t("containers.retry")}</span>
@@ -217,7 +229,10 @@ function SensorTelemetryHistoryModal({
             </div>
           ) : (
             <div className="max-h-[50vh] overflow-y-auto pr-1">
-              <table className="w-full text-left text-sm">
+              <table
+                className="w-full text-left text-sm"
+                aria-label={t("sensors.historyModalTitle")}
+              >
                 <thead className="sticky top-0 z-10 border-b border-ecoplaza-border bg-ecoplaza-surface text-[11px] font-semibold uppercase tracking-wider text-ecoplaza-text-muted">
                   <tr>
                     <th scope="col" className="pb-3 pr-3">
