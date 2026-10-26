@@ -85,7 +85,7 @@ ecoplaza-smart-waste-platform/
     │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
     │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
     │   └── main.tsx               # Punto de entrada del cliente web/escritorio
-    └── tests/                     # Suite de 337 pruebas automatizadas (Node.js y Vitest en 64 archivos)
+    └── tests/                     # Suite de 343 pruebas automatizadas (Node.js y Vitest en 65 archivos)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
@@ -103,10 +103,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 226)
+### 4. Estado Actual (Snapshot al Commit 227)
 
-- **Hito Alcanzado:** Commit `226` en preparación sobre la rama principal `main`.
-- **Cobertura de Pruebas Automatizadas:** **337 pruebas aprobadas al 100%** distribuidas en **64 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 34 suites `.component.test.tsx` en Vitest con 163 pruebas).
+- **Hito Alcanzado:** Commit `227` en preparación sobre la rama principal `main`.
+- **Cobertura de Pruebas Automatizadas:** **343 pruebas aprobadas al 100%** distribuidas en **65 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 35 suites `.component.test.tsx` en Vitest con 169 pruebas).
 - **Módulos Culminados y Operativos:**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
@@ -128,9 +128,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
   14. **Firmware de Telemetría IoT (ESP32):** Sketch C++ implementado en `firmware/src/main.cpp` y documentado en `firmware/README.md` para lectura periódica de sensores HC-SR04, HX711 y DHT22 con despacho de telemetría vía HTTP REST hacia Supabase.
   15. **Panel de Preferencias de Usuario y Accesibilidad:** Configuración interactiva en `SettingsPanel.tsx` con soporte para selección accesible de temas visuales (claro/oscuro, `role="radio"` / `aria-checked`), selección bilingüe (español/inglés, `role="button"` / `aria-pressed`), y diálogo modal nativo de restablecimiento de preferencias (`ResetPreferencesDialog.tsx`) accesible con `aria-haspopup="dialog"`.
   16. **Modal de Registro y Pesaje de Residuos:** Formulario modal accesible en `WasteRegistrationModal.tsx` con gestión de foco con `useDialogFocus`, validación de precisión al gramo (`parseWasteWeightKg`), opciones de selección de categoría mediante botones de acción directa y lista desplegable sincronizada, opciones de contenedor validadas y prevención de doble submit con `aria-busy` y bloqueo de botones.
+  17. **Modal de Registro y Venta de Materiales:** Formulario modal accesible en `SaleRegistrationModal.tsx` con soporte dual para lotes reales de `wasteRecords` y resúmenes de `stock`, campo de peso editable con validación contra stock máximo disponible, cálculo reactivo de total estimado en COP (`previewTotal`), y prevención de doble submit con `aria-busy` y bloqueo de botones.
 
 #### Roadmap Inmediato de Tareas Pendientes
-1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Formularios (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx`, `frontend/tests/successToastFeedback.component.test.tsx`, `frontend/tests/settingsPanelPreferences.component.test.tsx` y `frontend/tests/wasteRegistrationModal.component.test.tsx`.
+1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Formularios (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx`, `frontend/tests/successToastFeedback.component.test.tsx`, `frontend/tests/settingsPanelPreferences.component.test.tsx`, `frontend/tests/wasteRegistrationModal.component.test.tsx` y `frontend/tests/saleRegistrationModal.component.test.tsx`.
 2. **Empaquetado y Validación del Instalador Nativo de Windows:** Compilar y verificar el instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
 3. **Pruebas de Integración Física y Guía Final de Sustentación:** Validación en vivo del nodo físico ESP32 y consolidación del protocolo de demostración para la entrega académica.
 
@@ -151,10 +152,11 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
 - El usuario revisa los resultados y ejecuta personalmente todas las operaciones de Git desde su terminal de PowerShell.
 
 #### Política de Pruebas Automatizadas y Cero Errores
-- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **337 pruebas automatizadas**.
+- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **343 pruebas automatizadas**.
 - **Comandos de Validación Obligatorios (desde `frontend/`):**
   1. `npm run lint`: Verificación estricta con ESLint (**0 errores, 0 warnings**).
   2. `npm run build`: Validación integral de tipado TypeScript (`tsc -b`) y empaquetado de producción de Vite (**0 errores**).
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
-  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**163 / 163 pasadas**).
+  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**169 / 169 pasadas**).
+- **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
