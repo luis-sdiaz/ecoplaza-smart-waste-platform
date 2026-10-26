@@ -512,6 +512,7 @@ const es = {
     allBuyers: "Todos los compradores", invalidDateRange: "Selecciona un período válido; la fecha inicial no puede ser posterior a la final.",
     activeDateRange: "Mostrando ventas del {{start}} al {{end}}.",
     loading: "Cargando ventas y opciones disponibles...", retry: "Reintentar",
+    noSales: "No hay ventas registradas",
     emptyTitle: "Todavía no tienes ventas registradas",
     emptyDescription: "Las ventas confirmadas mediante PostgreSQL aparecerán aquí.",
     emptyBuyerTitle: "No hay ventas para este comprador",

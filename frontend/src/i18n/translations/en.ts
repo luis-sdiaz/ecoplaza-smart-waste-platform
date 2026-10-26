@@ -512,6 +512,7 @@ const en = {
     allBuyers: "All buyers", invalidDateRange: "Select a valid period; the start date cannot be later than the end date.",
     activeDateRange: "Showing sales from {{start}} to {{end}}.",
     loading: "Loading sales and available options...", retry: "Try again",
+    noSales: "No recorded sales available",
     emptyTitle: "You don't have any recorded sales yet",
     emptyDescription: "Sales confirmed through PostgreSQL will appear here.",
     emptyBuyerTitle: "No sales for this buyer",
