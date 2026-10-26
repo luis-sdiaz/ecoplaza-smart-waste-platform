@@ -1,31 +1,54 @@
 import { useEffect } from "react";
 import { AlertTriangle, CircleCheck, X } from "lucide-react";
 
-type SuccessToastProps = {
-  title: string;
-  description: string;
-  closeLabel: string;
+export type SuccessToastProps = {
+  title?: string;
+  description?: string;
+  message?: string | boolean | null;
+  closeLabel?: string;
   onClose: () => void;
   duration?: number;
   variant?: "success" | "error";
+  show?: boolean;
+  isOpen?: boolean;
 };
 
 function SuccessToast({
   title,
   description,
-  closeLabel,
+  message,
+  closeLabel = "Cerrar notificación",
   onClose,
   duration = 4000,
   variant = "success",
+  show = true,
+  isOpen = true,
 }: SuccessToastProps) {
+  const displayMessage =
+    typeof message === "string" && message.trim().length > 0
+      ? message
+      : undefined;
+  const displayTitle = title || displayMessage;
+  const hasContent = Boolean(
+    displayTitle || (description && description.trim().length > 0),
+  );
+  const isInactive =
+    !hasContent || message === false || show === false || isOpen === false;
+
   useEffect(() => {
+    if (isInactive) return;
+
     const timeoutId = window.setTimeout(onClose, duration);
 
     return () => window.clearTimeout(timeoutId);
-  }, [duration, onClose]);
+  }, [duration, onClose, isInactive]);
+
+  if (isInactive) {
+    return null;
+  }
 
   return (
-    <aside
+    <div
       role={variant === "error" ? "alert" : "status"}
       aria-live={variant === "error" ? "assertive" : "polite"}
       aria-atomic="true"
@@ -48,10 +71,14 @@ function SuccessToast({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold">{title}</span>
-        <span className="mt-1 block text-xs leading-5 text-ecoplaza-text-muted">
-          {description}
-        </span>
+        {displayTitle && (
+          <span className="block text-sm font-semibold">{displayTitle}</span>
+        )}
+        {description && (
+          <span className="mt-1 block text-xs leading-5 text-ecoplaza-text-muted">
+            {description}
+          </span>
+        )}
       </span>
 
       <button
@@ -64,7 +91,7 @@ function SuccessToast({
       >
         <X size={17} strokeWidth={2} aria-hidden="true" />
       </button>
-    </aside>
+    </div>
   );
 }
 
