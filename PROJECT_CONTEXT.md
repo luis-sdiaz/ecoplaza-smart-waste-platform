@@ -85,7 +85,7 @@ ecoplaza-smart-waste-platform/
     │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
     │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
     │   └── main.tsx               # Punto de entrada del cliente web/escritorio
-    └── tests/                     # Suite de 327 pruebas automatizadas (Node.js y Vitest en 62 archivos)
+    └── tests/                     # Suite de 331 pruebas automatizadas (Node.js y Vitest en 63 archivos)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
@@ -103,10 +103,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 219)
+### 4. Estado Actual (Snapshot al Commit 225)
 
-- **Hito Alcanzado:** Commit `219` en la rama principal `origin/main`.
-- **Cobertura de Pruebas Automatizadas:** **327 pruebas aprobadas al 100%** distribuidas en **62 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 32 suites `.component.test.tsx` en Vitest con 153 pruebas).
+- **Hito Alcanzado:** Commit `225` en preparación sobre la rama principal `main`.
+- **Cobertura de Pruebas Automatizadas:** **331 pruebas aprobadas al 100%** distribuidas en **63 archivos de prueba** (30 suites unitarias `.test.ts` en Node.js con 174 pruebas + 33 suites `.component.test.tsx` en Vitest con 157 pruebas).
 - **Módulos Culminados y Operativos:**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
@@ -126,9 +126,10 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
   12. **Diagnóstico Nativo Tauri:** Detección automática del entorno de ejecución (Web vs Tauri 2) y modal informativo con dimensiones de ventana y capacidades de archivo.
   13. **Seguridad CSP en Tauri 2:** Directivas Content Security Policy (CSP) estrictamente configuradas en `frontend/src-tauri/tauri.conf.json` y verificadas mediante pruebas automatizadas en `frontend/tests/tauriSecurityConfig.test.ts`.
   14. **Firmware de Telemetría IoT (ESP32):** Sketch C++ implementado en `firmware/src/main.cpp` y documentado en `firmware/README.md` para lectura periódica de sensores HC-SR04, HX711 y DHT22 con despacho de telemetría vía HTTP REST hacia Supabase.
+  15. **Panel de Preferencias de Usuario y Accesibilidad:** Configuración interactiva en `SettingsPanel.tsx` con soporte para selección accesible de temas visuales (claro/oscuro, `role="radio"` / `aria-checked`), selección bilingüe (español/inglés, `role="button"` / `aria-pressed`), y diálogo modal nativo de restablecimiento de preferencias (`ResetPreferencesDialog.tsx`) accesible con `aria-haspopup="dialog"`.
 
 #### Roadmap Inmediato de Tareas Pendientes
-1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Feedback Visual (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx` y `frontend/tests/successToastFeedback.component.test.tsx` validando el estado colapsable (`w-64` a `w-20`), navegación móvil responsiva con drawer (`role="dialog"`, `aria-modal="true"`), cierre accesible con backdrop y tecla Escape en `AppLayout.tsx`, y notificaciones accesibles con auto-dismiss y descarte manual en `SuccessToast.tsx`.
+1. **Cobertura de Pruebas de Componente para UI/UX, Navegación y Preferencias (Completado):** Pruebas automatizadas en Vitest incorporadas en `frontend/tests/sidebarNavigation.component.test.tsx`, `frontend/tests/appLayoutResponsive.component.test.tsx`, `frontend/tests/successToastFeedback.component.test.tsx` y `frontend/tests/settingsPanelPreferences.component.test.tsx`.
 2. **Empaquetado y Validación del Instalador Nativo de Windows:** Compilar y verificar el instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
 3. **Pruebas de Integración Física y Guía Final de Sustentación:** Validación en vivo del nodo físico ESP32 y consolidación del protocolo de demostración para la entrega académica.
 
@@ -149,10 +150,11 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
 - El usuario revisa los resultados y ejecuta personalmente todas las operaciones de Git desde su terminal de PowerShell.
 
 #### Política de Pruebas Automatizadas y Cero Errores
-- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **327 pruebas automatizadas**.
+- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **331 pruebas automatizadas**.
 - **Comandos de Validación Obligatorios (desde `frontend/`):**
   1. `npm run lint`: Verificación estricta con ESLint (**0 errores, 0 warnings**).
   2. `npm run build`: Validación integral de tipado TypeScript (`tsc -b`) y empaquetado de producción de Vite (**0 errores**).
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
-  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**153 / 153 pasadas**).
+  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**157 / 157 pasadas**).
+- **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.

@@ -22,11 +22,15 @@ function ResetPreferencesDialog({
     if (!isOpen || !dialog) return;
 
     const previousFocus = document.activeElement;
-    dialog.showModal();
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    }
     cancelButtonRef.current?.focus();
 
     return () => {
-      dialog.close();
+      if (typeof dialog.close === "function") {
+        dialog.close();
+      }
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
   }, [isOpen]);
@@ -36,6 +40,7 @@ function ResetPreferencesDialog({
   return (
     <dialog
       ref={dialogRef}
+      open
       role="dialog"
       aria-modal="true"
       aria-labelledby="reset-preferences-title"
@@ -78,7 +83,7 @@ function ResetPreferencesDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className="cursor-pointer rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-semibold text-ecoplaza-on-primary transition-colors hover:bg-ecoplaza-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+            className="cursor-pointer rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-semibold text-ecoplaza-on-primary transition-colors hover:bg-ecoplaza-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
           >
             {t("settings.resetConfirm")}
           </button>

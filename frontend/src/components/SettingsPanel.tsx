@@ -76,6 +76,11 @@ function SettingsPanel() {
     storePreference(LANGUAGE_STORAGE_KEY, language);
   };
 
+  const selectLanguage = (language: "es" | "en") => {
+    void i18n.changeLanguage(language);
+    storePreference(LANGUAGE_STORAGE_KEY, language);
+  };
+
   const handleWeightUnitChange = (
     event: React.ChangeEvent<HTMLSelectElement>,
   ): void => {
@@ -88,15 +93,15 @@ function SettingsPanel() {
   const handleDemoCategoryChange = (
     event: React.ChangeEvent<HTMLSelectElement>,
   ): void => {
-    const category = event.target.value;
     if (
-      category !== "organic" &&
-      category !== "recyclable" &&
-      category !== "non-recyclable"
+      event.target.value !== "organic" &&
+      event.target.value !== "recyclable" &&
+      event.target.value !== "non-recyclable"
     ) {
       return;
     }
 
+    const category = event.target.value as DemoCategory;
     setDemoCategory(category);
     storePreference(DEMO_CATEGORY_STORAGE_KEY, category);
   };
@@ -158,11 +163,45 @@ function SettingsPanel() {
               {t("settings.language")}
             </label>
 
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                role="button"
+                aria-pressed={i18n.language === "es"}
+                aria-label={t("settings.spanish")}
+                onClick={() => selectLanguage("es")}
+                className={`flex-1 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+                  i18n.language === "es"
+                    ? "border-ecoplaza-primary bg-ecoplaza-primary/10 text-ecoplaza-primary font-semibold"
+                    : "border-ecoplaza-border text-ecoplaza-text hover:bg-ecoplaza-background"
+                }`}
+              >
+                {t("settings.spanish")}
+              </button>
+              <button
+                type="button"
+                role="button"
+                aria-pressed={i18n.language === "en"}
+                aria-label={t("settings.english")}
+                onClick={() => selectLanguage("en")}
+                className={`flex-1 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+                  i18n.language === "en"
+                    ? "border-ecoplaza-primary bg-ecoplaza-primary/10 text-ecoplaza-primary font-semibold"
+                    : "border-ecoplaza-border text-ecoplaza-text hover:bg-ecoplaza-background"
+                }`}
+              >
+                {t("settings.english")}
+              </button>
+            </div>
+
             <select
               id="language"
+              aria-label={t("settings.language")}
               value={i18n.language}
               onChange={handleLanguageChange}
-              className="mt-2 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text outline-none"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
             >
               <option value="es">{t("settings.spanish")}</option>
               <option value="en">{t("settings.english")}</option>
@@ -248,98 +287,92 @@ function SettingsPanel() {
           {t("settings.appearanceDescription")}
         </p>
 
-        <fieldset className="mt-5 grid max-w-2xl grid-cols-2 gap-3">
+        <fieldset
+          className="mt-5 grid max-w-2xl grid-cols-2 gap-3"
+          role="radiogroup"
+          aria-label={t("settings.appearance")}
+        >
           <legend className="sr-only">{t("settings.appearance")}</legend>
 
-          <label className="cursor-pointer">
-            <input
-              type="radio"
-              name="appearance-theme"
-              value="light"
-              checked={theme === "light"}
-              onChange={() => setTheme("light")}
-              className="peer sr-only"
-            />
-
-            <span
-              className={`block rounded-xl border p-3 transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ecoplaza-primary ${
-                theme === "light"
-                  ? "border-ecoplaza-primary bg-ecoplaza-background"
-                  : "ecoplaza-theme-option-inactive border-ecoplaza-border hover:border-ecoplaza-primary/60 hover:bg-ecoplaza-background"
-              }`}
-            >
-              <span className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-sm font-semibold text-ecoplaza-text">
-                  <Sun size={18} strokeWidth={2} aria-hidden="true" />
-                  {t("settings.lightTheme")}
-                </span>
-
-                {theme === "light" && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ecoplaza-primary text-ecoplaza-on-primary">
-                    <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-                    <span className="sr-only">{t("settings.selectedTheme")}</span>
-                  </span>
-                )}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={theme === "light"}
+            aria-pressed={theme === "light"}
+            aria-label={t("settings.lightTheme")}
+            onClick={() => setTheme("light")}
+            className={`cursor-pointer block rounded-xl border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary ${
+              theme === "light"
+                ? "border-ecoplaza-primary bg-ecoplaza-background"
+                : "ecoplaza-theme-option-inactive border-ecoplaza-border hover:border-ecoplaza-primary/60 hover:bg-ecoplaza-background"
+            }`}
+          >
+            <span className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-sm font-semibold text-ecoplaza-text">
+                <Sun size={18} strokeWidth={2} aria-hidden="true" />
+                {t("settings.lightTheme")}
               </span>
 
-              <span className="mt-3 flex h-16 overflow-hidden rounded-lg border border-[#d8e4dc] bg-[#f3f8f5] p-2">
-                <span className="w-6 shrink-0 rounded-md bg-white p-1">
-                  <span className="block h-2 rounded-sm bg-[#1f7a4d]" />
-                  <span className="mt-1 block h-1 rounded-sm bg-[#d8e4dc]" />
-                  <span className="mt-1 block h-1 rounded-sm bg-[#d8e4dc]" />
+              {theme === "light" && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ecoplaza-primary text-ecoplaza-on-primary">
+                  <Check size={13} strokeWidth={2.5} aria-hidden="true" />
+                  <span className="sr-only">{t("settings.selectedTheme")}</span>
                 </span>
-                <span className="ml-2 flex-1">
-                  <span className="block h-2 w-2/5 rounded-sm bg-[#18332a]" />
-                  <span className="mt-2 block h-8 rounded-md border border-[#d8e4dc] bg-white" />
-                </span>
+              )}
+            </span>
+
+            <span className="mt-3 flex h-16 overflow-hidden rounded-lg border border-[#d8e4dc] bg-[#f3f8f5] p-2">
+              <span className="w-6 shrink-0 rounded-md bg-white p-1">
+                <span className="block h-2 rounded-sm bg-[#1f7a4d]" />
+                <span className="mt-1 block h-1 rounded-sm bg-[#d8e4dc]" />
+                <span className="mt-1 block h-1 rounded-sm bg-[#d8e4dc]" />
+              </span>
+              <span className="ml-2 flex-1">
+                <span className="block h-2 w-2/5 rounded-sm bg-[#18332a]" />
+                <span className="mt-2 block h-8 rounded-md border border-[#d8e4dc] bg-white" />
               </span>
             </span>
-          </label>
+          </button>
 
-          <label className="cursor-pointer">
-            <input
-              type="radio"
-              name="appearance-theme"
-              value="dark"
-              checked={theme === "dark"}
-              onChange={() => setTheme("dark")}
-              className="peer sr-only"
-            />
-
-            <span
-              className={`block rounded-xl border p-3 transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ecoplaza-primary ${
-                theme === "dark"
-                  ? "border-ecoplaza-primary bg-ecoplaza-background"
-                  : "ecoplaza-theme-option-inactive border-ecoplaza-border hover:border-ecoplaza-primary/60 hover:bg-ecoplaza-background"
-              }`}
-            >
-              <span className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-sm font-semibold text-ecoplaza-text">
-                  <Moon size={18} strokeWidth={2} aria-hidden="true" />
-                  {t("settings.darkTheme")}
-                </span>
-
-                {theme === "dark" && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ecoplaza-primary text-ecoplaza-on-primary">
-                    <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-                    <span className="sr-only">{t("settings.selectedTheme")}</span>
-                  </span>
-                )}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={theme === "dark"}
+            aria-pressed={theme === "dark"}
+            aria-label={t("settings.darkTheme")}
+            onClick={() => setTheme("dark")}
+            className={`cursor-pointer block rounded-xl border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary ${
+              theme === "dark"
+                ? "border-ecoplaza-primary bg-ecoplaza-background"
+                : "ecoplaza-theme-option-inactive border-ecoplaza-border hover:border-ecoplaza-primary/60 hover:bg-ecoplaza-background"
+            }`}
+          >
+            <span className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-sm font-semibold text-ecoplaza-text">
+                <Moon size={18} strokeWidth={2} aria-hidden="true" />
+                {t("settings.darkTheme")}
               </span>
 
-              <span className="mt-3 flex h-16 overflow-hidden rounded-lg border border-[#34483b] bg-[#101a15] p-2">
-                <span className="w-6 shrink-0 rounded-md bg-[#0c1812] p-1">
-                  <span className="block h-2 rounded-sm bg-[#168552]" />
-                  <span className="mt-1 block h-1 rounded-sm bg-[#34483b]" />
-                  <span className="mt-1 block h-1 rounded-sm bg-[#34483b]" />
+              {theme === "dark" && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ecoplaza-primary text-ecoplaza-on-primary">
+                  <Check size={13} strokeWidth={2.5} aria-hidden="true" />
+                  <span className="sr-only">{t("settings.selectedTheme")}</span>
                 </span>
-                <span className="ml-2 flex-1">
-                  <span className="block h-2 w-2/5 rounded-sm bg-[#e8f2eb]" />
-                  <span className="mt-2 block h-8 rounded-md border border-[#34483b] bg-[#18251e]" />
-                </span>
+              )}
+            </span>
+
+            <span className="mt-3 flex h-16 overflow-hidden rounded-lg border border-[#34483b] bg-[#101a15] p-2">
+              <span className="w-6 shrink-0 rounded-md bg-[#0c1812] p-1">
+                <span className="block h-2 rounded-sm bg-[#168552]" />
+                <span className="mt-1 block h-1 rounded-sm bg-[#34483b]" />
+                <span className="mt-1 block h-1 rounded-sm bg-[#34483b]" />
+              </span>
+              <span className="ml-2 flex-1">
+                <span className="block h-2 w-2/5 rounded-sm bg-[#e8f2eb]" />
+                <span className="mt-2 block h-8 rounded-md border border-[#34483b] bg-[#18251e]" />
               </span>
             </span>
-          </label>
+          </button>
         </fieldset>
       </article>
 
@@ -361,6 +394,7 @@ function SettingsPanel() {
 
         <button
           type="button"
+          aria-haspopup="dialog"
           onClick={() => setIsResetDialogOpen(true)}
           className="shrink-0 cursor-pointer rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
         >

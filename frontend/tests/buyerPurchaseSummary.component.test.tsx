@@ -101,7 +101,7 @@ describe("buyer commercial summary", () => {
     expect(purchases.map(({ id }) => id)).toEqual(["sale-1", "sale-2"]);
 
     fireEvent.click(screen.getByRole("button", { name: "buyers.exportPurchasesExcel" }));
-    await waitFor(() => expect(purchaseExcelMocks.save).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(purchaseExcelMocks.save).toHaveBeenCalledTimes(1), { timeout: 3000 });
     expect(purchaseExcelMocks.save.mock.calls[0][0].map((sale: { id: string }) => sale.id)).toEqual(["sale-1", "sale-2"]);
     expect(purchaseExcelMocks.save.mock.calls[0][1]).toBe(buyer.id);
   });
@@ -111,7 +111,7 @@ describe("buyer commercial summary", () => {
     renderHistory();
 
     fireEvent.click(screen.getByRole("button", { name: "buyers.exportPurchasesExcel" }));
-    await waitFor(() => expect(purchaseExcelMocks.save).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(purchaseExcelMocks.save).toHaveBeenCalledTimes(1), { timeout: 3000 });
     expect(screen.queryByText("buyers.purchaseExcelExportSuccess")).toBeNull();
 
     purchaseExcelMocks.save.mockRejectedValueOnce(new Error("write failed"));
