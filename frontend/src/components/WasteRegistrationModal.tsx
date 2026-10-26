@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 import type { Container } from "../services/containerService";
 import type { WasteCategory } from "../services/wasteService";
 import { parseWasteWeightKg } from "../services/wasteWeight";
@@ -81,6 +82,13 @@ function WasteRegistrationModal({
         : "border-ecoplaza-border focus-visible:outline-ecoplaza-accent"
     }`;
 
+  const selectCategory = (selected: string) => {
+    setCategory(selected);
+    if (errors.category) {
+      setErrors((current) => ({ ...current, category: false }));
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/25 p-8">
       <div
@@ -91,12 +99,23 @@ function WasteRegistrationModal({
         aria-labelledby="waste-registration-title"
         className="w-full max-w-md rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6 shadow-xl"
       >
-        <h2
-          id="waste-registration-title"
-          className="text-lg font-semibold text-ecoplaza-text"
-        >
-          {t("waste.modalTitle")}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2
+            id="waste-registration-title"
+            className="text-lg font-semibold text-ecoplaza-text"
+          >
+            {t("waste.modalTitle")}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            aria-label="Cerrar"
+            className="rounded-lg p-1.5 text-ecoplaza-text-muted hover:bg-ecoplaza-background hover:text-ecoplaza-text disabled:opacity-50"
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
           <div>
@@ -106,19 +125,57 @@ function WasteRegistrationModal({
             >
               {t("waste.categoryField")}
             </label>
+
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                aria-pressed={category === "organic"}
+                onClick={() => selectCategory("organic")}
+                className={`rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
+                  category === "organic"
+                    ? "border-ecoplaza-primary bg-ecoplaza-primary/10 text-ecoplaza-primary font-semibold"
+                    : "border-ecoplaza-border text-ecoplaza-text hover:bg-ecoplaza-background"
+                }`}
+              >
+                {t("common.wasteOrganic")}
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                aria-pressed={category === "recyclable"}
+                onClick={() => selectCategory("recyclable")}
+                className={`rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
+                  category === "recyclable"
+                    ? "border-ecoplaza-primary bg-ecoplaza-primary/10 text-ecoplaza-primary font-semibold"
+                    : "border-ecoplaza-border text-ecoplaza-text hover:bg-ecoplaza-background"
+                }`}
+              >
+                {t("common.wasteRecyclable")}
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                aria-pressed={category === "nonRecyclable"}
+                onClick={() => selectCategory("nonRecyclable")}
+                className={`rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
+                  category === "nonRecyclable"
+                    ? "border-ecoplaza-primary bg-ecoplaza-primary/10 text-ecoplaza-primary font-semibold"
+                    : "border-ecoplaza-border text-ecoplaza-text hover:bg-ecoplaza-background"
+                }`}
+              >
+                {t("common.wasteNonRecoverable")}
+              </button>
+            </div>
+
             <select
               id="waste-category"
               value={category}
               disabled={isSubmitting}
-              onChange={(event) => {
-                setCategory(event.target.value);
-                if (errors.category) {
-                  setErrors((current) => ({ ...current, category: false }));
-                }
-              }}
+              onChange={(event) => selectCategory(event.target.value)}
               aria-invalid={errors.category}
               aria-describedby={errors.category ? "waste-category-error" : undefined}
-              className={fieldClassName(errors.category)}
+              className={`${fieldClassName(errors.category)} mt-2`}
             >
               <option value="">{t("waste.selectOption")}</option>
               <option value="organic">{t("common.wasteOrganic")}</option>
@@ -186,6 +243,7 @@ function WasteRegistrationModal({
               type="number"
               min="0.001"
               step="0.001"
+              placeholder="0.000"
               inputMode="decimal"
               disabled={isSubmitting}
               value={weight}
@@ -211,7 +269,7 @@ function WasteRegistrationModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text-muted"
+              className="rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text-muted transition-colors hover:bg-ecoplaza-background hover:text-ecoplaza-text"
             >
               {t("waste.cancel")}
             </button>
@@ -219,7 +277,7 @@ function WasteRegistrationModal({
               type="submit"
               disabled={isSubmitting || containers.length === 0}
               aria-busy={isSubmitting}
-              className="rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-medium text-ecoplaza-on-primary transition-colors hover:bg-ecoplaza-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t(isSubmitting ? "waste.registering" : "waste.register")}
             </button>
