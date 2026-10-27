@@ -32,9 +32,9 @@ Cada contenedor inteligente dispone de una unidad IoT encargada de medir el nive
 | **DHT22** | VCC | 3V3 o 5V | 3.3 V / 5.0 V | Alimentación del sensor |
 | **DHT22** | DATA | **GPIO 4** | 3.3 V | Entrada digital con pull-up interna |
 | **DHT22** | GND | GND | 0 V | Masa común |
-| **LED Verde** | Ánodo (+) | **GPIO 25** | 3.3 V | En serie con resistencia de 220 Ω (< 60% llenado) |
-| **LED Amarillo** | Ánodo (+) | **GPIO 26** | 3.3 V | En serie con resistencia de 220 Ω (60% - 84% llenado) |
-| **LED Rojo** | Ánodo (+) | **GPIO 27** | 3.3 V | En serie con resistencia de 220 Ω (>= 85% crítico) |
+| **LED Verde** | Ánodo (+) | **GPIO 25** | 3.3 V | En serie con resistencia de 220 Ω (< 75% llenado) |
+| **LED Amarillo** | Ánodo (+) | **GPIO 26** | 3.3 V | En serie con resistencia de 220 Ω (75% - 89% llenado) |
+| **LED Rojo** | Ánodo (+) | **GPIO 27** | 3.3 V | En serie con resistencia de 220 Ω (>= 90% crítico) |
 | **LEDs (Cátodos)** | Cátodos (-) | GND | 0 V | Retorno a masa |
 
 ---
@@ -65,42 +65,47 @@ $$\text{V}_{\text{out}} = 5\,\text{V} \times \frac{2\,\text{k}\Omega}{1\,\text{k
 
 El contenedor actualiza automáticamente los LEDs locales según el cálculo porcentual de volumen ocupado:
 
-- **Verde (< 60%):** Estado óptimo (`OPTIMAL`). Contenedor con capacidad disponible.
-- **Amarillo (60% - 84%):** Advertencia (`WARNING`). Contenedor próximo a saturarse; programar recolección.
-- **Rojo (>= 85%):** Nivel crítico (`CRITICAL`). Contenedor desbordado o prioritario para recolección inmediata.
+- **Verde (< 75%):** Estado normal (`normal`). Contenedor con capacidad disponible.
+- **Amarillo (75% - 89%):** Advertencia (`warning`). Contenedor próximo a saturarse; programar recolección.
+- **Rojo (>= 90%):** Nivel crítico (`critical`). Contenedor desbordado o prioritario para recolección inmediata.
 
 ---
 
-## 5. Formato del Paquete JSON de Telemetría
+## 5. Configuración de WiFi y Supabase
+
+Copia `config.example.h` como `config.h` dentro de `firmware/` y completa las
+credenciales locales. El archivo `config.h` no debe versionarse. El firmware
+envía un `POST` a `/rest/v1/telemetry` con los encabezados `apikey`,
+`Authorization: Bearer` y `Content-Type: application/json`.
+
+## 6. Formato del Paquete JSON de Telemetría
 
 El microcontrolador emite por el puerto serial (115200 baudios) cadenas JSON estructuradas con el siguiente esquema:
 
 ```json
 {
   "container_id": "CTR-BOG-001",
-  "fill_level_percent": 78,
-  "distance_cm": 29.8,
-  "temperature_c": 21.4,
-  "humidity_percent": 54.2,
-  "status": "WARNING"
+  "fill_level": 78.0,
+  "battery_level": 100.0,
+  "status": "warning"
 }
 ```
 
-Este paquete es consumible directamente por el simulador de telemetría de EcoPlaza, gateways MQTT o puentes Serial-to-Supabase.
+`status` es `normal` para niveles menores a 75, `warning` desde 75 y
+`critical` desde 90. `battery_level` permanece fijo en `100.0` mientras el
+nodo se alimenta por USB. Este paquete coincide con las columnas de Supabase.
 
 ---
 
-## 6. Dependencias de Librerías
+## 7. Dependencias de Librerías
 
 Para compilar el proyecto en **Arduino IDE** o **PlatformIO**, instala las siguientes librerías:
 
-1. **DHT sensor library** (por Adafruit) — Versión 1.4.x
-2. **Adafruit Unified Sensor** (por Adafruit) — Versión 1.1.x
-3. **ArduinoJson** (por Benoît Blanchon) — Versión 6.x o 7.x
+1. **ArduinoJson** (por Benoît Blanchon) — Versión 6.x o 7.x
 
 ---
 
-## 7. Instrucciones de Compilación y Carga
+## 8. Instrucciones de Compilación y Carga
 
 ### Opción A: Con PlatformIO (VS Code)
 
@@ -113,8 +118,6 @@ board = esp32dev
 framework = arduino
 monitor_speed = 115200
 lib_deps =
-    adafruit/DHT sensor library @ ^1.4.6
-    adafruit/Adafruit Unified Sensor @ ^1.1.14
     bblanchon/ArduinoJson @ ^7.0.4
 ```
 
@@ -132,4 +135,3 @@ pio device monitor
 4. Selecciona el puerto COM correspondiente a tu placa ESP32.
 5. Haz clic en **Subir (Upload)**.
 6. Abre el **Monitor Serie (Serial Monitor)** a **115200 baudios**.
-
