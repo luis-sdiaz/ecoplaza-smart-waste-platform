@@ -7,3 +7,8 @@
 // URL base del proyecto Supabase, sin la ruta /rest/v1.
 #define SUPABASE_URL "https://tu-proyecto.supabase.co"
 #define SUPABASE_ANON_KEY "tu-clave-anon"
+
+// Calibracion del contenedor (centimetros). Si no se definen, main.cpp usa
+// 100.0 cm y 5.0 cm respectivamente.
+// #define CONTAINER_HEIGHT_CM 100.0f
+// #define SENSOR_MIN_DISTANCE_CM 5.0f

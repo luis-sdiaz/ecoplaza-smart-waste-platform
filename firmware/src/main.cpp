@@ -9,6 +9,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <math.h>
 #include <WiFi.h>
 
 #if __has_include("config.h")
@@ -27,6 +28,12 @@
 #ifndef SUPABASE_ANON_KEY
 #define SUPABASE_ANON_KEY ""
 #endif
+#ifndef CONTAINER_HEIGHT_CM
+#define CONTAINER_HEIGHT_CM 100.0f
+#endif
+#ifndef SENSOR_MIN_DISTANCE_CM
+#define SENSOR_MIN_DISTANCE_CM 5.0f
+#endif
 
 // Pines del circuito minimo viable.
 constexpr uint8_t TRIGGER_PIN = 5; // D5
@@ -38,8 +45,8 @@ constexpr uint8_t LED_YELLOW_PIN = 26;
 constexpr uint8_t LED_RED_PIN = 27;
 
 constexpr char CONTAINER_ID[] = "CTR-BOG-001";
-constexpr float CONTAINER_HEIGHT_CM = 100.0f;
-constexpr float SENSOR_MIN_DISTANCE_CM = 10.0f;
+constexpr uint8_t ULTRASONIC_SAMPLE_COUNT = 5;
+constexpr unsigned long ULTRASONIC_SAMPLE_INTERVAL_MS = 40;
 constexpr float USB_BATTERY_LEVEL = 100.0f;
 constexpr unsigned long TELEMETRY_INTERVAL_MS = 5000;
 constexpr unsigned long SOUND_TIMEOUT_US = 30000;
@@ -55,7 +62,8 @@ struct TelemetryData {
 
 unsigned long lastTelemetryTimestamp = 0;
 
-float readUltrasonicDistance();
+float readUltrasonicDistance(float& rawDistance);
+float readUltrasonicSample();
 float calculateFillLevel(float distanceCm);
 const char* resolveStatus(float fillLevel);
 void updateStatusLeds(float fillLevel);
@@ -88,15 +96,20 @@ void loop() {
       currentMillis - lastTelemetryTimestamp >= TELEMETRY_INTERVAL_MS) {
     lastTelemetryTimestamp = currentMillis;
 
-    const float distanceCm = readUltrasonicDistance();
-    const float fillLevel = calculateFillLevel(distanceCm);
+    float rawDistance = 0.0f;
+    const float filteredDistance = readUltrasonicDistance(rawDistance);
+    const float fillLevel = calculateFillLevel(filteredDistance);
     const char* status = resolveStatus(fillLevel);
     updateStatusLeds(fillLevel);
 
     const TelemetryData telemetry{
         CONTAINER_ID, fillLevel, USB_BATTERY_LEVEL, status};
 
-    Serial.print(F("[INFO] Nivel: "));
+    Serial.print(F("[INFO] Distancia cruda: "));
+    Serial.print(rawDistance, 1);
+    Serial.print(F(" cm, distancia filtrada: "));
+    Serial.print(filteredDistance, 1);
+    Serial.print(F(" cm, porcentaje: "));
     Serial.print(fillLevel, 1);
     Serial.print(F("%, estado: "));
     Serial.println(status);
@@ -106,7 +119,7 @@ void loop() {
   yield();
 }
 
-float readUltrasonicDistance() {
+float readUltrasonicSample() {
   digitalWrite(TRIGGER_PIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIGGER_PIN, HIGH);
@@ -116,12 +129,57 @@ float readUltrasonicDistance() {
   const unsigned long durationUs =
       pulseIn(ECHO_PIN, HIGH, SOUND_TIMEOUT_US);
   if (durationUs == 0) {
+    return 0.0f;
+  }
+
+  return (durationUs * 0.0343f) / 2.0f;
+}
+
+float readUltrasonicDistance(float& rawDistance) {
+  float validDistances[ULTRASONIC_SAMPLE_COUNT];
+  uint8_t validCount = 0;
+  rawDistance = 0.0f;
+
+  for (uint8_t sampleIndex = 0;
+       sampleIndex < ULTRASONIC_SAMPLE_COUNT; ++sampleIndex) {
+    const float sampleDistance = readUltrasonicSample();
+    rawDistance = sampleDistance;
+
+    if (sampleDistance > 0.0f &&
+        sampleDistance <= CONTAINER_HEIGHT_CM) {
+      validDistances[validCount++] = sampleDistance;
+    } else {
+      Serial.print(F("[WARN] Lectura ultrasónica inválida: "));
+      Serial.print(sampleDistance, 1);
+      Serial.println(F(" cm; se descarta"));
+    }
+
+    if (sampleIndex + 1 < ULTRASONIC_SAMPLE_COUNT) {
+      delay(ULTRASONIC_SAMPLE_INTERVAL_MS);
+    }
+  }
+
+  if (validCount == 0) {
+    Serial.println(F("[ERROR] Sin lecturas ultrasónicas válidas; se usa distancia de contenedor vacío"));
     return CONTAINER_HEIGHT_CM;
   }
 
-  const float distanceCm = (durationUs * 0.0343f) / 2.0f;
-  return constrain(distanceCm, SENSOR_MIN_DISTANCE_CM,
-                   CONTAINER_HEIGHT_CM);
+  for (uint8_t i = 1; i < validCount; ++i) {
+    const float value = validDistances[i];
+    int8_t j = static_cast<int8_t>(i) - 1;
+    while (j >= 0 && validDistances[j] > value) {
+      validDistances[j + 1] = validDistances[j];
+      --j;
+    }
+    validDistances[j + 1] = value;
+  }
+
+  if (validCount % 2 == 1) {
+    return validDistances[validCount / 2];
+  }
+  return (validDistances[validCount / 2 - 1] +
+          validDistances[validCount / 2]) /
+         2.0f;
 }
 
 float calculateFillLevel(float distanceCm) {
@@ -130,9 +188,11 @@ float calculateFillLevel(float distanceCm) {
     return 0.0f;
   }
 
-  const float fillLevel =
+  const float unclampedFillLevel =
       ((CONTAINER_HEIGHT_CM - distanceCm) / span) * 100.0f;
-  return constrain(fillLevel, 0.0f, 100.0f);
+  const float clampedFillLevel =
+      constrain(unclampedFillLevel, 0.0f, 100.0f);
+  return roundf(clampedFillLevel * 10.0f) / 10.0f;
 }
 
 const char* resolveStatus(float fillLevel) {

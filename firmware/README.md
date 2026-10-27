@@ -97,7 +97,34 @@ nodo se alimenta por USB. Este paquete coincide con las columnas de Supabase.
 
 ---
 
-## 7. Dependencias de Librerías
+## 7. Calibración y filtrado ultrasónico
+
+El firmware toma una ráfaga de cinco lecturas del HC-SR04, separadas por
+40 ms. Descarta lecturas inválidas (`<= 0` o mayores que
+`CONTAINER_HEIGHT_CM`) y calcula la mediana de las lecturas válidas para
+reducir rebotes y picos acústicos.
+
+La conversión de distancia a porcentaje usa:
+
+```text
+fill_level = ((CONTAINER_HEIGHT_CM - distancia_filtrada) /
+              (CONTAINER_HEIGHT_CM - SENSOR_MIN_DISTANCE_CM)) * 100.0
+```
+
+El resultado se limita entre `0.0%` y `100.0%` y se redondea a un decimal.
+Por defecto, `CONTAINER_HEIGHT_CM` es `100.0 cm` y
+`SENSOR_MIN_DISTANCE_CM` es `5.0 cm`. Para calibrar un contenedor de prueba,
+mide desde la cara del sensor hasta el fondo con el contenedor vacío y define
+ese valor en `config.h` (copia de `config.example.h`). Ajusta
+`SENSOR_MIN_DISTANCE_CM` a la distancia mínima física que el sensor puede
+medir sin entrar en su zona muerta.
+
+Cada ciclo muestra por Serial la distancia cruda de la última muestra, la
+distancia filtrada, el porcentaje calculado y el estado resultante.
+
+---
+
+## 8. Dependencias de Librerías
 
 Para compilar el proyecto en **Arduino IDE** o **PlatformIO**, instala las siguientes librerías:
 
@@ -105,7 +132,7 @@ Para compilar el proyecto en **Arduino IDE** o **PlatformIO**, instala las sigui
 
 ---
 
-## 8. Instrucciones de Compilación y Carga
+## 9. Instrucciones de Compilación y Carga
 
 ### Opción A: Con PlatformIO (VS Code)
 
