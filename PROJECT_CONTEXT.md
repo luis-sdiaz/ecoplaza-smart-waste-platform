@@ -209,3 +209,42 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
   3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
   4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**319 / 319 pasadas**).
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
+
+---
+
+## FASE 2: HARDWARE IoT & ESCRITORIO TAURI 2 (COMPLETADA)
+
+La Fase 2 de EcoPlaza — Hardware IoT & Escritorio Tauri 2 queda completada y
+verificada. Se documentan los cinco commits de implementación y ajuste:
+
+1. **Commit `9bf77bb` — Configuración inicial de firmware ESP32**
+   - Configuración del firmware ESP32 para el circuito mínimo viable.
+   - Pines GPIO 5 (TRIG) y GPIO 18 (ECHO), con divisor de tensión de 1 kΩ / 2 kΩ.
+   - Payload de telemetría compatible con Supabase.
+   - Plantilla segura de configuración mediante `config.example.h`.
+
+2. **Commit `8d016d0` — Filtrado y calibración volumétrica**
+   - Filtro de mediana sobre cinco muestras del sensor HC-SR04.
+   - Calibración volumétrica de la altura del contenedor.
+   - Porcentaje de llenado limitado estrictamente entre `0.0%` y `100.0%`.
+
+3. **Commit `86fd74f` — HTTPS y resiliencia de conectividad**
+   - Transmisión HTTPS mediante `WiFiClientSecure`.
+   - Reconexión WiFi no bloqueante con diagnóstico por puerto serie.
+   - Endpoint REST alineado con Supabase:
+     `/rest/v1/sensor_telemetry`.
+
+4. **Commit `4c1bb43` — Configuración de escritorio Tauri 2**
+   - Ventana principal configurada a `1280x800`.
+   - Dimensiones mínimas de `1024x700`.
+   - Identificador de aplicación `com.ecoplaza.app`.
+   - Capabilities restringidas a los permisos mínimos necesarios.
+
+5. **Commit `5094dc4` — Corrección de identidad y pruebas**
+   - Título de ventana corregido a
+     `EcoPlaza — Smart Waste & IoT Platform`.
+   - Alineación del test `tauriSecurityConfig` con el identificador de
+     aplicación vigente.
+
+La suite de pruebas automatizadas se mantiene **100% aprobada (493/493
+tests)** en GitHub Actions CI.
