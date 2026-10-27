@@ -23,7 +23,7 @@ test("a) tauri.conf.json existe y es un JSON sintácticamente válido", () => {
   const config = JSON.parse(rawContent);
   assert.equal(config.productName, "EcoPlaza — Smart Waste & IoT Platform");
   assert.equal(config.version, "1.0.0");
-  assert.equal(config.identifier, "com.ecoplaza.platform");
+  assert.equal(config.identifier, "com.ecoplaza.app");
   assert.equal(config.bundle?.targets, "all");
   assert.equal(config.bundle?.publisher, "EcoPlaza Team");
 });
@@ -172,4 +172,3 @@ test("d) capabilities/default.json respeta el principio de mínimo privilegio ne
     "No debe exponer lectura arbitraria del sistema de archivos fs:allow-read-file",
   );
 });
-

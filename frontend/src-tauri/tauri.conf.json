@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "EcoPlaza Smart Waste Platform",
+  "productName": "EcoPlaza — Smart Waste & IoT Platform",
   "version": "1.0.0",
   "identifier": "com.ecoplaza.app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "EcoPlaza Smart Waste Platform",
+        "title": "EcoPlaza — Smart Waste & IoT Platform",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,
