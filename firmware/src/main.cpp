@@ -11,6 +11,7 @@
 #include <HTTPClient.h>
 #include <math.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 #if __has_include("config.h")
 #include "config.h"
@@ -34,6 +35,9 @@
 #ifndef SENSOR_MIN_DISTANCE_CM
 #define SENSOR_MIN_DISTANCE_CM 5.0f
 #endif
+#ifndef TELEMETRY_PATH
+#define TELEMETRY_PATH "/rest/v1/sensor_telemetry"
+#endif
 
 // Pines del circuito minimo viable.
 constexpr uint8_t TRIGGER_PIN = 5; // D5
@@ -50,8 +54,8 @@ constexpr unsigned long ULTRASONIC_SAMPLE_INTERVAL_MS = 40;
 constexpr float USB_BATTERY_LEVEL = 100.0f;
 constexpr unsigned long TELEMETRY_INTERVAL_MS = 5000;
 constexpr unsigned long SOUND_TIMEOUT_US = 30000;
-constexpr unsigned long WIFI_TIMEOUT_MS = 20000;
-constexpr char TELEMETRY_PATH[] = "/rest/v1/telemetry";
+constexpr unsigned long WIFI_RECONNECT_INTERVAL_MS = 10000;
+constexpr unsigned long HTTP_TIMEOUT_MS = 7000;
 
 struct TelemetryData {
   const char* containerId;
@@ -61,13 +65,14 @@ struct TelemetryData {
 };
 
 unsigned long lastTelemetryTimestamp = 0;
+unsigned long lastWiFiAttemptTimestamp = 0;
 
 float readUltrasonicDistance(float& rawDistance);
 float readUltrasonicSample();
 float calculateFillLevel(float distanceCm);
 const char* resolveStatus(float fillLevel);
 void updateStatusLeds(float fillLevel);
-void connectToWiFi();
+void maintainWiFiConnection();
 bool publishTelemetry(const TelemetryData& telemetry);
 
 void setup() {
@@ -87,11 +92,13 @@ void setup() {
   Serial.println(F("[INFO] EcoPlaza ESP32 iniciado"));
   Serial.print(F("[INFO] Container: "));
   Serial.println(CONTAINER_ID);
-  connectToWiFi();
+  maintainWiFiConnection();
 }
 
 void loop() {
   const unsigned long currentMillis = millis();
+  maintainWiFiConnection();
+
   if (lastTelemetryTimestamp == 0 ||
       currentMillis - lastTelemetryTimestamp >= TELEMETRY_INTERVAL_MS) {
     lastTelemetryTimestamp = currentMillis;
@@ -212,28 +219,35 @@ void updateStatusLeds(float fillLevel) {
   digitalWrite(LED_RED_PIN, fillLevel >= 90.0f ? HIGH : LOW);
 }
 
-void connectToWiFi() {
+void maintainWiFiConnection() {
+  static bool connectionReported = false;
+
   if (strlen(WIFI_SSID) == 0) {
     Serial.println(F("[WARN] WIFI_SSID no configurado; se omite WiFi"));
     return;
   }
 
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print(F("[INFO] Conectando a WiFi"));
-  const unsigned long startedAt = millis();
-  while (WiFi.status() != WL_CONNECTED &&
-         millis() - startedAt < WIFI_TIMEOUT_MS) {
-    delay(500);
-    Serial.print('.');
-  }
-  Serial.println();
-
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print(F("[INFO] WiFi conectado: "));
-    Serial.println(WiFi.localIP());
-  } else {
-    Serial.println(F("[ERROR] No se pudo conectar a WiFi"));
+    if (!connectionReported) {
+      Serial.print(F("[INFO] WiFi conectado: "));
+      Serial.println(WiFi.localIP());
+      connectionReported = true;
+    }
+    return;
   }
+
+  connectionReported = false;
+  const unsigned long currentMillis = millis();
+  if (lastWiFiAttemptTimestamp != 0 &&
+      currentMillis - lastWiFiAttemptTimestamp <
+          WIFI_RECONNECT_INTERVAL_MS) {
+    return;
+  }
+
+  lastWiFiAttemptTimestamp = currentMillis;
+  Serial.println(F("[INFO] Iniciando (re)conexion WiFi"));
+  WiFi.disconnect();
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
 bool publishTelemetry(const TelemetryData& telemetry) {
@@ -255,9 +269,13 @@ bool publishTelemetry(const TelemetryData& telemetry) {
   String payload;
   serializeJson(document, payload);
 
+  WiFiClientSecure client;
+  client.setInsecure();
+
   HTTPClient http;
   const String endpoint = String(SUPABASE_URL) + TELEMETRY_PATH;
-  if (!http.begin(endpoint)) {
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  if (!http.begin(client, endpoint)) {
     Serial.println(F("[ERROR] No se pudo inicializar la conexion HTTP"));
     return false;
   }
@@ -266,16 +284,25 @@ bool publishTelemetry(const TelemetryData& telemetry) {
   http.addHeader("Authorization",
                  String("Bearer ") + SUPABASE_ANON_KEY);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("Prefer", "return=minimal");
 
   const int responseCode = http.POST(payload);
-  if (responseCode >= 200 && responseCode < 300) {
+  const String responseBody = http.getString();
+  if (responseCode == HTTP_CODE_OK || responseCode == HTTP_CODE_CREATED ||
+      responseCode == HTTP_CODE_NO_CONTENT) {
     Serial.printf("[INFO] Telemetria enviada (HTTP %d)\n", responseCode);
     http.end();
     return true;
   }
 
-  Serial.printf("[ERROR] Supabase rechazo la telemetria (HTTP %d): %s\n",
-                responseCode, http.errorToString(responseCode).c_str());
+  if (responseCode < 0) {
+    Serial.printf("[ERROR] Fallo HTTPS (HTTP %d): %s; cuerpo: %s\n",
+                  responseCode, http.errorToString(responseCode).c_str(),
+                  responseBody.c_str());
+  } else {
+    Serial.printf("[ERROR] Supabase rechazo la telemetria (HTTP %d), cuerpo: %s\n",
+                  responseCode, responseBody.c_str());
+  }
   http.end();
   return false;
 }

@@ -75,8 +75,21 @@ El contenedor actualiza automáticamente los LEDs locales según el cálculo por
 
 Copia `config.example.h` como `config.h` dentro de `firmware/` y completa las
 credenciales locales. El archivo `config.h` no debe versionarse. El firmware
-envía un `POST` a `/rest/v1/telemetry` con los encabezados `apikey`,
-`Authorization: Bearer` y `Content-Type: application/json`.
+envía un `POST` HTTPS a `/rest/v1/sensor_telemetry`, la tabla usada por
+`frontend/src/services/sensorService.ts`, con los encabezados `apikey`,
+`Authorization: Bearer`, `Content-Type: application/json` y
+`Prefer: return=minimal`. La ruta puede sobrescribirse mediante
+`TELEMETRY_PATH` en `config.h`.
+
+La conexión TLS usa `WiFiClientSecure` con `setInsecure()` para el entorno de
+pruebas/laboratorio, donde no se instala una CA raíz en el ESP32. En
+producción debe sustituirse por la validación del certificado o de la CA de
+Supabase. El timeout HTTP es de 7000 ms.
+
+Supabase normalmente responde `201 Created` al insertar; con
+`Prefer: return=minimal` el cuerpo de una respuesta exitosa puede estar vacío.
+También se aceptan `200 OK` y `204 No Content`. Las respuestas fallidas
+imprimen el código HTTP y el cuerpo para diagnóstico.
 
 ## 6. Formato del Paquete JSON de Telemetría
 
