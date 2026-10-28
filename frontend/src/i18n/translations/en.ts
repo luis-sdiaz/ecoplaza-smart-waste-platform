@@ -695,6 +695,8 @@ const en = {
     eyebrow: "Artificial intelligence", title: "AI Assistant",
     description: "Review the current status of EcoPlaza's assistance module.",
     panelTitle: "EcoPlaza AI", panelDescription: "Assistance module for waste analysis and telemetry",
+    clearConversation: "Clear conversation",
+    clearConversationAria: "Clear conversation and reset messages",
     availabilityLabel: "Online",
     onlineLabel: "Online",
     greeting: "Hello! I am EcoPlaza's smart assistant. How can I help you today?",

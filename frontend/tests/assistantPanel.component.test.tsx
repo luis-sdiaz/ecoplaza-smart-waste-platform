@@ -48,6 +48,8 @@ const translations: Record<string, string> = {
   "assistant.insights.lastPurchase": "Última compra",
   "assistant.insights.contact": "Contacto",
   "assistant.insights.goToBuyersAction": "Ver directorio de compradores",
+  "assistant.clearConversation": "Limpiar conversación",
+  "assistant.clearConversationAria": "Limpiar conversación y reiniciar mensajes",
   "categories.organic": "Orgánicos",
   "categories.recyclable": "Reciclables",
   "categories.nonRecyclable": "No aprovechables",
@@ -125,9 +127,11 @@ const mockBuyers: Buyer[] = [
 describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
   });
 
   afterEach(() => {
+    window.sessionStorage.clear();
     cleanup();
   });
 
@@ -329,6 +333,38 @@ describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", 
     expect(await screen.findByText("Gemini AI")).toBeTruthy();
     expect(await screen.findByText(/Diagnóstico Gemini/)).toBeTruthy();
     expect(await screen.findByText(/Estrategia:/)).toBeTruthy();
+  });
+
+  test("h) limpia la conversación y restaura el saludo inicial al hacer clic en 'Limpiar conversación'", async () => {
+    mockGenerateAssistantResponseWithProvider.mockResolvedValueOnce({
+      content: "Respuesta de prueba antes de limpiar",
+      provider: "local_fallback",
+    });
+
+    render(
+      <MemoryRouter>
+        <AssistantPanel />
+      </MemoryRouter>,
+    );
+
+    const input = screen.getByRole("textbox");
+    const sendButton = screen.getByRole("button", { name: "Enviar mensaje" });
+
+    fireEvent.change(input, { target: { value: "¿Hola?" } });
+    fireEvent.click(sendButton);
+
+    expect(await screen.findByText("Respuesta de prueba antes de limpiar")).toBeTruthy();
+
+    const clearButton = screen.getByRole("button", {
+      name: /Limpiar conversación/i,
+    });
+    fireEvent.click(clearButton);
+
+    expect(screen.queryByText("Respuesta de prueba antes de limpiar")).toBeNull();
+    expect(screen.queryByText("¿Hola?")).toBeNull();
+    expect(
+      screen.getByText(/¡Hola! Soy el asistente inteligente de EcoPlaza/i),
+    ).toBeTruthy();
   });
 });
 

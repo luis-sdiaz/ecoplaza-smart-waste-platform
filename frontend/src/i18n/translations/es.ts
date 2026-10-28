@@ -695,6 +695,8 @@ const es = {
     eyebrow: "Inteligencia artificial", title: "Asistente IA",
     description: "Consulta el estado actual del módulo de asistencia para EcoPlaza.",
     panelTitle: "EcoPlaza IA", panelDescription: "Módulo de asistencia para análisis de residuos y telemetría",
+    clearConversation: "Limpiar conversación",
+    clearConversationAria: "Limpiar conversación y reiniciar mensajes",
     availabilityLabel: "En línea",
     onlineLabel: "En línea",
     greeting: "¡Hola! Soy el asistente inteligente de EcoPlaza. ¿En qué puedo ayudarte hoy?",

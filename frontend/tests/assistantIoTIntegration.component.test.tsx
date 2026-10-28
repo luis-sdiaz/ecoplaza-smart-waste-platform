@@ -79,6 +79,7 @@ function LocationObserver() {
 describe("Integración Reactiva de Telemetría IoT en Panel del Asistente (Tarea 078)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     mocks.listContainers.mockResolvedValue({
       ok: true,
@@ -92,6 +93,7 @@ describe("Integración Reactiva de Telemetría IoT en Panel del Asistente (Tarea
   });
 
   afterEach(() => {
+    window.sessionStorage.clear();
     cleanup();
   });
 

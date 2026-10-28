@@ -7,6 +7,7 @@ export default defineConfig({
       "tests/**/*.component.test.tsx",
       "tests/geminiAiService.test.ts",
       "tests/assistantContextService.test.ts",
+      "tests/assistantStorage.test.ts",
     ],
     clearMocks: true,
     restoreMocks: true,

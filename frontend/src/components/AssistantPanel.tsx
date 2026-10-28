@@ -8,6 +8,7 @@ import {
   Bot,
   Coins,
   Loader2,
+  RotateCcw,
   Send,
   Sparkles,
   Users,
@@ -31,6 +32,12 @@ import {
 import type { RemoteWasteRecord } from "../services/wasteService";
 import type { SaleHistoryItem } from "../services/salesService";
 import type { Buyer } from "../services/buyerService";
+import {
+  clearAssistantMessages,
+  loadAssistantMessages,
+  saveAssistantMessages,
+  type AssistantMessage,
+} from "../services/assistantStorage";
 
 export interface AssistantPanelProps {
   onNavigateToSensors?: () => void;
@@ -42,14 +49,9 @@ export interface AssistantPanelProps {
     sales: SaleHistoryItem[];
     buyers: Buyer[];
   };
-}
-
-interface ChatMessage {
-  id: string;
-  role: "assistant" | "user";
-  content: string;
-  isIoT?: boolean;
-  provider?: "gemini" | "local_fallback";
+  messages?: AssistantMessage[];
+  onMessagesChange?: (messages: AssistantMessage[]) => void;
+  onClearMessages?: () => void;
 }
 
 function parseInlineMarkdown(text: string): React.ReactNode[] {
@@ -172,19 +174,55 @@ function AssistantPanel({
   onNavigateToBuyers,
   className = "",
   initialInsightsData,
+  messages: controlledMessages,
+  onMessagesChange,
+  onClearMessages,
 }: AssistantPanelProps) {
   const { t, i18n } = useTranslation();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content:
-        t("assistant.greeting") ||
-        "¡Hola! Soy el asistente inteligente de EcoPlaza. ¿En qué puedo ayudarte hoy?",
-      isIoT: false,
-      provider: "local_fallback",
-    },
-  ]);
+
+  const defaultWelcomeMessage: AssistantMessage = {
+    id: "1",
+    role: "assistant",
+    content:
+      t("assistant.greeting") ||
+      "¡Hola! Soy el asistente inteligente de EcoPlaza. ¿En qué puedo ayudarte hoy?",
+    isIoT: false,
+    provider: "local_fallback",
+  };
+
+  const [internalMessages, setInternalMessages] = useState<AssistantMessage[]>(() =>
+    loadAssistantMessages(defaultWelcomeMessage),
+  );
+
+  const messages = controlledMessages ?? internalMessages;
+
+  const setMessages = (updater: React.SetStateAction<AssistantMessage[]>) => {
+    if (typeof updater === "function") {
+      const nextMessages = updater(messages);
+      if (onMessagesChange) {
+        onMessagesChange(nextMessages);
+      }
+      setInternalMessages(nextMessages);
+      saveAssistantMessages(nextMessages);
+    } else {
+      if (onMessagesChange) {
+        onMessagesChange(updater);
+      }
+      setInternalMessages(updater);
+      saveAssistantMessages(updater);
+    }
+  };
+
+  const handleClearConversation = () => {
+    clearAssistantMessages();
+    if (onClearMessages) {
+      onClearMessages();
+    }
+    setInternalMessages([defaultWelcomeMessage]);
+    saveAssistantMessages([defaultWelcomeMessage]);
+    setActiveInsight(null);
+  };
+
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -386,13 +424,34 @@ function AssistantPanel({
           </div>
         </div>
 
-        <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-          <span
-            className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"
-            aria-hidden="true"
-          />
-          {t("assistant.onlineLabel")}
-        </span>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={handleClearConversation}
+            className="flex items-center gap-1.5 rounded-lg border border-ecoplaza-border bg-ecoplaza-background/60 px-2.5 py-1 text-xs font-medium text-ecoplaza-text-muted transition hover:bg-ecoplaza-background hover:text-ecoplaza-text focus:outline-hidden focus:ring-2 focus:ring-ecoplaza-primary"
+            aria-label={t("assistant.clearConversationAria", {
+              defaultValue: "Limpiar conversación y reiniciar mensajes",
+            })}
+            title={t("assistant.clearConversation", {
+              defaultValue: "Limpiar conversación",
+            })}
+          >
+            <RotateCcw size={14} aria-hidden="true" />
+            <span className="hidden sm:inline">
+              {t("assistant.clearConversation", {
+                defaultValue: "Limpiar conversación",
+              })}
+            </span>
+          </button>
+
+          <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <span
+              className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"
+              aria-hidden="true"
+            />
+            {t("assistant.onlineLabel")}
+          </span>
+        </div>
       </div>
 
       {/* Barra de Chips de Análisis Estratégico */}
