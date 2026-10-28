@@ -38,7 +38,7 @@
 | **Iconografía** | **Lucide Icons (`lucide-react`)** | Conjunto coherente y accesible de iconos SVG vectoriales. |
 | **Renderizado 3D** | **Three.js + React Three Fiber** | Escena 3D interactiva en la pantalla de autenticación con contenedor animado. |
 | **Escritorio Nativo** | **Tauri 2 (Rust)** | Framework de escritorio ligero, seguro y multiplataforma con mínimo consumo de RAM. |
-| **Backend & Base de Datos** | **Supabase (PostgreSQL)** | Base de datos relacional con RLS, autenticación basada en JWT y funciones RPC. |
+| **Backend & Base de Datos** | **Supabase (PostgreSQL)** | Base de datos relacional con RLS, autenticación JWT, funciones RPC transaccionales y tabla `sensor_telemetry` para persistencia de telemetría IoT. |
 | **Exportación de Datos** | **ExcelJS + CSV Nativo** | Generación de libros Excel (.xlsx) formateados y archivos CSV con BOM UTF-8 y fecha colombiana. |
 | **Pruebas Unitarias** | **Node.js Test Runner (`node --test`)** | Pruebas de lógica pura, cálculos de reportes, formateadores y validación de esquemas sin dependencias externas. |
 | **Pruebas de Componentes** | **Vitest + Testing Library** | Pruebas de integración visual, accesibilidad (ARIA), reactividad de formularios y aislamiento de cuentas. |
@@ -65,7 +65,7 @@ ecoplaza-smart-waste-platform/
 │       ├── 20261012000000_initial_database_schema.sql
 │       ├── 20261013000000_create_buyers.sql
 │       ├── 20261013010000_create_sales.sql
-│       └── 20261014000000_create_telemetry.sql
+│       └── 20261014000000_create_sensor_telemetry.sql
 └── frontend/                      # Aplicación cliente React 19 + TypeScript + Tauri 2
     ├── public/                    # Activos estáticos públicos (logos, favicons, texturas e imágenes)
     ├── src-tauri/                 # Contenedor nativo de Tauri 2 en lenguaje Rust
@@ -123,7 +123,7 @@ El directorio contiene **51 archivos de servicios especializados** que encapsula
 - **Módulos Culminados y Operativos (42 Componentes Certificados):**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
   2. **Dashboard Ejecutivo:** Arquitectura Bento Grid asimétrica, tarjetas de métricas KPI con Glassmorphism translúcido y elevación háptica, gráficos de distribución y estados vacíos asistidos.
-  3. **Monitoreo de Sensores y Telemetría IoT:** Tarjetas de contenedores con indicadores de llenado, alertas visuales críticas (>= 85%), selector de simulación manual contextual, auto-refresco periódico de 10s y modal accesible de historial de telemetría.
+  3. **Monitoreo de Sensores y Telemetría IoT:** Tarjetas de contenedores con indicadores de llenado, alertas visuales críticas (>= 85%), selector de simulación manual contextual, auto-refresco periódico de 10s, persistencia en tabla `sensor_telemetry` con RLS y modal accesible de historial de telemetría (con supresión total de errores 404 en observabilidad).
   4. **Gestión de Residuos:** Formulario de registro con precisión al gramo, popover inteligente de rango de fechas en formato colombiano (`DD/MM/YYYY`) y tabla interactiva.
   5. **Almacenamiento e Inventario:** Detección de antigüedad de lotes en riesgo moderado y crítico, valorización económica en pesos colombianos (COP) y filtro progresivo por rango de peso.
   6. **Directorio de Compradores:** Segmentación comercial por actividad (con compras / sin compras), resumen porcentual y vínculos directos hacia ventas.
@@ -240,6 +240,7 @@ verificada. Se documentan los cinco commits de implementación y ajuste:
    - Reconexión WiFi no bloqueante con diagnóstico por puerto serie.
    - Endpoint REST alineado con Supabase:
      `/rest/v1/sensor_telemetry`.
+   - Esquema relacional respaldado en la migración `20261014000000_create_sensor_telemetry.sql` con políticas RLS y supresión de errores 404 en DevTools.
 
 4. **Commit `4c1bb43` — Configuración de escritorio Tauri 2**
    - Ventana principal configurada a `1280x800`.
