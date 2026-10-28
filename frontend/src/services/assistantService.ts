@@ -692,14 +692,16 @@ export async function generateAssistantResponseWithProvider(
         };
       }
     } catch (error: unknown) {
-      // Captura silenciosa sin exponer claves ni tokens
       if (import.meta.env?.DEV) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         console.warn(
-          "[AssistantService] Fallback a motor heurístico por error de Gemini:",
-          errorMsg,
+          `[Assistant AI Fallback]: Error al consultar Gemini: ${errorMsg}`,
         );
       }
+    }
+  } else {
+    if (import.meta.env?.DEV) {
+      console.warn("[Assistant AI Fallback]: API Key no configurada");
     }
   }
 

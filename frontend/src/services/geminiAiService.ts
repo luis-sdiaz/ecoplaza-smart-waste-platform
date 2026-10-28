@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export const DEFAULT_GEMINI_MODEL = "gemini-1.5-flash";
+export const DEFAULT_GEMINI_MODEL = "gemini-flash-latest";
 
 export interface GeminiConfig {
   apiKey?: string;
@@ -35,7 +35,10 @@ export class GeminiAiService {
 
   constructor(config?: GeminiConfig) {
     this.apiKey = config?.apiKey;
-    this.modelName = config?.modelName || DEFAULT_GEMINI_MODEL;
+    const envModel = import.meta.env?.VITE_GEMINI_MODEL as string | undefined;
+    this.modelName =
+      config?.modelName ||
+      (envModel && envModel.trim() !== "" ? envModel.trim() : DEFAULT_GEMINI_MODEL);
   }
 
   /**
@@ -55,14 +58,16 @@ export class GeminiAiService {
   }
 
   /**
-   * Obtiene la clave efectiva considerando la configuración local o la variable de entorno.
+   * Obtiene la clave efectiva considerando la configuración local o la variable de entorno,
+   * normalizando y removiendo posibles comillas envolventes accidentales.
    */
   public getEffectiveApiKey(): string {
     const candidate =
       this.apiKey ??
       (import.meta.env?.VITE_GEMINI_API_KEY as string | undefined) ??
       "";
-    return typeof candidate === "string" ? candidate.trim() : "";
+    if (typeof candidate !== "string") return "";
+    return candidate.trim().replace(/^["']|["']$/g, "").trim();
   }
 
   public getModelName(): string {
@@ -73,7 +78,13 @@ export class GeminiAiService {
    * Verifica si existe una API key válida configurada y no vacía.
    */
   public isConfigured(): boolean {
-    return this.getEffectiveApiKey().length > 0;
+    const envKey = (import.meta.env?.VITE_GEMINI_API_KEY as string | undefined) ?? "";
+    const activeKey = this.apiKey !== undefined ? this.apiKey : envKey;
+    return Boolean(
+      activeKey &&
+        typeof activeKey === "string" &&
+        activeKey.trim().replace(/^["']|["']$/g, "").trim() !== "",
+    );
   }
 
   /**
@@ -147,6 +158,15 @@ export class GeminiAiService {
       ) {
         throw new Error(
           `Error de autenticación con la API de Gemini: ${sanitized}`,
+          { cause: error },
+        );
+      }
+      if (
+        sanitized.includes("404") ||
+        /not found|no longer available/i.test(sanitized)
+      ) {
+        throw new Error(
+          `Modelo de Gemini no encontrado o no disponible (404): ${sanitized}`,
           { cause: error },
         );
       }

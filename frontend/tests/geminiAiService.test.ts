@@ -117,7 +117,7 @@ describe("GeminiAiService - Infraestructura y Servicio Oficial de IA Generativa"
 
     mockGenerateContent.mockRejectedValue(
       new Error(
-        `Failed to fetch from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${secretKey}: Network connection failed`,
+        `Failed to fetch from https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${secretKey}: Network connection failed`,
       ),
     );
 
@@ -160,7 +160,7 @@ describe("GeminiAiService - Infraestructura y Servicio Oficial de IA Generativa"
   it("9. Permite reconfigurar dinámicamente el modelo y la clave mediante configure() e init()", () => {
     const service = new GeminiAiService();
     expect(service.isConfigured()).toBe(false);
-    expect(service.getModelName()).toBe("gemini-1.5-flash");
+    expect(service.getModelName()).toBe("gemini-flash-latest");
 
     service.configure({ apiKey: "new-key-123", modelName: "gemini-1.5-pro" });
     expect(service.isConfigured()).toBe(true);
@@ -170,7 +170,7 @@ describe("GeminiAiService - Infraestructura y Servicio Oficial de IA Generativa"
 
   it("10. La instancia singleton exportada geminiAiService existe y está disponible", () => {
     expect(geminiAiService).toBeInstanceOf(GeminiAiService);
-    expect(geminiAiService.getModelName()).toBe("gemini-1.5-flash");
+    expect(geminiAiService.getModelName()).toBe("gemini-flash-latest");
   });
 });
 

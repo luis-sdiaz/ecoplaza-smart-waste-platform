@@ -42,7 +42,7 @@
 | **Exportación de Datos** | **ExcelJS + CSV Nativo** | Generación de libros Excel (.xlsx) formateados y archivos CSV con BOM UTF-8 y fecha colombiana. |
 | **Pruebas Unitarias** | **Node.js Test Runner (`node --test`)** | Pruebas de lógica pura, cálculos de reportes, formateadores y validación de esquemas sin dependencias externas. |
 | **Pruebas de Componentes** | **Vitest + Testing Library** | Pruebas de integración visual, accesibilidad (ARIA), reactividad de formularios y aislamiento de cuentas. |
-| **Inteligencia Artificial (LLM)** | **Google Gemini (`@google/generative-ai`)** | Asistente Estratégico impulsado por Gemini 1.5 Flash con inyección de contexto operacional en vivo y fallback local determinista. |
+| **Inteligencia Artificial (LLM)** | **Google Gemini (`@google/generative-ai`)** | Asistente Estratégico impulsado por Gemini (`gemini-flash-latest`) con inyección de contexto operacional en vivo y fallback local determinista. |
 | **Hardware IoT (Firmware Implementado)** | **ESP32 + Sensores** | Código C++ implementado en `firmware/src/main.cpp` con guía en `firmware/README.md` para nodos ESP32 con sensor ultrasónico HC-SR04 (llenado), celda de carga HX711 (peso) y DHT22 (temperatura/humedad) conectados vía REST a Supabase. |
 
 ---
@@ -96,7 +96,7 @@ El directorio contiene **51 archivos de servicios especializados** que encapsula
 - `assistantService.ts`: Orquestador del asistente estratégico inteligente con integración de Google Gemini, soporte de Markdown seguro y fallback determinista local transparente.
 - `buyerService.ts` / `buyerFilters.ts`: Gestión de directorio de compradores y métricas de recurrencia comercial.
 - `excelService.ts` / `excelWorkbook.ts`: Motor base y generador tipado de hojas de cálculo con ExcelJS, respaldado por exportadores especializados (`buyerExcelService.ts`, `buyerPurchaseExcelService.ts`, `containerExcelService.ts`, `inventoryExcelService.ts`, `reportExcelService.ts`, `salesExcelService.ts`, `wasteExcelService.ts`).
-- `geminiAiService.ts`: Servicio singleton tipado para interactuar con la API oficial de Google Gemini (`gemini-1.5-flash`), con ofuscación de credenciales en logs de error y verificación de disponibilidad.
+- `geminiAiService.ts`: Servicio singleton tipado para interactuar con la API oficial de Google Gemini (`gemini-flash-latest`), con ofuscación de credenciales en logs de error, soporte para `VITE_GEMINI_MODEL` y verificación de disponibilidad.
 - `iotAnalyticsService.ts`: Diagnóstico de salud de flota de contenedores IoT y colas de despacho urgente.
 - `reportService.ts`: Agregación cronológica de ventas, variabilidad mensual e ingresos por categoría.
 - `salesService.ts`: Orquestación de ventas atómicas mediante llamadas RPC a Supabase.
@@ -182,7 +182,7 @@ El directorio contiene **51 archivos de servicios especializados** que encapsula
    - Transmisión HTTPS segura con `WiFiClientSecure` hacia Supabase REST (`/rest/v1/sensor_telemetry`).
    - Configuración de ventana nativa Tauri 2 (`1280x800`), CSP estricto y capabilities blindadas.
    - *Hito pendiente físico:* Flasheo en caliente sobre microcontrolador ESP32 físico y sensor HC-SR04 al disponer del cable Micro-USB con líneas de datos.
-3. **Fase 3: Inteligencia Artificial Generativa — Google Gemini 1.5 Flash (100% COMPLETADA Y CERTIFICADA):**
+3. **Fase 3: Inteligencia Artificial Generativa — Google Gemini (100% COMPLETADA Y CERTIFICADA):**
    - Servicio singleton `geminiAiService.ts` con SDK `@google/generative-ai` y sanitización de credenciales.
    - Inyección contextual dinámica `assistantContextService.ts` con inventario valorizado en COP y telemetría de sensores IoT con criticidad >= 80%.
    - Orquestación con fallback transparente y determinista local ante cuotas agotadas (HTTP 429) u offline en `assistantService.ts`.
@@ -257,12 +257,12 @@ La suite de pruebas automatizadas se incrementó de 493 a **517 pruebas (100% ap
 
 ---
 
-## FASE 3: INTELIGENCIA ARTIFICIAL GENERATIVA — GOOGLE GEMINI 1.5 FLASH (COMPLETADA Y CERTIFICADA)
+## FASE 3: INTELIGENCIA ARTIFICIAL GENERATIVA — GOOGLE GEMINI (COMPLETADA Y CERTIFICADA)
 
 La Fase 3 de EcoPlaza — Integración de Inteligencia Artificial Generativa con Google Gemini queda formalmente completada, verificada y certificada bajo el **Commit `fe1f3ed`** en la rama principal `main`:
 
 1. **Servicio Base del SDK de Gemini (`geminiAiService.ts`):**
-   - Integración del SDK oficial `@google/generative-ai` (`gemini-1.5-flash`).
+   - Integración del SDK oficial `@google/generative-ai` con modelo primario directo `gemini-flash-latest` y configuración extensible mediante `VITE_GEMINI_MODEL`.
    - Patrón Singleton tipado con verificación dinámica de disponibilidad (`isGeminiAvailable()`).
    - Sanitización y ofuscación rigurosa de claves de API en mensajes de error y logs (`key=[REDACTED_API_KEY]`).
    - 10 pruebas automatizadas certificadas en `geminiAiService.test.ts`.
