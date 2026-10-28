@@ -1,4 +1,6 @@
 import type { Container } from "./containerService.ts";
+import { geminiAiService } from "./geminiAiService.ts";
+import { getEnrichedSystemPrompt } from "./assistantContextService.ts";
 import {
   calculateFleetHealth,
   generateIoTExecutiveSummary,
@@ -587,32 +589,32 @@ export function isIoTFleetResponse(response: string): boolean {
   );
 }
 
-export async function generateAssistantResponse(
-  prompt: string,
-  lang: "es" | "en",
-  telemetryOverride?: ContainerTelemetrySnapshot[],
-): Promise<string>;
-export async function generateAssistantResponse(
-  prompt: string,
-  contextOverride?: AssistantAnalyticsContext,
-  telemetryOverride?: ContainerTelemetrySnapshot[],
-  lang?: "es" | "en",
-): Promise<string>;
-export async function generateAssistantResponse(
-  prompt: string,
-  contextOrLang?: AssistantAnalyticsContext | "es" | "en",
-  telemetryOverride?: ContainerTelemetrySnapshot[],
-  lang: "es" | "en" = "es",
-): Promise<string> {
-  const effectiveLang: "es" | "en" =
-    typeof contextOrLang === "string" ? contextOrLang : lang;
-  const effectiveContext =
-    typeof contextOrLang === "string" ? undefined : contextOrLang;
-  const effectiveTelemetry = telemetryOverride;
+export type AssistantProvider = "gemini" | "local_fallback";
 
+export interface AssistantResponseResult {
+  content: string;
+  provider: AssistantProvider;
+}
+
+let lastAssistantProvider: AssistantProvider = "local_fallback";
+
+export function getLastAssistantProvider(): AssistantProvider {
+  return lastAssistantProvider;
+}
+
+export function setLastAssistantProvider(provider: AssistantProvider): void {
+  lastAssistantProvider = provider;
+}
+
+export async function generateLocalAssistantResponse(
+  prompt: string,
+  effectiveContext?: AssistantAnalyticsContext,
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+  effectiveLang: "es" | "en" = "es",
+): Promise<string> {
   let snapshots: ContainerTelemetrySnapshot[] | null = null;
-  if (effectiveTelemetry !== undefined) {
-    snapshots = effectiveTelemetry;
+  if (telemetryOverride !== undefined) {
+    snapshots = telemetryOverride;
   } else if (customTelemetryProvider) {
     snapshots = await customTelemetryProvider();
   }
@@ -650,5 +652,102 @@ export async function generateAssistantResponse(
     case "general":
       return formatAssistantGeneralResponse(context);
   }
+}
+
+export async function generateAssistantResponseWithProvider(
+  prompt: string,
+  lang: "es" | "en",
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+): Promise<AssistantResponseResult>;
+export async function generateAssistantResponseWithProvider(
+  prompt: string,
+  contextOverride?: AssistantAnalyticsContext,
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+  lang?: "es" | "en",
+): Promise<AssistantResponseResult>;
+export async function generateAssistantResponseWithProvider(
+  prompt: string,
+  contextOrLang?: AssistantAnalyticsContext | "es" | "en",
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+  lang: "es" | "en" = "es",
+): Promise<AssistantResponseResult> {
+  const effectiveLang: "es" | "en" =
+    typeof contextOrLang === "string" ? contextOrLang : lang;
+  const effectiveContext =
+    typeof contextOrLang === "string" ? undefined : contextOrLang;
+
+  // 1. Si la API key de Gemini está configurada, consultar el motor de IA
+  if (geminiAiService.isConfigured()) {
+    try {
+      const systemInstruction = await getEnrichedSystemPrompt();
+      const generatedText = await geminiAiService.generateText(prompt, {
+        systemInstruction,
+      });
+
+      if (typeof generatedText === "string" && generatedText.trim().length > 0) {
+        lastAssistantProvider = "gemini";
+        return {
+          content: generatedText.trim(),
+          provider: "gemini",
+        };
+      }
+    } catch (error: unknown) {
+      // Captura silenciosa sin exponer claves ni tokens
+      if (import.meta.env?.DEV) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.warn(
+          "[AssistantService] Fallback a motor heurístico por error de Gemini:",
+          errorMsg,
+        );
+      }
+    }
+  }
+
+  // 2. Fallback determinista automático a heurísticas locales
+  const fallbackText = await generateLocalAssistantResponse(
+    prompt,
+    effectiveContext,
+    telemetryOverride,
+    effectiveLang,
+  );
+
+  lastAssistantProvider = "local_fallback";
+  return {
+    content: fallbackText,
+    provider: "local_fallback",
+  };
+}
+
+export async function generateAssistantResponse(
+  prompt: string,
+  lang: "es" | "en",
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+): Promise<string>;
+export async function generateAssistantResponse(
+  prompt: string,
+  contextOverride?: AssistantAnalyticsContext,
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+  lang?: "es" | "en",
+): Promise<string>;
+export async function generateAssistantResponse(
+  prompt: string,
+  contextOrLang?: AssistantAnalyticsContext | "es" | "en",
+  telemetryOverride?: ContainerTelemetrySnapshot[],
+  lang: "es" | "en" = "es",
+): Promise<string> {
+  const result =
+    typeof contextOrLang === "string"
+      ? await generateAssistantResponseWithProvider(
+          prompt,
+          contextOrLang,
+          telemetryOverride,
+        )
+      : await generateAssistantResponseWithProvider(
+          prompt,
+          contextOrLang,
+          telemetryOverride,
+          lang,
+        );
+  return result.content;
 }
 

@@ -9,10 +9,13 @@ import {
   formatAssistantSalesResponse,
   formatIoTFleetResponse,
   generateAssistantResponse,
+  generateAssistantResponseWithProvider,
+  getLastAssistantProvider,
   setAssistantDataProvider,
   setAssistantTelemetryProvider,
   type AssistantAnalyticsContext,
 } from "../src/services/assistantService.ts";
+import { geminiAiService } from "../src/services/geminiAiService.ts";
 import type { ContainerTelemetrySnapshot } from "../src/services/iotAnalyticsService.ts";
 import type { Container } from "../src/services/containerService.ts";
 import type { SaleHistoryItem } from "../src/services/salesService.ts";
@@ -491,6 +494,68 @@ test("generateAssistantResponse: responde con análisis IoT cuando se consulta s
   } finally {
     setAssistantTelemetryProvider(null);
   }
+});
+
+test("generateAssistantResponseWithProvider: consulta exitosa a Gemini cuando está configurado", async () => {
+  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  const originalGenerate = geminiAiService.generateText;
+  geminiAiService.generateText = async () =>
+    "Respuesta generada por Gemini AI 1.5 Flash";
+
+  try {
+    const result = await generateAssistantResponseWithProvider(
+      "¿Cómo optimizar reciclaje?",
+    );
+    assert.strictEqual(result.provider, "gemini");
+    assert.strictEqual(result.content, "Respuesta generada por Gemini AI 1.5 Flash");
+    assert.strictEqual(getLastAssistantProvider(), "gemini");
+  } finally {
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ apiKey: "" });
+  }
+});
+
+test("generateAssistantResponseWithProvider: fallback local cuando Gemini arroja error 429 de cuota", async () => {
+  const context = buildAssistantAnalyticsContext(
+    mockWasteRecords,
+    mockSales,
+    mockContainers,
+    fixedNow,
+  );
+  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  const originalGenerate = geminiAiService.generateText;
+  geminiAiService.generateText = async () => {
+    throw new Error("Cuota de Gemini excedida (429): Resource exhausted");
+  };
+
+  try {
+    const result = await generateAssistantResponseWithProvider(
+      "Tendencias de ventas",
+      context,
+    );
+    assert.strictEqual(result.provider, "local_fallback");
+    assert.match(result.content, /rendimiento|ventas/i);
+    assert.strictEqual(getLastAssistantProvider(), "local_fallback");
+  } finally {
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ apiKey: "" });
+  }
+});
+
+test("generateAssistantResponseWithProvider: fallback local cuando isConfigured() es falso", async () => {
+  const context = buildAssistantAnalyticsContext(
+    mockWasteRecords,
+    mockSales,
+    mockContainers,
+    fixedNow,
+  );
+  geminiAiService.configure({ apiKey: "" });
+  const result = await generateAssistantResponseWithProvider(
+    "Proyectar ingresos",
+    context,
+  );
+  assert.strictEqual(result.provider, "local_fallback");
+  assert.match(result.content, /proyección|stock/i);
 });
 
 

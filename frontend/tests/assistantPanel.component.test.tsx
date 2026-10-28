@@ -60,6 +60,21 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+const mockGenerateAssistantResponseWithProvider = vi.fn();
+
+vi.mock("../src/services/assistantService", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/services/assistantService")>();
+  return {
+    ...actual,
+    generateAssistantResponseWithProvider: (
+      prompt: string,
+      lang: "es" | "en",
+      snapshots?: unknown,
+    ) => mockGenerateAssistantResponseWithProvider(prompt, lang, snapshots),
+  };
+});
+
 const mockInventory: RemoteWasteRecord[] = [
   {
     id: "w-1",
@@ -253,6 +268,67 @@ describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", 
     const buyersLink = screen.getByText("Ver directorio de compradores");
     fireEvent.click(buyersLink);
     expect(handleNavigateBuyers).toHaveBeenCalled();
+  });
+
+  test("e) muestra el distintivo 'Modo Local / Heurístico' en el mensaje inicial del asistente", () => {
+    render(
+      <MemoryRouter>
+        <AssistantPanel />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Modo Local / Heurístico")).toBeTruthy();
+  });
+
+  test("f) renderiza la respuesta con distintivo y formato estructurado al interactuar", async () => {
+    mockGenerateAssistantResponseWithProvider.mockResolvedValueOnce({
+      content: "📊 Resumen Operativo General de EcoPlaza",
+      provider: "local_fallback",
+    });
+
+    render(
+      <MemoryRouter>
+        <AssistantPanel />
+      </MemoryRouter>,
+    );
+
+    const input = screen.getByRole("textbox", {
+      name: "Escribe una consulta sobre residuos, ventas, inventario o telemetría IoT...",
+    });
+    const sendButton = screen.getByRole("button", { name: "Enviar mensaje" });
+
+    fireEvent.change(input, { target: { value: "resumen general" } });
+    fireEvent.click(sendButton);
+
+    expect(await screen.findByText(/Resumen Operativo General/i)).toBeTruthy();
+    const badges = screen.getAllByText("Modo Local / Heurístico");
+    expect(badges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("g) muestra el distintivo 'Gemini AI' y formato Markdown cuando la respuesta proviene del motor de IA", async () => {
+    mockGenerateAssistantResponseWithProvider.mockResolvedValueOnce({
+      content:
+        "### Diagnóstico Gemini\n**Estrategia:** Priorizar la venta de reciclables acumulados en bodega.",
+      provider: "gemini",
+    });
+
+    render(
+      <MemoryRouter>
+        <AssistantPanel />
+      </MemoryRouter>,
+    );
+
+    const input = screen.getByRole("textbox", {
+      name: "Escribe una consulta sobre residuos, ventas, inventario o telemetría IoT...",
+    });
+    const sendButton = screen.getByRole("button", { name: "Enviar mensaje" });
+
+    fireEvent.change(input, { target: { value: "¿Qué hacer con el stock?" } });
+    fireEvent.click(sendButton);
+
+    expect(await screen.findByText("Gemini AI")).toBeTruthy();
+    expect(await screen.findByText(/Diagnóstico Gemini/)).toBeTruthy();
+    expect(await screen.findByText(/Estrategia:/)).toBeTruthy();
   });
 });
 

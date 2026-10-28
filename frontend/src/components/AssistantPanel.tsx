@@ -18,7 +18,7 @@ import { getLatestTelemetry } from "../services/sensorService";
 import {
   formatCurrencyCop,
   formatWeightKg,
-  generateAssistantResponse,
+  generateAssistantResponseWithProvider,
   isIoTFleetResponse,
   type ContainerTelemetrySnapshot,
 } from "../services/assistantService";
@@ -49,6 +49,76 @@ interface ChatMessage {
   role: "assistant" | "user";
   content: string;
   isIoT?: boolean;
+  provider?: "gemini" | "local_fallback";
+}
+
+function parseInlineMarkdown(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+      return (
+        <strong key={index} className="font-semibold text-ecoplaza-text">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+      return (
+        <code
+          key={index}
+          className="rounded border border-ecoplaza-border bg-ecoplaza-background px-1 py-0.5 font-mono text-xs text-ecoplaza-primary"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return part;
+  });
+}
+
+function FormattedMessageContent({ content }: { content: string }) {
+  const lines = content.split("\n");
+
+  return (
+    <div className="space-y-1.5 text-sm leading-relaxed wrap-break-word">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={idx} className="h-1" />;
+        }
+
+        if (trimmed.startsWith("#")) {
+          const headingText = trimmed.replace(/^#+\s*/, "");
+          return (
+            <h4
+              key={idx}
+              className="mt-2 mb-1 text-sm font-bold text-ecoplaza-text"
+            >
+              {parseInlineMarkdown(headingText)}
+            </h4>
+          );
+        }
+
+        if (/^\s*[-*•]\s+/.test(trimmed)) {
+          const bulletText = trimmed.replace(/^\s*[-*•]\s+/, "");
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-2">
+              <span className="text-ecoplaza-primary shrink-0 select-none">
+                •
+              </span>
+              <div>{parseInlineMarkdown(bulletText)}</div>
+            </div>
+          );
+        }
+
+        return (
+          <p key={idx} className="whitespace-pre-wrap leading-relaxed">
+            {parseInlineMarkdown(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 export type ActiveInsightType = "valuation" | "risks" | "buyers" | null;
@@ -112,6 +182,7 @@ function AssistantPanel({
         t("assistant.greeting") ||
         "¡Hola! Soy el asistente inteligente de EcoPlaza. ¿En qué puedo ayudarte hoy?",
       isIoT: false,
+      provider: "local_fallback",
     },
   ]);
   const [input, setInput] = useState("");
@@ -180,7 +251,7 @@ function AssistantPanel({
       const snapshots = await fetchLiveTelemetrySnapshots();
       const lang = (i18n.resolvedLanguage === "en" ? "en" : "es") as
         "es" | "en";
-      const response = await generateAssistantResponse(
+      const result = await generateAssistantResponseWithProvider(
         promptText,
         lang,
         snapshots,
@@ -188,14 +259,15 @@ function AssistantPanel({
 
       if (!isMountedRef.current) return;
 
-      const isIoT = isIoTFleetResponse(response);
+      const isIoT = isIoTFleetResponse(result.content);
       setMessages((prev) => [
         ...prev,
         {
           id: String(prev.length + 1),
           role: "assistant",
-          content: response,
+          content: result.content,
           isIoT,
+          provider: result.provider,
         },
       ]);
     } catch {
@@ -209,6 +281,7 @@ function AssistantPanel({
             t("assistant.errorResponse") ||
             "Lo sentimos, ocurrió un error al consultar las métricas de la plataforma. Por favor, verifica tu conexión e inténtalo de nuevo.",
           isIoT: false,
+          provider: "local_fallback",
         },
       ]);
     } finally {
@@ -638,9 +711,23 @@ function AssistantPanel({
                 <Bot size={18} aria-hidden="true" />
               </div>
               <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-text shadow-xs sm:max-w-[75%]">
-                <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">
-                  {message.content}
-                </p>
+                {message.provider && (
+                  <div className="mb-2 flex items-center gap-1.5">
+                    {message.provider === "gemini" ? (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 px-2 py-0.5 text-[11px] font-medium text-purple-600 dark:text-purple-400">
+                        <Sparkles size={11} aria-hidden="true" />
+                        <span>Gemini AI</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                        <Bot size={11} aria-hidden="true" />
+                        <span>Modo Local / Heurístico</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <FormattedMessageContent content={message.content} />
 
                 {message.isIoT && (
                   <div className="mt-3.5 border-t border-ecoplaza-border pt-3">
