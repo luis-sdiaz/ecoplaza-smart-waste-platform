@@ -42,6 +42,7 @@
 | **Exportación de Datos** | **ExcelJS + CSV Nativo** | Generación de libros Excel (.xlsx) formateados y archivos CSV con BOM UTF-8 y fecha colombiana. |
 | **Pruebas Unitarias** | **Node.js Test Runner (`node --test`)** | Pruebas de lógica pura, cálculos de reportes, formateadores y validación de esquemas sin dependencias externas. |
 | **Pruebas de Componentes** | **Vitest + Testing Library** | Pruebas de integración visual, accesibilidad (ARIA), reactividad de formularios y aislamiento de cuentas. |
+| **Inteligencia Artificial (LLM)** | **Google Gemini (`@google/generative-ai`)** | Asistente Estratégico impulsado por Gemini 1.5 Flash con inyección de contexto operacional en vivo y fallback local determinista. |
 | **Hardware IoT (Firmware Implementado)** | **ESP32 + Sensores** | Código C++ implementado en `firmware/src/main.cpp` con guía en `firmware/README.md` para nodos ESP32 con sensor ultrasónico HC-SR04 (llenado), celda de carga HX711 (peso) y DHT22 (temperatura/humedad) conectados vía REST a Supabase. |
 
 ---
@@ -80,20 +81,22 @@ ecoplaza-smart-waste-platform/
     │   ├── layouts/               # Plantillas estructurales de la aplicación (AppLayout)
     │   ├── lib/                   # Clientes base configurados (supabase.ts)
     │   ├── pages/                 # Vistas principales y rutas del sistema (12 vistas)
-    │   ├── services/              # Capa de servicios desacoplados (49 archivos de servicio modular)
+    │   ├── services/              # Capa de servicios desacoplados (51 archivos de servicio modular)
     │   ├── theme/                 # Contexto y lógica reactiva de temas Claro / Oscuro
     │   ├── App.tsx                # Enrutamiento principal y proveedores de contexto
     │   ├── index.css              # Estilos globales, variables CSS del lienzo y curvas cóncavas
     │   └── main.tsx               # Punto de entrada del cliente web/escritorio
-    └── tests/                     # Suite de 493 pruebas automatizadas (Node.js y Vitest en 90 archivos)
+    └── tests/                     # Suite de 517 pruebas automatizadas (Node.js y Vitest en 62 suites)
 ```
 
 #### Servicios Desacoplados Principales (`frontend/src/services/`):
-El directorio contiene **49 archivos de servicios especializados** que encapsulan el acceso a datos, analítica y utilidades operativas:
+El directorio contiene **51 archivos de servicios especializados** que encapsulan el acceso a datos, analítica y utilidades operativas:
+- `assistantContextService.ts`: Constructor determinista e inyector de contexto operacional vivo (inventario valorizado en COP y telemetría de sensores IoT con criticidad >= 80%) como `systemInstruction` para Gemini.
 - `assistantInsightsService.ts`: Generador de diagnósticos estratégicos de valorización de inventario, compradores afines y riesgos de stock.
-- `assistantService.ts`: Procesamiento de lenguaje natural básico y respuestas operativas del asistente inteligente.
+- `assistantService.ts`: Orquestador del asistente estratégico inteligente con integración de Google Gemini, soporte de Markdown seguro y fallback determinista local transparente.
 - `buyerService.ts` / `buyerFilters.ts`: Gestión de directorio de compradores y métricas de recurrencia comercial.
 - `excelService.ts` / `excelWorkbook.ts`: Motor base y generador tipado de hojas de cálculo con ExcelJS, respaldado por exportadores especializados (`buyerExcelService.ts`, `buyerPurchaseExcelService.ts`, `containerExcelService.ts`, `inventoryExcelService.ts`, `reportExcelService.ts`, `salesExcelService.ts`, `wasteExcelService.ts`).
+- `geminiAiService.ts`: Servicio singleton tipado para interactuar con la API oficial de Google Gemini (`gemini-1.5-flash`), con ofuscación de credenciales en logs de error y verificación de disponibilidad.
 - `iotAnalyticsService.ts`: Diagnóstico de salud de flota de contenedores IoT y colas de despacho urgente.
 - `reportService.ts`: Agregación cronológica de ventas, variabilidad mensual e ingresos por categoría.
 - `salesService.ts`: Orquestación de ventas atómicas mediante llamadas RPC a Supabase.
@@ -103,19 +106,19 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
 
 ---
 
-### 4. Estado Actual (Snapshot al Commit 254 — Freeze y Certificación de Fase 1)
+### 4. Estado Actual (Snapshot al Commit fe1f3ed — Certificación de Fase 3)
 
-- **Hito Oficial Alcanzado:** **FASE 1: CALIDAD, PRUEBAS Y ACCESIBILIDAD UI/UX — 100% COMPLETADA Y CERTIFICADA**.
-- **Línea Base del Repositorio:** Commit `cc4e039` sobre la rama principal `main` (Commit 254 en congelación documental).
-- **Balance Final Métrico de la Fase 1:**
-  - **493 pruebas automatizadas aprobadas al 100%** (0 fallos, 0 omitidas, 0 canceladas).
-  - **90 archivos de prueba** rigurosamente organizados:
-    - **30 suites unitarias puras** en Node.js Test Runner (`node --test`) con **174 pruebas**.
-    - **60 suites de integración UI/UX y accesibilidad** en Vitest + Testing Library con **319 pruebas**.
+- **Hito Oficial Alcanzado:** **FASE 3: INTELIGENCIA ARTIFICIAL GENERATIVA (GOOGLE GEMINI) — 100% COMPLETADA Y CERTIFICADA**.
+- **Línea Base del Repositorio:** Commit `fe1f3ed` sobre la rama principal `main` (Cierre oficial de la Fase 3 con 517 pruebas aprobadas).
+- **Balance Final Métrico del Proyecto:**
+  - **517 pruebas automatizadas aprobadas al 100%** (0 fallos, 0 omitidas, 0 canceladas).
+  - **62 suites de prueba** rigurosamente organizadas:
+    - **177 pruebas unitarias puras** en Node.js Test Runner (`node --test`).
+    - **340 pruebas de integración UI/UX, componentes y servicios** en Vitest + Testing Library.
   - **Análisis Estático (ESLint):** **0 errores y 0 advertencias** en la totalidad del código TypeScript/React.
   - **Compilación de Producción (TypeScript + Vite):** Verificada con éxito (`tsc -b && vite build`) sin errores de tipado estricto.
 - **Resumen Ejecutivo de Arquitectura y Calidad:**
-  La plataforma EcoPlaza cuenta con grado de producción en su capa de interfaz, aislamiento multi-tenant por usuario (`owner_id`), navegación accesible (WAI-ARIA), diseño responsive adaptable y cobertura integral en sus 12 vistas operativas y 42 módulos de interfaz. El código se encuentra completamente blindado contra regresiones y listo para la transición a la **Fase 2: Integración End-to-End (E2E), Pasarela de Pagos y Despliegue Cloud**.
+  La plataforma EcoPlaza cuenta con grado de producción integral en su capa de interfaz, aislamiento multi-tenant por usuario (`owner_id`), navegación accesible (WAI-ARIA), diseño responsive adaptable y cobertura en sus 12 vistas operativas, 42 módulos de interfaz y motor de Inteligencia Artificial Generativa contextual. La integración de IA dispone de arquitectura desacoplada con fallback determinista local, protegiendo la continuidad operativa del centro de acopio ante cuotas agotadas (HTTP 429) o fallos de red.
 
 - **Módulos Culminados y Operativos (42 Componentes Certificados):**
   1. **Autenticación y Seguridad:** Flujo de Login y Registro con validación en tiempo real, modelo 3D interactivo en Three.js, y cierre de sesión seguro con gestión de estados `aria-busy`.
@@ -174,16 +177,20 @@ El directorio contiene **49 archivos de servicios especializados** que encapsula
    - **Bloque C: Modales Transaccionales, Formularios y Telemetría IoT [CERTIFICADO - 9 suites / 54 pruebas]:**
      - `registerModal.component.test.tsx`, `forgotPasswordModal.component.test.tsx`, `buyerPurchaseHistoryModal.component.test.tsx`, `resetPreferencesDialog.component.test.tsx`, `containerManagementPanel.component.test.tsx`, `sensorTelemetryHistoryModal.component.test.tsx`, `demoBuyerTable.component.test.tsx`, `demoSalesTable.component.test.tsx`, `pageHeader.component.test.tsx`.
    - **Métricas Totales Fase 1:** 493 pruebas automatizadas (174 pruebas unitarias Node.js + 319 pruebas de componentes Vitest) en 90 archivos con 100% de éxito, 0 fallos, 0 omitidas y 0 regresiones.
-2. **Empaquetado y Validación del Instalador Nativo de Windows:**
+2. **Fase 2: Hardware IoT & Escritorio Tauri 2 (Firmware C++ y Arquitectura Completados):**
+   - Firmware C++ con sensor ultrasónico HC-SR04, filtro de mediana y calibración volumétrica.
+   - Transmisión HTTPS segura con `WiFiClientSecure` hacia Supabase REST (`/rest/v1/sensor_telemetry`).
+   - Configuración de ventana nativa Tauri 2 (`1280x800`), CSP estricto y capabilities blindadas.
+   - *Hito pendiente físico:* Flasheo en caliente sobre microcontrolador ESP32 físico y sensor HC-SR04 al disponer del cable Micro-USB con líneas de datos.
+3. **Fase 3: Inteligencia Artificial Generativa — Google Gemini 1.5 Flash (100% COMPLETADA Y CERTIFICADA):**
+   - Servicio singleton `geminiAiService.ts` con SDK `@google/generative-ai` y sanitización de credenciales.
+   - Inyección contextual dinámica `assistantContextService.ts` con inventario valorizado en COP y telemetría de sensores IoT con criticidad >= 80%.
+   - Orquestación con fallback transparente y determinista local ante cuotas agotadas (HTTP 429) u offline en `assistantService.ts`.
+   - Badge visual sutil de procedencia (`Gemini AI` vs `Modo Local / Heurístico`) y parser seguro de Markdown sin dependencias externas en `AssistantPanel.tsx`.
+   - Cobertura expandida a 517 pruebas automatizadas certificadas bajo el Commit `fe1f3ed`.
+4. **Fase 4: Empaquetado y Distribución del Instalador Nativo de Windows (Tauri 2):**
    - Compilación y verificación del instalador ejecutable de escritorio (`.msi` / `.exe`) mediante `npx tauri build`.
-   - Validación de comunicación IPC con el backend nativo en Rust.
-3. **Fase 2: Integración End-to-End (E2E), Pasarela de Pagos y Sincronización Cloud:**
-   - Implementación de pruebas E2E automatizadas para flujos críticos con Playwright.
-   - Sincronización híbrida de base de datos local SQLite con Supabase Cloud.
-   - Integración de pasarela de pagos / facturación electrónica para compradores de material reciclable.
-4. **Pruebas de Integración Física y Guía Final de Sustentación:**
-   - Validación en vivo del nodo físico ESP32 con sensores ultrasónicos e infrarrojos y protocolo MQTT/HTTP.
-   - Consolidación del manual de usuario y protocolo de sustentación técnica final.
+   - Validación de comunicación IPC con el backend nativo en Rust y pruebas de empaquetado para distribución en centros de acopio.
 
 ---
 
@@ -202,12 +209,12 @@ Para asegurar la máxima calidad, mantenibilidad y estabilidad del proyecto, tod
 - El usuario revisa los resultados y ejecuta personalmente todas las operaciones de Git desde su terminal de PowerShell.
 
 #### Política de Pruebas Automatizadas y Cero Errores
-- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **493 pruebas automatizadas**.
+- **Cobertura 100% Activa:** Cualquier refactorización o nueva característica debe preservar la totalidad de las **517 pruebas automatizadas**.
 - **Comandos de Validación Obligatorios (desde `frontend/`):**
   1. `npm run lint`: Verificación estricta con ESLint (**0 errores, 0 warnings**).
   2. `npm run build`: Validación integral de tipado TypeScript (`tsc -b`) y empaquetado de producción de Vite (**0 errores**).
-  3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**174 / 174 pasadas**).
-  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**319 / 319 pasadas**).
+  3. `npm run test:node`: Ejecución de pruebas unitarias puras en Node.js (**177 / 177 pasadas**).
+  4. `npm run test:components`: Ejecución de pruebas de componentes en Vitest (**340 / 340 pasadas**).
 - **Una tarea por ciclo:** Trabajar de manera focalizada, validar antes y después de cada cambio, y presentar un informe técnico estructurado al completar la iteración.
 
 ---
@@ -246,5 +253,38 @@ verificada. Se documentan los cinco commits de implementación y ajuste:
    - Alineación del test `tauriSecurityConfig` con el identificador de
      aplicación vigente.
 
-La suite de pruebas automatizadas se mantiene **100% aprobada (493/493
-tests)** en GitHub Actions CI.
+La suite de pruebas automatizadas se incrementó de 493 a **517 pruebas (100% aprobadas: 177 Node.js + 340 Vitest en 62 suites)** en GitHub Actions CI.
+
+---
+
+## FASE 3: INTELIGENCIA ARTIFICIAL GENERATIVA — GOOGLE GEMINI 1.5 FLASH (COMPLETADA Y CERTIFICADA)
+
+La Fase 3 de EcoPlaza — Integración de Inteligencia Artificial Generativa con Google Gemini queda formalmente completada, verificada y certificada bajo el **Commit `fe1f3ed`** en la rama principal `main`:
+
+1. **Servicio Base del SDK de Gemini (`geminiAiService.ts`):**
+   - Integración del SDK oficial `@google/generative-ai` (`gemini-1.5-flash`).
+   - Patrón Singleton tipado con verificación dinámica de disponibilidad (`isGeminiAvailable()`).
+   - Sanitización y ofuscación rigurosa de claves de API en mensajes de error y logs (`key=[REDACTED_API_KEY]`).
+   - 10 pruebas automatizadas certificadas en `geminiAiService.test.ts`.
+
+2. **Inyección Dinámica de Contexto de Negocio (`assistantContextService.ts`):**
+   - Construcción de directiva de sistema (`systemInstruction`) determinista para el LLM.
+   - Consolidación del inventario vivo clasificado por material (orgánico, reciclable, no aprovechable) y valorizado en pesos colombianos (COP).
+   - Telemetría IoT en vivo con detección automática de contenedores en capacidad crítica (>= 80%) y directivas de vaciado prioritario.
+   - Inyección de identidad institucional de EcoPlaza (Pasto, Nariño, Colombia) y directrices de respuesta ejecutiva.
+   - 8 pruebas automatizadas certificadas en `assistantContextService.test.ts`.
+
+3. **Orquestación y Fallback Determinista Resiliente (`assistantService.ts`):**
+   - Conexión del flujo conversacional con Gemini cuando `VITE_GEMINI_API_KEY` está presente y configurada.
+   - Degradación agraciada y automática hacia el motor de heurísticas locales (`assistantInsightsService.ts`) ante ausencia de clave, errores de red o agotamiento de cuota de API (HTTP 429).
+   - Metadatos de procedencia (`provider: 'gemini' | 'heuristic'`) para trazabilidad del origen de la respuesta.
+   - Pruebas de integración certificando ambos caminos de ejecución (Gemini y fallback local).
+
+4. **Interfaz Visual Accesible y Parser de Markdown Seguro (`AssistantPanel.tsx`):**
+   - Distintivo visual discreto en cada mensaje del asistente indicando el origen: badge verde esmeralda `Gemini AI` con icono de chispa (`Sparkles`), o badge neutro `Modo Local / Heurístico` con icono de microchip (`Cpu`).
+   - Componente `FormattedMessageContent`: parser seguro y ligero de Markdown sin dependencias externas pesadas, con soporte accesible para encabezados (`h4`), listas con viñetas (`ul`/`li`) y texto enriquecido en negrita (`strong`).
+   - Preservación del 100% de contratos de accesibilidad (WAI-ARIA) e interactividad previa.
+
+5. **Balance Final de Pruebas de la Fase 3:**
+   - Crecimiento de la suite a **517 pruebas automatizadas aprobadas (100% de éxito: 177 en Node.js + 340 en Vitest en 62 suites)**.
+   - Cero errores de compilación (`tsc -b`) y cero advertencias en ESLint.
