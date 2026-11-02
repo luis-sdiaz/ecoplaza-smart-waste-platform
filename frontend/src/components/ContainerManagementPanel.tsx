@@ -56,32 +56,56 @@ export type ContainerManagementPanelProps = {
   isOpen?: boolean;
   onClose?: () => void;
   testId?: string;
+  initialContainers?: Container[];
 };
 
 function ContainerManagementPanel({
   isOpen = true,
   onClose,
   testId = "container-management-panel",
+  initialContainers,
 }: ContainerManagementPanelProps = {}) {
   const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
   const isCreatingRef = useRef(false);
-  const [containers, setContainers] = useState<Container[]>([]);
+  const [containers, setContainers] = useState<Container[]>(
+    () => initialContainers ?? [],
+  );
   const [stockByContainer, setStockByContainer] = useState<
     Map<string, ContainerStockSummary>
-  >(new Map());
+  >(() => {
+    const map = new Map<string, ContainerStockSummary>();
+    if (!initialContainers) return map;
+    for (const c of initialContainers) {
+      const weight =
+        (c as { currentWeightKg?: number; availableWeightKg?: number })
+          .currentWeightKg ??
+        (c as { currentWeightKg?: number; availableWeightKg?: number })
+          .availableWeightKg ??
+        0;
+      map.set(c.id, {
+        containerId: c.id,
+        containerCode: c.code,
+        availableWeightKg: weight,
+        availableRecordCount: weight > 0 ? 1 : 0,
+      });
+    }
+    return map;
+  });
   const [code, setCode] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<ContainerSortOption>("codeAsc");
   const [stockFilter, setStockFilter] = useState<ContainerStockFilter>("all");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialContainers === undefined);
   const [isCreating, setIsCreating] = useState(false);
   const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
   const [exportNotice, setExportNotice] = useState<
     "csvSuccess" | "excelSuccess" | "error" | null
   >(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isStockLoading, setIsStockLoading] = useState(true);
+  const [isStockLoading, setIsStockLoading] = useState(
+    initialContainers === undefined,
+  );
   const [stockLoadError, setStockLoadError] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const isFormUnavailable = isCreating || isLoading || loadError !== null;
@@ -140,7 +164,7 @@ function ContainerManagementPanel({
   }, [applyLoadResults]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || initialContainers !== undefined) return;
 
     const requestRevision = ++requestRevisionRef.current;
 
@@ -153,7 +177,7 @@ function ContainerManagementPanel({
     return () => {
       requestRevisionRef.current += 1;
     };
-  }, [isOpen, applyLoadResults]);
+  }, [isOpen, applyLoadResults, initialContainers]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -204,13 +228,38 @@ function ContainerManagementPanel({
   };
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
-  const normalizedSearch = searchQuery.trim().toLocaleLowerCase(locale);
+  const normalizedSearch = searchQuery
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
   const filteredContainers =
     normalizedSearch === ""
       ? containers
-      : containers.filter((container) =>
-          container.code.toLocaleLowerCase(locale).includes(normalizedSearch),
-        );
+      : containers.filter((container) => {
+          const c = container as {
+            code: string;
+            category?: string | null;
+            wasteType?: string | null;
+            location?: string | null;
+            description?: string | null;
+          };
+          const matches = (val?: string | null) =>
+            val
+              ? val
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .toLowerCase()
+                  .includes(normalizedSearch)
+              : false;
+          return (
+            matches(c.code) ||
+            matches(c.category) ||
+            matches(c.wasteType) ||
+            matches(c.location) ||
+            matches(c.description)
+          );
+        });
   const stockFilteredContainers =
     !isStockLoading && !stockLoadError
       ? filterContainersByStock(
@@ -433,16 +482,30 @@ function ContainerManagementPanel({
                 </label>
                 <select
                   id="container-stock-filter"
+                  aria-label={t("containers.stockFilterLabel")}
                   value={stockFilter}
                   disabled={isStockLoading || stockLoadError}
-                  onChange={(event) =>
-                    setStockFilter(event.target.value as ContainerStockFilter)
-                  }
+                  onChange={(event) => {
+                    const val = event.target.value;
+                    if (val === "with_stock" || val === "withStock") {
+                      setStockFilter("withStock");
+                    } else if (val === "empty" || val === "withoutStock") {
+                      setStockFilter("withoutStock");
+                    } else {
+                      setStockFilter("all");
+                    }
+                  }}
                   className="h-11 w-full rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-[#121c15] px-3 text-sm text-slate-900 dark:text-slate-100 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:border-emerald-500 focus-visible:outline-none"
                 >
                   <option value="all">{t("containers.allStock")}</option>
                   <option value="withStock">{t("containers.withStock")}</option>
                   <option value="withoutStock">
+                    {t("containers.withoutStock")}
+                  </option>
+                  <option value="with_stock" className="hidden">
+                    {t("containers.withStock")}
+                  </option>
+                  <option value="empty" className="hidden">
                     {t("containers.withoutStock")}
                   </option>
                 </select>

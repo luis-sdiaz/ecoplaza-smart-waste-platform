@@ -204,7 +204,7 @@ describe("Dashboard live commercial metrics", () => {
 
     expect(await within(metric("dashboard.availableInventory")).findByText("25 kg")).toBeTruthy();
     expect(await within(metric("dashboard.revenue")).findByText(/COP.*1,250\.5/)).toBeTruthy();
-    expect(within(metric("dashboard.revenue")).getByText("dashboard.realData")).toBeTruthy();
+    expect(within(metric("dashboard.revenue")).queryByText("dashboard.realData")).toBeNull();
     expect(await screen.findByText("dashboard.materialStatusAvailable")).toBeTruthy();
     expect(screen.getByText("25 kg · 83.3%")).toBeTruthy();
     expect(screen.getByText("5 kg · 16.7%")).toBeTruthy();

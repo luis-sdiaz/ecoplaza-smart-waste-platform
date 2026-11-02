@@ -326,13 +326,11 @@ function UserBuyersPage({ userId }: { userId: string }) {
           title={t("buyers.summaryTotal")}
           value={metricsUnavailable ? "—" : String(buyers.length)}
           description={t("buyers.registeredContacts")}
-          badge={t("buyers.realData")}
         />
         <MetricCard
           title={t("buyers.summaryWithPurchases")}
           value={metricsUnavailable ? "—" : String(activitySummary.withPurchasesCount)}
           description={t("buyers.withPurchasesDescription")}
-          badge={t("buyers.realData")}
         />
         <MetricCard
           title={t("buyers.summaryWithoutPurchases")}
@@ -344,19 +342,13 @@ function UserBuyersPage({ userId }: { userId: string }) {
           title={t("buyers.withContact")}
           value={metricsUnavailable ? "—" : String(withContact)}
           description={metricsUnavailable ? "—" : `${t("buyers.withEmail")}: ${withEmail} · ${t("buyers.withPhone")}: ${withPhone}`}
-          badge={t("buyers.realData")}
         />
       </section>
 
       <div className="mt-8">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("buyers.records")}</h2>
-              <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">
-                {t("buyers.realData")}
-              </span>
-            </div>
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("buyers.records")}</h2>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.recordsDescription")}</p>
           </div>
           <div className="flex shrink-0 gap-2">
@@ -489,13 +481,10 @@ function UserBuyersPage({ userId }: { userId: string }) {
 
       {showDemoData && (
         <div className="mt-10 border-t border-ecoplaza-border pt-8">
-          <div className="flex items-center gap-2">
+          <div>
             <h2 className="text-lg font-semibold text-ecoplaza-text">{t("buyers.demoTitle")}</h2>
-            <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-              {t("buyers.demoData")}
-            </span>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.demoDescription")}</p>
           </div>
-          <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("buyers.demoDescription")}</p>
           <div className="mt-4">
             <DemoBuyerTable buyers={demoBuyers} />
           </div>

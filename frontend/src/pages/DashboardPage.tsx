@@ -237,8 +237,6 @@ function UserDashboardPage({ userId }: { userId: string }) {
     category: ReportWasteCategory,
     field: "weightKg" | "percentage",
   ): number => statistics?.distribution.find((item) => item.category === category)?.[field] ?? 0;
-  const demoBadge = t("dashboard.demoData");
-  const realBadge = t("dashboard.realData");
   const hasNoCommercialActivity = !realValueUnavailable && statistics !== null &&
     statistics.availableWeightKg === 0 && statistics.salesCount === 0;
   const materialStatus = statistics === null ? null : calculateMaterialStatusBreakdown(
@@ -320,7 +318,6 @@ function UserDashboardPage({ userId }: { userId: string }) {
           title={t("dashboard.registeredWaste")}
           value={metricValue((data) => formatWeight(data.totalRegisteredWeightKg))}
           description={t("dashboard.realWasteDescription")}
-          badge={realBadge}
           icon={<Trash2 size={22} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
         />
         {showDemoData && (
@@ -328,8 +325,6 @@ function UserDashboardPage({ userId }: { userId: string }) {
             title={t("dashboard.activeSensors")}
             value="8"
             description={t("dashboard.registeredSensors", { count: 10 })}
-            badge={demoBadge}
-            badgeVariant="demo"
             icon={<Radio size={22} className="text-sky-600 dark:text-sky-400" aria-hidden="true" />}
           />
         )}
@@ -337,14 +332,12 @@ function UserDashboardPage({ userId }: { userId: string }) {
           title={t("dashboard.availableInventory")}
           value={metricValue((data) => formatWeight(data.availableWeightKg))}
           description={t("dashboard.materialForSale")}
-          badge={realBadge}
           icon={<Boxes size={22} className="text-amber-600 dark:text-amber-400" aria-hidden="true" />}
         />
         <MetricCard
           title={t("dashboard.revenue")}
           value={metricValue((data) => currencyFormatter.format(data.grossSalesValue))}
           description={t("dashboard.accumulatedSales")}
-          badge={realBadge}
           icon={<TrendingUp size={22} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
         />
       </div>
@@ -355,15 +348,9 @@ function UserDashboardPage({ userId }: { userId: string }) {
         <div className="flex flex-col gap-6 lg:col-span-8">
           {/* Section: Estado del material */}
           <div className="glass-panel rounded-2xl p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.materialStatus")}</h2>
-                <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.materialStatusDescription")}</p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                {realBadge}
-              </span>
+            <div>
+              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.materialStatus")}</h2>
+              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.materialStatusDescription")}</p>
             </div>
             {realValueUnavailable || materialStatus === null ? (
               <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200/80 bg-slate-50/50 p-6 text-center dark:border-white/10 dark:bg-white/5">
@@ -404,15 +391,9 @@ function UserDashboardPage({ userId }: { userId: string }) {
 
           {/* Section: Ventas recientes */}
           <div className="glass-panel rounded-2xl p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.recentSales")}</h2>
-                <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesDescription")}</p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                {realBadge}
-              </span>
+            <div>
+              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.recentSales")}</h2>
+              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesDescription")}</p>
             </div>
             {areRecentSalesLoading ? (
               <div role="status" className="mt-4 flex min-h-24 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
@@ -462,13 +443,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
           {/* Section: Residuos por categoría */}
           <div className="glass-panel rounded-2xl p-6">
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.wasteByCategory")}</h2>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                  {t("dashboard.realData")}
-                </span>
-              </div>
+              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.wasteByCategory")}</h2>
               <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.realWasteDistribution")}</p>
             </div>
 
@@ -501,13 +476,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
           {showDemoData && (
             <div className="glass-panel rounded-2xl p-6">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-800 shadow-2xs backdrop-blur-md dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" aria-hidden="true" />
-                    {demoBadge}
-                  </span>
-                </div>
+                <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
                 <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.sensorMonitoringDemo")}</p>
               </div>
 
@@ -521,15 +490,9 @@ function UserDashboardPage({ userId }: { userId: string }) {
 
           {/* Section: Categoría líder en ingresos */}
           <div className="glass-panel rounded-2xl p-6" data-testid="top-revenue-category-card">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="top-revenue-category-title" className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.topRevenueCategory")}</h2>
-                <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryDescription")}</p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                {realBadge}
-              </span>
+            <div>
+              <h2 id="top-revenue-category-title" className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.topRevenueCategory")}</h2>
+              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryDescription")}</p>
             </div>
 
             {realValueUnavailable || topRevenueCategory === null ? (
@@ -565,15 +528,9 @@ function UserDashboardPage({ userId }: { userId: string }) {
 
           {/* Section: Inventario disponible más antiguo */}
           <div className="glass-panel rounded-2xl p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.oldestInventory")}</h2>
-                <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.oldestInventoryDescription")}</p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs backdrop-blur-md dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                {realBadge}
-              </span>
+            <div>
+              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.oldestInventory")}</h2>
+              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.oldestInventoryDescription")}</p>
             </div>
             {isOldestInventoryLoading ? (
               <div role="status" className="mt-4 flex min-h-24 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">

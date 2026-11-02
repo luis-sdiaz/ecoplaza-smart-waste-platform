@@ -75,7 +75,7 @@ describe("SettingsPanel Component - Preferencias de Usuario y Accesibilidad UI/U
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: /contenedor de demostración|demo/i,
+        name: /contenedor asignado|assigned container|contenedor de demostración|demo/i,
       }),
     ).toBeInTheDocument();
     expect(

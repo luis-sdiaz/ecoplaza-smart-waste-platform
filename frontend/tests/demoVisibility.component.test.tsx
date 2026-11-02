@@ -78,7 +78,7 @@ describe("Demonstration data visibility control", () => {
 
     expect(screen.getByText("sensors.demoTitle")).toBeTruthy();
     expect(screen.getByText("sensors.demoDevices")).toBeTruthy();
-    expect(screen.getByText("containers.title")).toBeTruthy();
+    expect(screen.getByText("sensors.realTelemetryTitle")).toBeTruthy();
   });
 
   test("SensorsPage hides demo sensors when demo data visibility is false while keeping real container management intact", () => {
@@ -90,7 +90,7 @@ describe("Demonstration data visibility control", () => {
 
     expect(screen.queryByText("sensors.demoTitle")).toBeNull();
     expect(screen.queryByText("sensors.demoDevices")).toBeNull();
-    expect(screen.getByText("containers.title")).toBeTruthy();
+    expect(screen.getByText("sensors.realTelemetryTitle")).toBeTruthy();
   });
 
   test("SettingsPanel toggles demonstration visibility and persists in storage", () => {

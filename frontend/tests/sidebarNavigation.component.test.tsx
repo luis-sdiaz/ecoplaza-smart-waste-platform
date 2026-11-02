@@ -41,6 +41,7 @@ vi.mock("../src/auth/AuthContext", () => ({
 const translations: Record<string, string> = {
   "navigation.home": "Dashboard (Panel)",
   "navigation.sensors": "Sensores",
+  "navigation.containers": "Contenedores",
   "navigation.waste": "Residuos",
   "navigation.inventory": "Inventario",
   "navigation.buyers": "Compradores",

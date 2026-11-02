@@ -6,7 +6,6 @@ import SensorDeviceCard from "../components/SensorDeviceCard";
 import SensorTelemetryHistoryModal from "../components/SensorTelemetryHistoryModal";
 import SimulateTelemetryModal from "../components/SimulateTelemetryModal";
 import SuccessToast from "../components/SuccessToast";
-import ContainerManagementPanel from "../components/ContainerManagementPanel";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -198,14 +197,9 @@ function SensorsPageView({
         <section className="glass-panel rounded-2xl p-6 shadow-sm">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  {t("sensors.demoTitle")}
-                </h2>
-                <span className="rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
-                  {t("sensors.demoBadge")}
-                </span>
-              </div>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {t("sensors.demoTitle")}
+              </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {t("sensors.demoDescription")}
               </p>
@@ -288,17 +282,12 @@ function SensorsPageView({
         <section className="glass-panel rounded-2xl p-6 shadow-sm" aria-labelledby="real-telemetry-title">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
-                <h2
-                  id="real-telemetry-title"
-                  className="text-lg font-semibold text-slate-900 dark:text-slate-100"
-                >
-                  {t("sensors.realTelemetryTitle")}
-                </h2>
-                <span className="rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
-                  {t("containers.remoteData")}
-                </span>
-              </div>
+              <h2
+                id="real-telemetry-title"
+                className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+              >
+                {t("sensors.realTelemetryTitle")}
+              </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {t("sensors.realTelemetryDescription")}
               </p>
@@ -478,8 +467,6 @@ function SensorsPageView({
           )}
         </section>
       )}
-
-      {user && <ContainerManagementPanel key={user.id} />}
 
       {historyTarget && (
         <SensorTelemetryHistoryModal

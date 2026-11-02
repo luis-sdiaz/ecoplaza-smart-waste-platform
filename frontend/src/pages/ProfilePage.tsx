@@ -1,10 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { Camera, CircleCheck, IdCard, Info, Leaf, Mail, Pencil, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import {
+  Camera,
+  Check,
+  CircleCheck,
+  Copy,
+  IdCard,
+  Info,
+  Leaf,
+  Mail,
+  Pencil,
+  ShieldCheck,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { isValidProfileName, normalizeProfileName } from "../auth/profileStorage";
 import { prepareProfileImage, ProfileImageError } from "../auth/profileImage";
+import PageHeader from "../components/PageHeader";
 import SuccessToast from "../components/SuccessToast";
 import "./ProfilePage.css";
 
@@ -87,6 +101,8 @@ function ProfilePageContent() {
   const [avatarFeedback, setAvatarFeedback] = useState<AvatarFeedback | null>(null);
   const [notification, setNotification] = useState<ProfileNotification | null>(null);
   const [isProfileErrorDismissed, setIsProfileErrorDismissed] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastSequenceRef = useRef(0);
   const isMountedRef = useRef(false);
 
@@ -95,6 +111,9 @@ function ProfilePageContent() {
 
     return () => {
       isMountedRef.current = false;
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -220,6 +239,23 @@ function ProfilePageContent() {
     }
   };
 
+  const handleCopyId = async (): Promise<void> => {
+    if (!user?.id) return;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(user.id);
+      }
+      setIsCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    } catch {
+      // Fallback gracioso
+    }
+  };
+
   const notificationCopy = notification
     ? profileNotificationCopy[notification.operation]
     : profileError && !isProfileErrorDismissed
@@ -227,16 +263,22 @@ function ProfilePageContent() {
       : null;
 
   return (
-    <section className="profile-page" aria-label={t("profile.title")}>
-      <h1 className="profile-sr-only">{t("profile.title")}</h1>
+    <section className="profile-page p-8 max-w-7xl mx-auto w-full min-h-0" aria-label={t("profile.title")}>
+      <PageHeader
+        eyebrow={t("profile.eyebrow", { defaultValue: "Cuenta & Seguridad" })}
+        title={t("profile.title")}
+        description={t("profile.description", {
+          defaultValue: "Administra tu información de acceso, identidad y seguridad en EcoPlaza.",
+        })}
+      />
 
       {user ? (
-        <div className="profile-panel">
+        <div className="profile-panel mt-6">
           <div className="profile-panel-grid">
             <article className="profile-hero" aria-labelledby="profile-user-name">
               <div className="profile-hero-cover">
                 <span className="profile-brand">
-                  <Leaf size={18} strokeWidth={1.8} aria-hidden="true" />
+                  <Leaf size={16} strokeWidth={2} aria-hidden="true" />
                   EcoPlaza
                 </span>
               </div>
@@ -249,7 +291,7 @@ function ProfilePageContent() {
                         {user.avatarUrl ? (
                           <img className="profile-avatar-image" src={user.avatarUrl} alt="" />
                         ) : (
-                          <UserRound strokeWidth={1.35} aria-hidden="true" />
+                          <UserRound strokeWidth={1.5} aria-hidden="true" />
                         )}
                       </div>
                       <input
@@ -261,7 +303,6 @@ function ProfilePageContent() {
                         onChange={handleAvatarSelection}
                       />
                     </div>
-                    <span className="profile-demo-badge">{t("profile.userAccount")}</span>
                   </div>
 
                   <span className="profile-active-badge">
@@ -300,7 +341,12 @@ function ProfilePageContent() {
                             <button type="submit" className="profile-name-save" disabled={isNameBusy}>
                               {t("profile.save")}
                             </button>
-                            <button type="button" className="profile-name-cancel" onClick={cancelNameEditing} disabled={isNameBusy}>
+                            <button
+                              type="button"
+                              className="profile-name-cancel"
+                              onClick={cancelNameEditing}
+                              disabled={isNameBusy}
+                            >
                               {t("profile.cancel")}
                             </button>
                           </div>
@@ -315,20 +361,24 @@ function ProfilePageContent() {
                   ) : (
                     <div className="profile-name-row">
                       <h2 id="profile-user-name" title={user.name}>{user.name}</h2>
-                      <button type="button" className="profile-name-edit" onClick={startNameEditing}>
+                      <button
+                        type="button"
+                        className="profile-name-edit"
+                        onClick={startNameEditing}
+                      >
                         <Pencil size={14} strokeWidth={1.8} aria-hidden="true" />
                         {t("profile.editName")}
                       </button>
                     </div>
                   )}
-                  <p className="profile-account-type">
-                    <span>{t("profile.accountType")}</span>
-                    <strong>{t("profile.user")}</strong>
-                  </p>
-                  <p className="profile-email" title={user.email}>
-                    <Mail size={17} strokeWidth={1.7} aria-hidden="true" />
-                    <span>{user.email}</span>
-                  </p>
+
+                  <div className="profile-meta-row">
+                    <span className="profile-role-badge">{t("profile.userAccount")}</span>
+                    <p className="profile-email" title={user.email}>
+                      <Mail size={15} strokeWidth={1.8} aria-hidden="true" />
+                      <span>{user.email}</span>
+                    </p>
+                  </div>
 
                   <div className="profile-photo-management">
                     <div className="profile-photo-copy">
@@ -379,7 +429,7 @@ function ProfilePageContent() {
               <section className="profile-status-card" aria-labelledby="profile-status-heading">
                 <header className="profile-card-heading">
                   <span className="profile-card-icon">
-                    <ShieldCheck size={21} strokeWidth={1.7} aria-hidden="true" />
+                    <ShieldCheck size={20} strokeWidth={1.8} aria-hidden="true" />
                   </span>
                   <h2 id="profile-status-heading">{t("profile.accountInformation")}</h2>
                 </header>
@@ -391,7 +441,10 @@ function ProfilePageContent() {
                   </div>
                   <div className="profile-account-item">
                     <dt>{t("profile.status")}</dt>
-                    <dd>{t("profile.active")}</dd>
+                    <dd className="profile-status-active">
+                      <span className="profile-status-dot" aria-hidden="true" />
+                      {t("profile.active")}
+                    </dd>
                   </div>
                   <div className="profile-account-item">
                     <dt>{t("profile.currentAccess")}</dt>
@@ -408,10 +461,9 @@ function ProfilePageContent() {
               </section>
 
               <section className="profile-id-card" aria-labelledby="profile-id-heading">
-                <IdCard className="profile-id-watermark" strokeWidth={0.85} aria-hidden="true" />
                 <header className="profile-card-heading">
                   <span className="profile-card-icon">
-                    <IdCard size={21} strokeWidth={1.6} aria-hidden="true" />
+                    <IdCard size={20} strokeWidth={1.8} aria-hidden="true" />
                   </span>
                   <h2 id="profile-id-heading">{t("profile.userIdentification")}</h2>
                 </header>
@@ -419,7 +471,32 @@ function ProfilePageContent() {
                 <dl className="profile-identifier-list">
                   <div className="profile-identifier-item">
                     <dt>{t("profile.id")}</dt>
-                    <dd title={user.id}>{user.id}</dd>
+                    <dd className="profile-id-row">
+                      <span className="profile-id-value" title={user.id}>
+                        {user.id}
+                      </span>
+                      <button
+                        type="button"
+                        className="profile-id-copy-btn"
+                        onClick={handleCopyId}
+                        title={
+                          isCopied
+                            ? t("profile.idCopied", { defaultValue: "Copiado" })
+                            : t("profile.copyId", { defaultValue: "Copiar ID" })
+                        }
+                        aria-label={
+                          isCopied
+                            ? t("profile.idCopied", { defaultValue: "Copiado" })
+                            : t("profile.copyId", { defaultValue: "Copiar ID" })
+                        }
+                      >
+                        {isCopied ? (
+                          <Check size={14} className="profile-check-icon" strokeWidth={2.2} aria-hidden="true" />
+                        ) : (
+                          <Copy size={14} strokeWidth={1.8} aria-hidden="true" />
+                        )}
+                      </button>
+                    </dd>
                   </div>
                   <div className="profile-identifier-item">
                     <dt>{t("profile.associatedEmail")}</dt>
@@ -431,7 +508,7 @@ function ProfilePageContent() {
           </div>
         </div>
       ) : (
-        <div className="profile-empty-state">
+        <div className="profile-empty-state mt-6">
           <Info size={22} aria-hidden="true" />
           <p role="status">{t("profile.unavailable")}</p>
         </div>

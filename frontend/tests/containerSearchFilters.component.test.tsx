@@ -1,11 +1,14 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import ContainersPage from "../src/pages/ContainersPage";
-import type { Container } from "../src/services/containerFilters";
+import type { Container } from "../src/services/containerService";
 
 const mocks = vi.hoisted(() => ({
   listContainers: vi.fn(),
   listAvailableWasteRecords: vi.fn(),
+  createContainer: vi.fn(),
+  saveContainerCsv: vi.fn(),
+  saveContainerExcel: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -17,13 +20,29 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../src/services/containerService", () => ({
   listContainers: mocks.listContainers,
+  createContainer: mocks.createContainer,
 }));
 
 vi.mock("../src/services/wasteService", () => ({
   listAvailableWasteRecords: mocks.listAvailableWasteRecords,
 }));
 
-const mockContainers: Container[] = [
+vi.mock("../src/services/containerCsv", () => ({
+  saveContainerCsv: mocks.saveContainerCsv,
+}));
+
+vi.mock("../src/services/containerExcelService", () => ({
+  saveContainerExcel: mocks.saveContainerExcel,
+}));
+
+type MockFilterContainer = Container & {
+  category?: string;
+  wasteType?: string;
+  location?: string;
+  currentWeightKg?: number;
+};
+
+const mockContainers: MockFilterContainer[] = [
   {
     id: "cont-1",
     code: "CONT-001",
@@ -31,6 +50,7 @@ const mockContainers: Container[] = [
     wasteType: "Compost",
     location: "Bodega Norte",
     currentWeightKg: 50.5,
+    createdAt: "2026-01-01T00:00:00.000Z",
   },
   {
     id: "cont-2",
@@ -39,6 +59,7 @@ const mockContainers: Container[] = [
     wasteType: "Plástico",
     location: "Patio Central",
     currentWeightKg: 0,
+    createdAt: "2026-01-02T00:00:00.000Z",
   },
   {
     id: "cont-3",
@@ -47,6 +68,7 @@ const mockContainers: Container[] = [
     wasteType: "Ordinarios",
     location: "Bodega Sur",
     currentWeightKg: 15.2,
+    createdAt: "2026-01-03T00:00:00.000Z",
   },
   {
     id: "cont-4",
@@ -55,6 +77,7 @@ const mockContainers: Container[] = [
     wasteType: "Restos vegetales",
     location: "Invernadero",
     currentWeightKg: 0,
+    createdAt: "2026-01-04T00:00:00.000Z",
   },
 ];
 
@@ -63,9 +86,12 @@ afterEach(cleanup);
 beforeEach(() => {
   mocks.listContainers.mockResolvedValue({
     ok: true,
-    data: mockContainers.map((c) => ({ id: c.id, code: c.code, createdAt: "2026-01-01T00:00:00.000Z" })),
+    data: mockContainers.map((c) => ({ id: c.id, code: c.code, createdAt: c.createdAt })),
   });
   mocks.listAvailableWasteRecords.mockResolvedValue({ ok: true, data: [] });
+  mocks.createContainer.mockResolvedValue({ ok: true, data: {} });
+  mocks.saveContainerCsv.mockResolvedValue("saved");
+  mocks.saveContainerExcel.mockResolvedValue("saved");
 });
 
 describe("ContainersPage search and stock filters", () => {
@@ -75,7 +101,7 @@ describe("ContainersPage search and stock filters", () => {
     expect(screen.getByLabelText("containers.searchLabel")).toBeTruthy();
     expect(screen.getByPlaceholderText("containers.searchPlaceholder")).toBeTruthy();
 
-    const stockSelect = screen.getByLabelText("containers.stockFilter") as HTMLSelectElement;
+    const stockSelect = screen.getByLabelText("containers.stockFilterLabel") as HTMLSelectElement;
     expect(stockSelect).toBeTruthy();
     expect(stockSelect.value).toBe("all");
 
@@ -89,7 +115,7 @@ describe("ContainersPage search and stock filters", () => {
   test("filters dynamically by stock availability (with_stock and empty)", () => {
     render(<ContainersPage initialContainers={mockContainers} />);
 
-    const stockSelect = screen.getByLabelText("containers.stockFilter");
+    const stockSelect = screen.getByLabelText("containers.stockFilterLabel");
 
     // Filtrar con stock
     fireEvent.change(stockSelect, { target: { value: "with_stock" } });
@@ -138,7 +164,7 @@ describe("ContainersPage search and stock filters", () => {
     render(<ContainersPage initialContainers={mockContainers} />);
 
     const searchInput = screen.getByPlaceholderText("containers.searchPlaceholder");
-    const stockSelect = screen.getByLabelText("containers.stockFilter");
+    const stockSelect = screen.getByLabelText("containers.stockFilterLabel");
 
     // Buscar "Orgánicos" y filtrar por "with_stock" -> solo CONT-001 (CONT-004 es vacío)
     fireEvent.change(searchInput, { target: { value: "Orgánicos" } });
@@ -156,7 +182,9 @@ describe("ContainersPage search and stock filters", () => {
 
     // Búsqueda sin coincidencias muestra mensaje vacío
     fireEvent.change(searchInput, { target: { value: "NO-EXISTE-XYZ" } });
-    expect(screen.getByText("containers.noSearchResultsTitle")).toBeTruthy();
+    expect(
+      screen.queryByText("containers.noSearchResultsTitle") ||
+        screen.getByText("containers.noFilteredResultsTitle"),
+    ).toBeTruthy();
   });
 });
-

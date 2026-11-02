@@ -2,6 +2,7 @@ import {
   House,
   Leaf,
   SlidersHorizontal,
+  Box,
   Recycle,
   PackageOpen,
   Users,
@@ -22,6 +23,7 @@ import { useAuth } from "../auth/AuthContext";
 const navItems = [
   { to: "/", end: true, icon: House, labelKey: "navigation.home" },
   { to: "/sensors", end: false, icon: SlidersHorizontal, labelKey: "navigation.sensors" },
+  { to: "/containers", end: false, icon: Box, labelKey: "navigation.containers" },
   { to: "/waste", end: false, icon: Recycle, labelKey: "navigation.waste" },
   { to: "/inventory", end: false, icon: PackageOpen, labelKey: "navigation.inventory" },
   { to: "/buyers", end: false, icon: Users, labelKey: "navigation.buyers" },
@@ -83,18 +85,18 @@ function Sidebar({ currentTab, onTabChange }: SidebarProps = {}) {
     >
       {/* Encabezado con marca y botón de toggle colapsable */}
       <div
-        className={`pt-5 pb-3 flex items-center transition-all duration-300 ${
+        className={`transition-all duration-300 flex ${
           isCollapsed
-            ? "flex-col gap-2 px-3 justify-center"
-            : "justify-between gap-2 px-4"
+            ? "flex-col items-center pt-6 pb-4 px-3"
+            : "items-center justify-between pt-5 pb-4 px-4 gap-2"
         }`}
       >
         <div
-          className={`flex items-center gap-3 min-w-0 ${
-            isCollapsed ? "justify-center" : ""
+          className={`flex items-center min-w-0 ${
+            isCollapsed ? "justify-center w-full" : "gap-3"
           }`}
         >
-          <div className="ecoplaza-sidebar-logo flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 border border-white/20 p-2.5 text-emerald-200 shadow-sm">
+          <div className="ecoplaza-sidebar-logo flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 border border-white/20 p-2.5 text-emerald-200 shadow-sm transition-all duration-200">
             <Leaf size={20} strokeWidth={2.4} />
           </div>
 
@@ -117,12 +119,15 @@ function Sidebar({ currentTab, onTabChange }: SidebarProps = {}) {
         <button
           type="button"
           onClick={() => setIsCollapsed(!isCollapsed)}
+          aria-expanded={!isCollapsed}
           aria-label={
             isCollapsed
               ? t("navigation.expandSidebar", "Expandir barra lateral")
               : t("navigation.collapseSidebar", "Colapsar barra lateral")
           }
-          className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-emerald-100 transition-colors"
+          className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center bg-white/10 hover:bg-white/20 text-emerald-100 hover:text-white transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 ${
+            isCollapsed ? "rounded-full mt-4 mb-2" : "rounded-xl"
+          }`}
           title={
             isCollapsed
               ? t("navigation.expandSidebar", "Expandir")
@@ -130,9 +135,9 @@ function Sidebar({ currentTab, onTabChange }: SidebarProps = {}) {
           }
         >
           {isCollapsed ? (
-            <ChevronRight size={18} strokeWidth={2.4} aria-hidden="true" />
+            <ChevronRight size={17} strokeWidth={2.4} aria-hidden="true" />
           ) : (
-            <ChevronLeft size={18} strokeWidth={2.4} aria-hidden="true" />
+            <ChevronLeft size={17} strokeWidth={2.4} aria-hidden="true" />
           )}
         </button>
       </div>

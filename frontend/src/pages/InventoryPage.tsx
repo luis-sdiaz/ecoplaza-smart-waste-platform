@@ -288,38 +288,29 @@ function InventoryPageContent() {
           title={t("inventory.availableWeight")}
           value={metricValue(statistics.totalWeightKg)}
           description={t("inventory.availableWeightDescription")}
-          badge={t("inventory.realData")}
         />
         <MetricCard
           title={t("common.organic")}
           value={metricValue(statistics.organicWeightKg)}
           description={t("inventory.categoryWeight")}
-          badge={t("inventory.realData")}
         />
         <MetricCard
           title={t("common.recyclable")}
           value={metricValue(statistics.recyclableWeightKg)}
           description={t("inventory.categoryWeight")}
-          badge={t("inventory.realData")}
         />
         <MetricCard
           title={t("common.nonRecyclable")}
           value={metricValue(statistics.nonRecyclableWeightKg)}
           description={t("inventory.categoryWeight")}
-          badge={t("inventory.realData")}
         />
       </div>
 
       {!isLoading && !loadError && (
         <div className="mt-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("inventory.stockByContainer")}</h2>
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("inventory.stockByContainerDescription")}</p>
-            </div>
-            <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-              {t("inventory.realData")}
-            </span>
+          <div>
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("inventory.stockByContainer")}</h2>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("inventory.stockByContainerDescription")}</p>
           </div>
           <div className="mt-4">
             <ContainerStockSummaryTable summaries={containerSummaries} />

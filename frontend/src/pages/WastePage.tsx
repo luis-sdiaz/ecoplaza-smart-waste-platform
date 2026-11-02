@@ -395,11 +395,8 @@ function UserWastePage({ userId }: { userId: string }) {
     <section className="p-8">
       <PageHeader eyebrow={t("waste.eyebrow")} title={t("waste.title")} description={t("waste.description")} />
 
-      <div className="mt-8 flex items-center gap-2">
+      <div className="mt-8">
         <h2 className="text-lg font-semibold text-ecoplaza-text">{t("waste.remoteRecords")}</h2>
-        <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">
-          {t("waste.remoteData")}
-        </span>
       </div>
 
       <div className="mt-4 grid grid-cols-4 gap-4">
@@ -695,11 +692,10 @@ function UserWastePage({ userId }: { userId: string }) {
 
       {showDemoData && (
         <div className="mt-10 border-t border-ecoplaza-border pt-8">
-          <div className="flex items-center gap-2">
+          <div>
             <h2 className="text-lg font-semibold text-ecoplaza-text">{t("waste.localRecords")}</h2>
-            <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{t("waste.localData")}</span>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("waste.localDescription")}</p>
           </div>
-          <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("waste.localDescription")}</p>
           <div className="mt-4"><WasteRecordTable records={legacyRecords} /></div>
         </div>
       )}

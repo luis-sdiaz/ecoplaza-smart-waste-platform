@@ -343,12 +343,10 @@ function UserSalesPage({ userId }: { userId: string }) {
     (activeDateRange !== null ? 1 : 0) +
     (isAmountFiltered ? 1 : 0);
   const hasActiveFilters = saleSearch.trim() !== "" || activeAdvancedCount > 0;
-  const isFiltered = hasActiveFilters;
   const emptyState = getSalesEmptyState(
     buyerFilter !== "",
     activeDateRange !== null,
   );
-  const metricBadge = t(isFiltered ? "sales.filteredData" : "sales.realData");
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium" });
   const sortedSales = sortSalesHistory(visibleSales, sortOption);
   const formatInputDate = (value: string): string =>
@@ -501,20 +499,17 @@ function UserSalesPage({ userId }: { userId: string }) {
       <PageHeader eyebrow={t("sales.eyebrow")} title={t("sales.title")} description={t("sales.description")} />
 
       <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(visibleSales.length)} description={t("sales.operations")} badge={metricBadge} />
-        <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable || totalRevenue === null ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} badge={metricBadge} />
-        <MetricCard title={t("sales.soldMaterial")} value={metricsUnavailable ? "—" : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`} description={t("sales.quantitySold")} badge={metricBadge} />
-        <MetricCard title={t("sales.servedBuyers")} value={metricsUnavailable ? "—" : String(servedBuyers)} description={t("sales.buyersWithSales")} badge={metricBadge} />
-        <MetricCard title={t("sales.averagePrice")} value={metricsUnavailable || averageSellingPrice === null ? "—" : currencyFormatter.format(averageSellingPrice)} description={t("sales.averagePriceDescription")} badge={metricBadge} />
+        <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(visibleSales.length)} description={t("sales.operations")} />
+        <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable || totalRevenue === null ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} />
+        <MetricCard title={t("sales.soldMaterial")} value={metricsUnavailable ? "—" : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`} description={t("sales.quantitySold")} />
+        <MetricCard title={t("sales.servedBuyers")} value={metricsUnavailable ? "—" : String(servedBuyers)} description={t("sales.buyersWithSales")} />
+        <MetricCard title={t("sales.averagePrice")} value={metricsUnavailable || averageSellingPrice === null ? "—" : currencyFormatter.format(averageSellingPrice)} description={t("sales.averagePriceDescription")} />
       </div>
 
       <div className="mt-8">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("sales.records")}</h2>
-              <span className="rounded-full bg-ecoplaza-primary/10 px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-primary">{metricBadge}</span>
-            </div>
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("sales.records")}</h2>
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("sales.realRecordsDescription")}</p>
           </div>
           <div className="flex shrink-0 gap-2">
@@ -818,11 +813,10 @@ function UserSalesPage({ userId }: { userId: string }) {
 
       {showDemoData && (
         <div className="mt-10 border-t border-ecoplaza-border pt-8">
-          <div className="flex items-center gap-2">
+          <div>
             <h2 className="text-lg font-semibold text-ecoplaza-text">{t("sales.demoTitle")}</h2>
-            <span className="rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">{t("sales.demoData")}</span>
+            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("sales.demoDescription")}</p>
           </div>
-          <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("sales.demoDescription")}</p>
           <div className="mt-4"><DemoSalesTable sales={demoSales} /></div>
         </div>
       )}
