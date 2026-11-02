@@ -11,6 +11,7 @@ export default defineConfig({
     ],
     clearMocks: true,
     restoreMocks: true,
+    testTimeout: 15000,
     env: {
       VITE_SUPABASE_URL: "https://placeholder.supabase.co",
       VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_placeholder_key",

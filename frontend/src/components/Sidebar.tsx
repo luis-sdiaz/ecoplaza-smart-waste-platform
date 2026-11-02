@@ -87,7 +87,7 @@ function Sidebar({ currentTab, onTabChange }: SidebarProps = {}) {
       <div
         className={`transition-all duration-300 flex ${
           isCollapsed
-            ? "flex-col items-center pt-6 pb-4 px-3"
+            ? "flex-col items-center pt-6 pb-4 px-3 gap-4"
             : "items-center justify-between pt-5 pb-4 px-4 gap-2"
         }`}
       >
@@ -126,7 +126,7 @@ function Sidebar({ currentTab, onTabChange }: SidebarProps = {}) {
               : t("navigation.collapseSidebar", "Colapsar barra lateral")
           }
           className={`flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center bg-white/10 hover:bg-white/20 text-emerald-100 hover:text-white transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 ${
-            isCollapsed ? "rounded-full mt-4 mb-2" : "rounded-xl"
+            isCollapsed ? "rounded-full mt-3 mb-2" : "rounded-xl"
           }`}
           title={
             isCollapsed
