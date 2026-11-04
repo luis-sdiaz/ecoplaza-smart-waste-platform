@@ -145,32 +145,59 @@ Para compilar el proyecto en **Arduino IDE** o **PlatformIO**, instala las sigui
 
 ---
 
-## 9. Instrucciones de Compilación y Carga
+## 9. Instrucciones de Compilación y Flasheo
 
-### Opción A: Con PlatformIO (VS Code)
+### Opción A: Automatización con Script PowerShell (Recomendado en Windows)
 
-Crea un archivo `platformio.ini` en la raíz de `firmware/`:
+1. **Configuración de credenciales locales:**
+   Copia la plantilla de configuración a `firmware/src/config.h`:
+   ```powershell
+   Copy-Item firmware/config.example.h firmware/src/config.h
+   ```
+   Abre `firmware/src/config.h` y completa los valores correspondientes a tu red (`WIFI_SSID`, `WIFI_PASSWORD`) y las credenciales de Supabase (`SUPABASE_URL`, `SUPABASE_ANON_KEY`). Este archivo se encuentra ignorado por `.gitignore` para proteger tus credenciales.
 
-```ini
-[env:esp32dev]
-platform = espressif32
-board = esp32dev
-framework = arduino
-monitor_speed = 115200
-lib_deps =
-    bblanchon/ArduinoJson @ ^7.0.4
-```
+2. **Conexión de hardware:**
+   Conecta la placa ESP32 a tu computadora mediante un cable de datos microUSB. Identifica el puerto COM asignado en el Administrador de Dispositivos de Windows (por ejemplo, `COM3`).
 
-Ejecuta en la terminal de PlatformIO:
-```bash
-pio run --target upload
-pio device monitor
-```
+3. **Ejecución del script de flasheo:**
+   Abre una terminal PowerShell y ejecuta:
+   ```powershell
+   cd firmware
+   ./flash-esp32.ps1 -Port COM3
+   ```
+   *(Si omites el parámetro `-Port`, el script utilizará `COM3` por defecto).*
 
-### Opción B: Con Arduino IDE 2.x
+   El script validará automáticamente la presencia de `config.h`, ejecutará la compilación y carga con PlatformIO (`pio run --target upload`) y abrirá inmediatamente el monitor serie (`pio device monitor`) a 115200 baudios para verificar la emisión de telemetría hacia Supabase.
+
+---
+
+### Opción B: Manual con PlatformIO CLI / VS Code
+
+1. Asegúrate de contar con `platformio.ini` en la raíz de `firmware/`:
+   ```ini
+   [env:esp32doit-devkit-v1]
+   platform = espressif32
+   board = esp32doit-devkit-v1
+   framework = arduino
+   monitor_speed = 115200
+   upload_speed = 115200
+   lib_deps =
+       bblanchon/ArduinoJson @ ^7.0.0
+   build_flags =
+       -D CORE_DEBUG_LEVEL=0
+   ```
+2. Ejecuta en la terminal dentro de `firmware/`:
+   ```bash
+   pio run --target upload --upload-port COM3
+   pio device monitor --port COM3 --baud 115200
+   ```
+
+---
+
+### Opción C: Con Arduino IDE 2.x
 
 1. Instala el paquete de placas **ESP32 by Espressif Systems** desde el *Boards Manager*.
-2. Selecciona la placa **ESP32 Dev Module**.
+2. Selecciona la placa **ESP32 Dev Module** o **DOIT ESP32 DEVKIT V1**.
 3. Abre el archivo `firmware/src/main.cpp` (puedes renombrarlo a `main.ino` si tu entorno lo requiere).
 4. Selecciona el puerto COM correspondiente a tu placa ESP32.
 5. Haz clic en **Subir (Upload)**.
