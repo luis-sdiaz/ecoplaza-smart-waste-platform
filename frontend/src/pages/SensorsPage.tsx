@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, AlertTriangle, LoaderCircle, Radio, RefreshCw } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
+import LiveTelemetryCard from "../components/LiveTelemetryCard";
 import SensorDeviceCard from "../components/SensorDeviceCard";
 import SensorTelemetryHistoryModal from "../components/SensorTelemetryHistoryModal";
 import SimulateTelemetryModal from "../components/SimulateTelemetryModal";
@@ -275,6 +276,19 @@ function SensorsPageView({
               />
             </div>
           </div>
+        </section>
+      )}
+
+      {user && (
+        <section className="mb-6">
+          <LiveTelemetryCard
+            containerId="CTR-BOG-001"
+            containerName={
+              containers.find(
+                (c) => c.code === "CTR-BOG-001" || c.id === "CTR-BOG-001",
+              )?.code ?? "CTR-BOG-001"
+            }
+          />
         </section>
       )}
 

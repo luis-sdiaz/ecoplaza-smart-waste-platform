@@ -256,6 +256,13 @@ const es = {
     containerCode: "Código",
     simulateCardAction: "Simular",
     simulateCardAriaLabel: "Simular lectura para contenedor {{name}}",
+    liveTelemetryTitle: "Telemetría IoT en Vivo",
+    liveTelemetrySubtitle: "Monitoreo en tiempo real del sensor ultrasónico HC-SR04",
+    noTelemetryYet: "Aún no hay telemetría registrada",
+    waitingForSensor: "Esperando hardware",
+    ultrasonicDistance: "Distancia ultrasónica",
+    onlineStatus: "En línea",
+    offlineStatus: "Fuera de línea",
   },
   containers: {
     title: "Mis contenedores",

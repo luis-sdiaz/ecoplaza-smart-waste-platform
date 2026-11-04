@@ -256,6 +256,13 @@ const en = {
     containerCode: "Code",
     simulateCardAction: "Simulate",
     simulateCardAriaLabel: "Simulate reading for container {{name}}",
+    liveTelemetryTitle: "Live IoT Telemetry",
+    liveTelemetrySubtitle: "Real-time monitoring from HC-SR04 ultrasonic sensor",
+    noTelemetryYet: "No telemetry recorded yet",
+    waitingForSensor: "Waiting for hardware",
+    ultrasonicDistance: "Ultrasonic distance",
+    onlineStatus: "Online",
+    offlineStatus: "Offline",
   },
   containers: {
     title: "My containers",
