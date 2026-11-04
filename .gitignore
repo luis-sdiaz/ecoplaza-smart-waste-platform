@@ -48,3 +48,8 @@ dist-ssr/
 # Contexto local y configuración de entorno
 PROJECT_CONTEXT.md
 .vscode/
+
+# Firmware credentials
+firmware/config.h
+firmware/src/config.h
+

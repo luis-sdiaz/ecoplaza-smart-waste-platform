@@ -126,11 +126,14 @@ const mockBuyers: Buyer[] = [
 
 describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-25T12:00:00Z"));
     vi.clearAllMocks();
     window.sessionStorage.clear();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     window.sessionStorage.clear();
     cleanup();
   });
