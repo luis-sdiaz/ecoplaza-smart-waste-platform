@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, Database, Download, LoaderCircle, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import BuyerFormModal from "../components/BuyerFormModal";
 import BuyerTable from "../components/BuyerTable";
+import DeleteBuyerModal from "../components/DeleteBuyerModal";
 import BuyerPurchaseHistoryModal from "../components/BuyerPurchaseHistoryModal";
 import DemoBuyerTable, { type DemoBuyer } from "../components/DemoBuyerTable";
 import MetricCard from "../components/MetricCard";
@@ -12,6 +13,7 @@ import SuccessToast from "../components/SuccessToast";
 import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import {
   createBuyer,
+  deleteBuyer,
   listBuyers,
   updateBuyer,
   type Buyer,
@@ -53,6 +55,7 @@ function getBuyerErrorKey(code: BuyerErrorCode): string {
   if (code === "invalid_email") return "buyers.invalidEmail";
   if (code === "invalid_phone") return "buyers.invalidPhone";
   if (code === "not_found") return "buyers.notFound";
+  if (code === "cannot_delete_buyer_with_sales") return "buyers.cannotDeleteBuyerWithSales";
   if (code === "network_error") return "buyers.networkError";
   if (code === "permission_denied") return "buyers.permissionError";
   if (code === "constraint_violation") return "buyers.constraintError";
@@ -79,6 +82,8 @@ function UserBuyersPage({ userId }: { userId: string }) {
   const [editingBuyer, setEditingBuyer] = useState<Buyer | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [notification, setNotification] = useState<BuyerNotification | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<BuyerSortOption>("updated_desc");
@@ -237,11 +242,45 @@ function UserBuyersPage({ userId }: { userId: string }) {
     }
   };
 
+  const handleDeleteBuyer = async (buyerId: string): Promise<void> => {
+    if (isDeleting) return;
+
+    setIsDeleting(true);
+    setNotification(null);
+    const lifecycleRevision = requestRevisionRef.current;
+
+    try {
+      const result = await deleteBuyer(buyerId);
+      if (lifecycleRevision !== requestRevisionRef.current) return;
+
+      if (!result.ok) {
+        showNotification("error", "buyers.deleteErrorTitle", getBuyerErrorKey(result.error.code));
+        return;
+      }
+
+      setBuyers((current) => current.filter((buyer) => buyer.id !== buyerId));
+      setIsDeleteModalOpen(false);
+      showNotification("success", "buyers.deleteSuccessTitle", "buyers.deleteSuccessDescription");
+    } catch {
+      if (lifecycleRevision === requestRevisionRef.current) {
+        showNotification("error", "buyers.deleteErrorTitle", "buyers.databaseError");
+      }
+    } finally {
+      if (lifecycleRevision === requestRevisionRef.current) {
+        setIsDeleting(false);
+      }
+    }
+  };
+
   const withEmail = buyers.filter((buyer) => buyer.email !== null).length;
   const withPhone = buyers.filter((buyer) => buyer.phone !== null).length;
   const withContact = buyers.filter((buyer) => buyer.email !== null || buyer.phone !== null).length;
   const activitySummary = useMemo(
     () => calculateBuyerActivitySummary(buyers),
+    [buyers],
+  );
+  const deletableBuyers = useMemo(
+    () => buyers.filter((buyer) => (buyer.purchaseCount ?? 0) === 0),
     [buyers],
   );
   const metricsUnavailable = isLoading || loadError !== null;
@@ -356,7 +395,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
               type="button"
               disabled={isLoading || loadError !== null || visibleBuyers.length === 0 || exportKind !== null}
               onClick={() => void exportBuyers()}
-              className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg border border-ecoplaza-border px-4 py-2 text-sm font-medium text-ecoplaza-text shadow-sm transition-colors hover:bg-ecoplaza-background disabled:cursor-not-allowed disabled:opacity-60"
             >
               {exportKind === "csv"
                 ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
@@ -367,7 +406,7 @@ function UserBuyersPage({ userId }: { userId: string }) {
               type="button"
               disabled={isLoading || loadError !== null || visibleBuyers.length === 0 || exportKind !== null}
               onClick={() => void exportBuyersExcel()}
-              className="flex items-center gap-2 rounded-xl border border-ecoplaza-primary px-4 py-3 text-sm font-semibold text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg border border-ecoplaza-primary px-4 py-2 text-sm font-semibold text-ecoplaza-primary shadow-sm transition-colors hover:bg-ecoplaza-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {exportKind === "excel"
                 ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
@@ -376,17 +415,27 @@ function UserBuyersPage({ userId }: { userId: string }) {
             </button>
             <button
               type="button"
+              data-testid="open-delete-buyer-modal"
+              disabled={isLoading || loadError !== null || deletableBuyers.length === 0}
+              onClick={() => { setNotification(null); setIsDeleteModalOpen(true); }}
+              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 size={17} aria-hidden="true" />
+              <span>{t("buyers.deleteBuyerButton")}</span>
+            </button>
+            <button
+              type="button"
               disabled={isLoading || loadError !== null}
               onClick={openCreateForm}
-              className="rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               + {t("buyers.registerButton")}
             </button>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4">
-          <label className="relative min-w-[280px] flex-1">
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-4 shadow-sm">
+          <label className="relative min-w-[260px] flex-1">
             <span className="sr-only">{t("buyers.searchLabel")}</span>
             <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ecoplaza-text-muted" size={17} aria-hidden="true" />
             <input
@@ -395,16 +444,16 @@ function UserBuyersPage({ userId }: { userId: string }) {
               disabled={isLoading || loadError !== null}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder={t("buyers.searchPlaceholder")}
-              className="w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background py-2.5 pr-3 pl-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted"
+              className="h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background pr-3 pl-10 text-sm text-ecoplaza-text placeholder:text-ecoplaza-text-muted/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
             />
           </label>
           <label className="flex shrink-0 items-center gap-2 text-sm text-ecoplaza-text-muted">
-            <span>{t("buyers.contactFilter")}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">{t("buyers.contactFilter")}</span>
             <select
               value={contactFilter}
               disabled={isLoading || loadError !== null}
               onChange={(event) => setContactFilter(event.target.value as BuyerContactFilter)}
-              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 py-2.5 text-sm text-ecoplaza-text"
+              className="h-10 rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
             >
               <option value="all">{t("buyers.allContacts")}</option>
               <option value="email">{t("buyers.withEmailFilter")}</option>
@@ -412,12 +461,12 @@ function UserBuyersPage({ userId }: { userId: string }) {
             </select>
           </label>
           <label className="flex shrink-0 items-center gap-2 text-sm text-ecoplaza-text-muted">
-            <span>{t("buyers.activityFilter")}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">{t("buyers.activityFilter")}</span>
             <select
               value={activityFilter}
               disabled={isLoading || loadError !== null}
               onChange={(event) => setActivityFilter(event.target.value as BuyerActivityFilter)}
-              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 py-2.5 text-sm text-ecoplaza-text"
+              className="h-10 rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
             >
               <option value="all">{t("buyers.activityAll")}</option>
               <option value="with_purchases">{t("buyers.activityWithPurchases")}</option>
@@ -425,12 +474,12 @@ function UserBuyersPage({ userId }: { userId: string }) {
             </select>
           </label>
           <label className="flex shrink-0 items-center gap-2 text-sm text-ecoplaza-text-muted">
-            <span>{t("buyers.sortBy")}</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">{t("buyers.sortBy")}</span>
             <select
               value={sortOption}
               disabled={isLoading || loadError !== null}
               onChange={(event) => setSortOption(event.target.value as BuyerSortOption)}
-              className="rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 py-2.5 text-sm text-ecoplaza-text"
+              className="h-10 rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
             >
               <option value="updated_desc">{t("buyers.sortRecentlyUpdated")}</option>
               <option value="name_asc">{t("buyers.sortNameAsc")}</option>
@@ -503,6 +552,17 @@ function UserBuyersPage({ userId }: { userId: string }) {
             }
           }}
           onSubmit={(values) => void handleSubmit(values)}
+        />
+      )}
+
+      {isDeleteModalOpen && (
+        <DeleteBuyerModal
+          buyers={deletableBuyers}
+          isDeleting={isDeleting}
+          onClose={() => {
+            if (!isDeleting) setIsDeleteModalOpen(false);
+          }}
+          onConfirm={(buyerId) => void handleDeleteBuyer(buyerId)}
         />
       )}
 

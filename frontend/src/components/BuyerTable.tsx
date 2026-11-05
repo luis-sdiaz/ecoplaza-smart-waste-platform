@@ -108,13 +108,13 @@ function BuyerTable({
                   {buyer.name}
                 </td>
                 <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
-                  {buyer.documentNumber || t("buyers.notProvided", "No registrado")}
+                  {buyer.documentNumber?.trim() ? buyer.documentNumber : "—"}
                 </td>
                 <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
-                  {buyer.email ?? t("buyers.notProvided", "No registrado")}
+                  {buyer.email?.trim() ? buyer.email : "—"}
                 </td>
                 <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
-                  {buyer.phone ?? t("buyers.notProvided", "No registrado")}
+                  {buyer.phone?.trim() ? buyer.phone : "—"}
                 </td>
                 <td className="px-5 py-4">
                   <span

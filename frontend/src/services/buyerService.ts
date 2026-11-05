@@ -10,6 +10,7 @@ export type Buyer = {
   documentNumber?: string;
   address?: string;
   status?: string;
+  purchaseCount?: number;
 };
 
 export type BuyerInput = {
@@ -28,6 +29,7 @@ export type BuyerErrorCode =
   | "invalid_email"
   | "invalid_phone"
   | "not_found"
+  | "cannot_delete_buyer_with_sales"
   | "network_error"
   | "permission_denied"
   | "constraint_violation"
@@ -293,6 +295,55 @@ export async function updateBuyer(
 
     if (error) return failure(error);
     return parseBuyer(data, userResult.data);
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function deleteBuyer(
+  id: string,
+): Promise<BuyerServiceResult<void>> {
+  if (!UUID_PATTERN.test(id)) {
+    return { ok: false, error: { code: "invalid_id", retryable: false } };
+  }
+
+  const userResult = await getAuthenticatedUserId();
+  if (!userResult.ok) return userResult;
+
+  try {
+    const { data: existingBuyer, error: buyerError } = await supabase
+      .from("buyers")
+      .select("id, owner_id")
+      .eq("id", id)
+      .eq("owner_id", userResult.data)
+      .maybeSingle<{ id: string; owner_id: string }>();
+
+    if (buyerError) return failure(buyerError);
+    if (!existingBuyer) {
+      return { ok: false, error: { code: "not_found", retryable: false } };
+    }
+
+    const { data: sales, error: salesError } = await supabase
+      .from("sales")
+      .select("id")
+      .eq("buyer_id", id)
+      .eq("owner_id", userResult.data)
+      .limit(1);
+
+    if (salesError) return failure(salesError);
+    if (sales && sales.length > 0) {
+      return { ok: false, error: { code: "cannot_delete_buyer_with_sales", retryable: false } };
+    }
+
+    const { error: deleteError } = await supabase
+      .from("buyers")
+      .delete()
+      .eq("id", id)
+      .eq("owner_id", userResult.data);
+
+    if (deleteError) return failure(deleteError);
+
+    return { ok: true, data: undefined };
   } catch (error) {
     return failure(error);
   }
