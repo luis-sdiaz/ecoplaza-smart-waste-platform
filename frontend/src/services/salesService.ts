@@ -61,7 +61,8 @@ export type SalesErrorCode =
   | "network_error"
   | "permission_denied"
   | "constraint_violation"
-  | "database_error";
+  | "database_error"
+  | "sale_not_found";
 
 export type SalesServiceResult<T> =
   | { ok: true; data: T }
@@ -409,5 +410,52 @@ export async function createSale(input: CreateSaleInput): Promise<SalesServiceRe
     return failure(error, "create");
   } finally {
     pendingWasteRecordIds.delete(input.wasteRecordId);
+  }
+}
+
+export async function deleteSale(id: string): Promise<SalesServiceResult<void>> {
+  if (!UUID_PATTERN.test(id)) {
+    return { ok: false, error: { code: "sale_not_found", retryable: false } };
+  }
+
+  const userResult = await getAuthenticatedUserId();
+  if (!userResult.ok) return userResult;
+
+  try {
+    const { data: existing, error: fetchError } = await supabase
+      .from("sales")
+      .select("id, owner_id, waste_record_id")
+      .eq("id", id)
+      .eq("owner_id", userResult.data)
+      .maybeSingle<{ id: string; owner_id: string; waste_record_id: string }>();
+
+    if (fetchError) return failure(fetchError, "read");
+    if (!existing) {
+      return { ok: false, error: { code: "sale_not_found", retryable: false } };
+    }
+
+    // Al eliminar la venta en sales, actualiza el estado del residuo asociado en waste_records
+    // volviéndolo a marcar como 'available' para que no se pierda el stock del contenedor
+    if (existing.waste_record_id) {
+      const { error: wasteError } = await supabase
+        .from("waste_records")
+        .update({ status: "available" })
+        .eq("id", existing.waste_record_id)
+        .eq("owner_id", userResult.data);
+
+      if (wasteError) return failure(wasteError, "read");
+    }
+
+    const { error: deleteError } = await supabase
+      .from("sales")
+      .delete()
+      .eq("id", id)
+      .eq("owner_id", userResult.data);
+
+    if (deleteError) return failure(deleteError, "read");
+
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return failure(error, "read");
   }
 }

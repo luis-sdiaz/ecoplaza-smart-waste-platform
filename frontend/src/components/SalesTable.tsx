@@ -39,43 +39,43 @@ function SalesTable({ sales, onViewDetails, isLoading = false }: SalesTableProps
   };
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
-      <table className="w-full min-w-[980px]">
+    <div className="w-full overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <table className="w-full min-w-[760px] border-collapse text-left">
         <caption className="sr-only">
           {t("sales.recentSales", "Ventas recientes")}
         </caption>
-        <thead className="bg-ecoplaza-background">
+        <thead className="bg-slate-50/75 dark:bg-slate-800/60">
           <tr>
-            <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
+            <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
               {t("sales.sale", "Venta")}
             </th>
-            <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
+            <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
               {t("buyers.buyer", "Comprador")}
             </th>
-            <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
+            <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
               {t("common.material", "Material")}
             </th>
-            <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
+            <th scope="col" className="px-3 py-3.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
               {t("sales.soldWeight", "Peso vendido")}
             </th>
-            <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("sales.unitPrice", "Precio unitario")}
+            <th scope="col" className="px-3 py-3.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {t("sales.unitPrice", "Precio por kg")}
             </th>
-            <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
+            <th scope="col" className="px-3 py-3.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
               {t("sales.total", "Total")}
             </th>
-            <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
+            <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
               {t("common.date", "Fecha")}
             </th>
-            <th scope="col" className="px-5 py-4 text-right text-xs font-semibold text-ecoplaza-text-muted">
+            <th scope="col" className="px-3 py-3.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
               {t("sales.actions", "Acciones")}
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
           {isLoading ? (
             <tr>
-              <td colSpan={8} className="px-5 py-12 text-center text-sm text-ecoplaza-text-muted">
+              <td colSpan={8} className="px-3 py-12 text-center text-sm text-slate-500 dark:text-slate-400">
                 <div className="flex items-center justify-center gap-2" role="status">
                   <LoaderCircle className="h-5 w-5 animate-spin text-ecoplaza-primary" aria-hidden="true" />
                   <span>{t("sales.loading", "Cargando ventas...")}</span>
@@ -86,19 +86,21 @@ function SalesTable({ sales, onViewDetails, isLoading = false }: SalesTableProps
             <tr>
               <td
                 colSpan={8}
-                className="px-5 py-12 text-center text-sm text-ecoplaza-text-muted"
+                className="px-3 py-12 text-center text-sm text-slate-500 dark:text-slate-400"
               >
                 {t("sales.noSales", "No hay ventas registradas")}
               </td>
             </tr>
           ) : (
             sales.map((sale) => (
-              <tr key={sale.id} className="border-t border-ecoplaza-border" title={sale.notes}>
-                <td className="px-5 py-4 font-mono text-xs font-medium text-ecoplaza-text" title={sale.id}>
+              <tr key={sale.id} className="transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40" title={sale.notes}>
+                <td className="px-3 py-3.5 font-mono text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap" title={sale.id}>
                   {`SAL-${sale.id.slice(0, 8).toUpperCase()}`}
                 </td>
-                <td className="px-5 py-4 text-sm font-medium text-ecoplaza-text">{sale.buyerName}</td>
-                <td className="px-5 py-4 text-sm text-ecoplaza-text">
+                <td className="px-3 py-3.5 text-sm font-medium text-slate-800 dark:text-slate-100" title={sale.buyerName}>
+                  {sale.buyerName}
+                </td>
+                <td className="px-3 py-3.5 text-left">
                   <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getCategoryBadgeClass(
                       sale.category,
@@ -106,30 +108,27 @@ function SalesTable({ sales, onViewDetails, isLoading = false }: SalesTableProps
                   >
                     {translateCategory(sale.category)}
                   </span>
-                  <span className="mt-1 block text-xs text-ecoplaza-text-muted">
-                    {`RES-${sale.wasteRecordNumber.padStart(3, "0")}`}
-                  </span>
                 </td>
-                <td className="px-5 py-4 text-sm text-ecoplaza-text">
+                <td className="px-3 py-3.5 text-right tabular-nums text-sm font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
                   {numberFormatter.format(sale.weightKg)} {t("common.kg", "kg")}
                 </td>
-                <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
+                <td className="px-3 py-3.5 text-right tabular-nums text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
                   {currencyFormatter.format(sale.unitPrice)}
                 </td>
-                <td className="px-5 py-4 text-sm font-semibold text-ecoplaza-text">
+                <td className="px-3 py-3.5 text-right tabular-nums text-sm font-bold text-slate-900 dark:text-slate-50 whitespace-nowrap">
                   {currencyFormatter.format(sale.totalValue)}
                 </td>
-                <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
+                <td className="px-3 py-3.5 text-left text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
                   {dateFormatter.format(new Date(sale.soldAt))}
                 </td>
-                <td className="px-5 py-4 text-right">
+                <td className="px-3 py-3.5 text-right whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => onViewDetails?.(sale)}
                     aria-label={`${t("sales.viewDetails", "Ver detalle")} - ${sale.buyerName}`}
-                    className="inline-flex items-center gap-2 rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 whitespace-nowrap transition-colors hover:bg-slate-50 hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    <Eye size={15} aria-hidden="true" />
+                    <Eye size={13} aria-hidden="true" />
                     <span>{t("sales.viewDetails", "Ver detalle")}</span>
                   </button>
                 </td>

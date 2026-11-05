@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, ChevronDown, Database, Download, LoaderCircle, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, Database, Download, LoaderCircle, RefreshCw, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import type { Buyer } from "../services/buyerService";
 import type { Container } from "../services/containerService";
 import {
   createSale,
+  deleteSale,
   getSaleFormData,
   listSales,
   type SaleHistoryItem,
@@ -19,6 +20,7 @@ import SaleRegistrationModal, {
   type SaleRegistrationValues,
 } from "../components/SaleRegistrationModal";
 import SaleDetailsModal from "../components/SaleDetailsModal";
+import DeleteSaleModal from "../components/DeleteSaleModal";
 import SalesTable from "../components/SalesTable";
 import SuccessToast from "../components/SuccessToast";
 import DateRangePickerButton from "../components/common/DateRangePickerButton";
@@ -46,7 +48,7 @@ import {
   sumSafeMonetaryValues,
 } from "../services/monetarySafety";
 import { getSalesEmptyState } from "../services/salesEmptyState";
-import { calculateAverageSellingPricePerKg, summarizeSalesByCategory } from "../services/salesMetrics";
+import { calculateAverageSellingPricePerKg } from "../services/salesMetrics";
 import { filterSalesByAmount, parseSalesAmountRange } from "../services/salesAmountRange";
 import { exportSalesExcel, type SalesExcelLabels } from "../services/salesExcelService";
 
@@ -56,6 +58,9 @@ const demoSales: DemoSale[] = [
   { id: "SAL-003", buyer: "EcoMercado Local", material: "Reciclables", quantity: 90, total: 780000, date: "01/10/2026", status: "Completada" },
   { id: "SAL-004", buyer: "Reciclar del Sur", material: "Reciclables", quantity: 70, total: 520000, date: "30/09/2026", status: "Completada" },
 ];
+
+const salesMetricCardClassName =
+  "transition-all duration-200 ease-out hover:-translate-y-1 hover:border-slate-300 hover:shadow-md";
 
 type SalesNotification = {
   id: number;
@@ -79,6 +84,7 @@ function getSalesErrorKey(code: SalesErrorCode): string {
   if (code === "network_error") return "sales.networkError";
   if (code === "permission_denied") return "sales.permissionError";
   if (code === "constraint_violation") return "sales.constraintError";
+  if (code === "sale_not_found") return "sales.saleNotFound";
   return "sales.databaseError";
 }
 
@@ -109,6 +115,8 @@ function UserSalesPage({ userId }: { userId: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleHistoryItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exportKind, setExportKind] = useState<"csv" | "excel" | null>(null);
@@ -316,6 +324,25 @@ function UserSalesPage({ userId }: { userId: string }) {
     }
   };
 
+  const handleDeleteSale = async (saleId: string): Promise<void> => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteSale(saleId);
+      if (result.ok) {
+        setSales((current) => current.filter((s) => s.id !== saleId));
+        setIsDeleteModalOpen(false);
+        showNotification("success", "sales.deleteSuccessTitle", "sales.deleteSuccessDescription");
+        void loadSalesData(activeTimestampRange, buyerFilter || undefined);
+      } else {
+        showNotification("error", "sales.deleteErrorTitle", getSalesErrorKey(result.error.code));
+      }
+    } catch {
+      showNotification("error", "sales.deleteErrorTitle", "sales.databaseError");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
@@ -330,7 +357,6 @@ function UserSalesPage({ userId }: { userId: string }) {
     : [];
   const totalRevenue = sumSafeMonetaryValues(visibleSales.map((sale) => sale.totalValue));
   const averageSellingPrice = calculateAverageSellingPricePerKg(visibleSales);
-  const categorySummary = summarizeSalesByCategory(visibleSales);
   const totalWeight = visibleSales.reduce((total, sale) => total + sale.weightKg, 0);
   const servedBuyers = new Set(visibleSales.map((sale) => sale.buyerId)).size;
   const metricsUnavailable = isLoading || loadError !== null || !amountRangeResult.valid;
@@ -494,16 +520,30 @@ function UserSalesPage({ userId }: { userId: string }) {
     }
   };
 
+  const completedSalesValue = metricsUnavailable ? "—" : String(visibleSales.length);
+  const grossRevenueValue =
+    metricsUnavailable || totalRevenue === null ? "—" : currencyFormatter.format(totalRevenue);
+  const soldMaterialValue = metricsUnavailable
+    ? "—"
+    : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`;
+  const servedBuyersValue = metricsUnavailable ? "—" : String(servedBuyers);
+  const averagePriceValue =
+    metricsUnavailable || averageSellingPrice === null
+      ? "—"
+      : currencyFormatter.format(averageSellingPrice);
+  const withCurrencyUnit = (value: string) =>
+    value === "—" || value.includes("COP") ? value : `${value} COP`;
+
   return (
     <section className="p-8">
       <PageHeader eyebrow={t("sales.eyebrow")} title={t("sales.title")} description={t("sales.description")} />
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard title={t("sales.completedSales")} value={metricsUnavailable ? "—" : String(visibleSales.length)} description={t("sales.operations")} />
-        <MetricCard title={t("dashboard.revenue")} value={metricsUnavailable || totalRevenue === null ? "—" : currencyFormatter.format(totalRevenue)} description={t("sales.realRevenueDescription")} />
-        <MetricCard title={t("sales.soldMaterial")} value={metricsUnavailable ? "—" : `${weightFormatter.format(totalWeight)} ${t("common.kg")}`} description={t("sales.quantitySold")} />
-        <MetricCard title={t("sales.servedBuyers")} value={metricsUnavailable ? "—" : String(servedBuyers)} description={t("sales.buyersWithSales")} />
-        <MetricCard title={t("sales.averagePrice")} value={metricsUnavailable || averageSellingPrice === null ? "—" : currencyFormatter.format(averageSellingPrice)} description={t("sales.averagePriceDescription")} />
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <MetricCard className={salesMetricCardClassName} title={t("sales.completedSales")} value={completedSalesValue} description={t("sales.operations")} />
+        <MetricCard className={salesMetricCardClassName} title={t("dashboard.revenue")} value={grossRevenueValue} valueTitle={withCurrencyUnit(grossRevenueValue)} description={t("sales.realRevenueDescription")} />
+        <MetricCard className={salesMetricCardClassName} title={t("sales.soldMaterial")} value={soldMaterialValue} description={t("sales.quantitySold")} />
+        <MetricCard className={salesMetricCardClassName} title={t("sales.servedBuyers")} value={servedBuyersValue} description={t("sales.buyersWithSales")} />
+        <MetricCard className={salesMetricCardClassName} title={t("sales.averagePrice")} value={averagePriceValue} valueTitle={averagePriceValue === "—" ? averagePriceValue : `${withCurrencyUnit(averagePriceValue)} / ${t("common.kg")}`} description={t("sales.averagePriceDescription")} />
       </div>
 
       <div className="mt-8">
@@ -517,7 +557,7 @@ function UserSalesPage({ userId }: { userId: string }) {
               type="button"
               disabled={exportUnavailable}
               onClick={() => void handleExportSales()}
-              className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg border border-ecoplaza-border px-4 py-2 text-sm font-medium text-ecoplaza-text shadow-sm transition-colors hover:bg-ecoplaza-background disabled:cursor-not-allowed disabled:opacity-60"
             >
               {exportKind === "csv" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
               {exportKind === "csv" ? t("sales.exporting") : t("sales.exportCsv")}
@@ -526,16 +566,26 @@ function UserSalesPage({ userId }: { userId: string }) {
               type="button"
               disabled={exportUnavailable}
               onClick={() => void handleExportSalesExcel()}
-              className="flex items-center gap-2 rounded-xl border border-ecoplaza-border px-4 py-3 text-sm font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg border border-ecoplaza-primary px-4 py-2 text-sm font-semibold text-ecoplaza-primary shadow-sm transition-colors hover:bg-ecoplaza-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {exportKind === "excel" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
               {exportKind === "excel" ? t("sales.exportingExcel") : t("sales.exportExcel")}
             </button>
             <button
               type="button"
+              data-testid="open-delete-sale-modal"
+              disabled={isLoading || loadError !== null || sales.length === 0}
+              onClick={() => { setNotification(null); setIsDeleteModalOpen(true); }}
+              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 size={17} aria-hidden="true" />
+              <span>{t("sales.deleteSaleButton", "Eliminar venta")}</span>
+            </button>
+            <button
+              type="button"
               disabled={registrationUnavailable}
               onClick={() => { setNotification(null); setIsModalOpen(true); }}
-              className="rounded-xl bg-ecoplaza-primary px-4 py-3 text-sm font-medium text-ecoplaza-on-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               + {t("sales.registerButton")}
             </button>
@@ -752,31 +802,6 @@ function UserSalesPage({ userId }: { userId: string }) {
           </div>
         )}
 
-        {!metricsUnavailable && visibleSales.length > 0 && (
-          <section className="mt-4 rounded-2xl border border-ecoplaza-primary/20 bg-ecoplaza-primary/5 p-4" aria-labelledby="sales-category-summary-title">
-            <div>
-              <h3 id="sales-category-summary-title" className="text-sm font-semibold text-ecoplaza-text">{t("sales.categorySummaryTitle")}</h3>
-              <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("sales.categorySummaryDescription")}</p>
-            </div>
-            {categorySummary === null ? (
-              <p role="alert" className="mt-3 text-sm text-ecoplaza-danger">{t("sales.categorySummaryError")}</p>
-            ) : (
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {categorySummary.map((summary) => (
-                  <article key={summary.category} className="rounded-xl bg-ecoplaza-surface/80 p-3">
-                    <h4 className="text-xs font-semibold text-ecoplaza-text">{t(`common.${summary.category}`)}</h4>
-                    <dl className="mt-2 grid grid-cols-3 gap-2">
-                      <div><dt className="text-[10px] text-ecoplaza-text-muted">{t("sales.summarySales")}</dt><dd className="mt-1 text-sm font-semibold text-ecoplaza-text">{summary.saleCount}</dd></div>
-                      <div><dt className="text-[10px] text-ecoplaza-text-muted">{t("sales.summaryWeight")}</dt><dd className="mt-1 text-sm font-semibold text-ecoplaza-text">{weightFormatter.format(summary.totalWeightKg)} {t("common.kg")}</dd></div>
-                      <div><dt className="text-[10px] text-ecoplaza-text-muted">{t("sales.summaryRevenue")}</dt><dd className="mt-1 text-sm font-semibold text-ecoplaza-primary">{currencyFormatter.format(summary.grossRevenue)}</dd></div>
-                    </dl>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
         <div className="mt-4">
           {isLoading ? (
             <div role="status" className="flex min-h-40 items-center justify-center gap-3 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface text-sm text-ecoplaza-text-muted">
@@ -829,6 +854,15 @@ function UserSalesPage({ userId }: { userId: string }) {
           isSubmitting={isSubmitting}
           onClose={() => { if (!isSubmitting) setIsModalOpen(false); }}
           onSubmit={(values) => void handleCreateSale(values)}
+        />
+      )}
+
+      {isDeleteModalOpen && (
+        <DeleteSaleModal
+          sales={sales}
+          isDeleting={isDeleting}
+          onClose={() => { if (!isDeleting) setIsDeleteModalOpen(false); }}
+          onConfirm={(saleId) => void handleDeleteSale(saleId)}
         />
       )}
 

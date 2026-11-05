@@ -131,16 +131,12 @@ describe("SalesTable Component - Tabla Operativa de Ventas y Accesibilidad", () 
     expect(screen.getByText("Gestión Ambiental Urbana")).toBeInTheDocument();
   });
 
-  it("4. Renderiza las categorías de material con sus respectivos badges y lotes vinculados", () => {
+  it("4. Renderiza las categorías de material con sus respectivos badges estilizados", () => {
     renderTable();
 
     expect(screen.getAllByText(/reciclable|recyclable/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/orgánico|organic/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/no reciclable|non.?recyclable/i).length).toBeGreaterThan(0);
-
-    expect(screen.getByText(/RES-001/i)).toBeInTheDocument();
-    expect(screen.getByText(/RES-012/i)).toBeInTheDocument();
-    expect(screen.getByText(/RES-105/i)).toBeInTheDocument();
   });
 
   it("5. Despliega los valores cuantitativos de peso y montos monetarios en COP correctamente formateados", () => {

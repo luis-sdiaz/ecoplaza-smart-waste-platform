@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 export interface MetricCardProps {
   title: string;
   value: string | number;
+  valueTitle?: string;
   description?: string;
   subtitle?: string;
   badge?: string;
@@ -28,6 +29,7 @@ export interface MetricCardProps {
 function MetricCard({
   title,
   value,
+  valueTitle,
   description,
   subtitle,
   badge,
@@ -82,21 +84,21 @@ function MetricCard({
       tabIndex={isInteractive ? 0 : undefined}
       onClick={onClick}
       onKeyDown={isInteractive ? handleKeyDown : undefined}
-      className={`glass-card group relative flex flex-col justify-between overflow-hidden rounded-2xl p-6 transition-all duration-200 ${
+      className={`glass-card group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl p-6 transition-all duration-200 ${
         isInteractive
           ? "cursor-pointer hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-ecoplaza-primary focus-visible:outline-offset-2"
           : ""
       } ${className}`}
     >
-      <div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {icon && (
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/80 bg-white/60 text-emerald-600 shadow-xs backdrop-blur-sm transition-transform duration-300 group-hover:scale-105 dark:border-white/10 dark:bg-white/10 dark:text-emerald-400">
                 {icon}
               </div>
             )}
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+            <p className="min-w-0 text-sm font-medium text-slate-600 dark:text-slate-300">
               {title}
             </p>
           </div>
@@ -177,7 +179,10 @@ function MetricCard({
             </span>
           </div>
         ) : (
-          <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <p
+            className="mt-4 min-w-0 cursor-default text-xl font-bold tracking-tight text-slate-800 sm:text-2xl dark:text-white"
+            title={valueTitle ?? String(value)}
+          >
             {value}
           </p>
         )}
