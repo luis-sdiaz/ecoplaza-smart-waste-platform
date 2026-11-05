@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import SensorsPage from "../src/pages/SensorsPage";
 import SensorDeviceCard from "../src/components/SensorDeviceCard";
 import type { TelemetryRecord } from "../src/services/sensorService";
+import type { SensorTelemetry } from "../src/services/telemetryService";
 
 const mocks = vi.hoisted(() => ({
   listContainers: vi.fn(),
   getLatestTelemetry: vi.fn(),
+  fetchLatestPhysicalTelemetry: vi.fn(),
   listAvailableWasteRecords: vi.fn(),
   currentUser: { id: "user-123", email: "operador@ecoplaza.com" } as { id: string; email: string } | null,
 }));
@@ -27,6 +29,15 @@ vi.mock("../src/services/containerService", () => ({
 vi.mock("../src/services/sensorService", () => ({
   getLatestTelemetry: mocks.getLatestTelemetry,
 }));
+
+vi.mock("../src/services/telemetryService", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/services/telemetryService")>();
+  return {
+    ...actual,
+    fetchLatestTelemetryByContainer: mocks.fetchLatestPhysicalTelemetry,
+  };
+});
 
 vi.mock("../src/services/wasteService", () => ({
   listAvailableWasteRecords: mocks.listAvailableWasteRecords,
@@ -90,10 +101,34 @@ beforeEach(() => {
   mocks.currentUser = { id: "user-123", email: "operador@ecoplaza.com" };
   mocks.listContainers.mockReset();
   mocks.getLatestTelemetry.mockReset();
+  mocks.fetchLatestPhysicalTelemetry.mockReset();
+  mocks.fetchLatestPhysicalTelemetry.mockResolvedValue(null);
   mocks.listAvailableWasteRecords.mockReset();
 });
 
 describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => {
+  test("includes live CTR-BOG-001 telemetry reactively in active, alert, and average KPIs", async () => {
+    const physicalTelemetry: SensorTelemetry = {
+      id: "physical-live-001",
+      containerId: "CTR-BOG-001",
+      distanceCm: 21.2,
+      fillPercentage: 78.8,
+      recordedAt: "2026-11-05T12:00:00.000Z",
+      status: "warning",
+    };
+    mocks.listContainers.mockResolvedValue({ ok: true, data: [mockContainerA] });
+    mocks.getLatestTelemetry.mockResolvedValue(telemetryAlpha);
+    mocks.fetchLatestPhysicalTelemetry.mockResolvedValue(physicalTelemetry);
+
+    render(<SensorsPage />);
+
+    expect(await screen.findByText("78.8%")).toBeTruthy();
+    expect(screen.getByTestId("registered-sensors-kpi").textContent).toContain("2");
+    expect(screen.getByTestId("active-sensors-kpi").textContent).toContain("2");
+    expect(screen.getByTestId("average-fill-kpi").textContent).toContain("72%");
+    expect(screen.getByTestId("sensor-alerts-kpi").textContent).toContain("1");
+  });
+
   test("renders complete telemetry data correctly (fill level, battery, temperature, formatted date)", async () => {
     mocks.listContainers.mockResolvedValue({
       ok: true,
@@ -111,7 +146,7 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
     expect(screen.getByText("ctr-uuid-alpha")).toBeTruthy();
 
     // Nivel de llenado y status
-    expect(screen.getByText("65%")).toBeTruthy();
+    expect(screen.getAllByText("65%").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("common.active")).toBeTruthy();
 
     // Batería y temperatura
@@ -132,7 +167,7 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
     render(<SensorsPage />);
 
     expect(await screen.findByText("CTR-CRITICAL")).toBeTruthy();
-    expect(screen.getByText("88%")).toBeTruthy();
+    expect(screen.getAllByText("88%").length).toBeGreaterThanOrEqual(1);
 
     // Alerta visual de capacidad crítica (>80%)
     expect(screen.getByText("sensors.criticalFillAlert")).toBeTruthy();
@@ -143,7 +178,7 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
     expect(screen.getByText("26.4 °C")).toBeTruthy();
   });
 
-  test("activates resilient fallback when a container has null telemetry without throwing or NaN", async () => {
+  test("omits database containers without telemetry from the active monitoring grid", async () => {
     mocks.listContainers.mockResolvedValue({
       ok: true,
       data: [mockContainerEmpty],
@@ -153,17 +188,9 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
 
     render(<SensorsPage />);
 
-    expect(await screen.findByText("CTR-NEWBIE")).toBeTruthy();
-
-    // Fallback amigable
-    expect(screen.getByText("sensors.waitingSignal")).toBeTruthy();
-    expect(screen.getAllByText("sensors.noTelemetry").length).toBeGreaterThan(0);
-
-    // Los valores deben ser guiones '—' y jamás NaN ni NaN%
-    const dashes = screen.getAllByText("—");
-    expect(dashes.length).toBeGreaterThanOrEqual(3);
-
-    // Asegurar que no hay ningún NaN en pantalla
+    expect(await screen.findByText("sensors.noContainersTitle")).toBeTruthy();
+    expect(screen.queryByText("CTR-NEWBIE")).toBeNull();
+    expect(screen.queryByText("sensors.waitingSignal")).toBeNull();
     expect(screen.queryByText(/NaN/i)).toBeNull();
   });
 
@@ -181,11 +208,11 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
 
     // El primer contenedor carga correctamente
     expect(await screen.findByText("CTR-ALPHA")).toBeTruthy();
-    expect(screen.getByText("65%")).toBeTruthy();
+    expect(screen.getAllByText("65%").length).toBeGreaterThanOrEqual(1);
 
-    // El segundo contenedor activa fallback limpiamente sin romper la grilla
-    expect(screen.getByText("CTR-NEWBIE")).toBeTruthy();
-    expect(screen.getByText("sensors.waitingSignal")).toBeTruthy();
+    // El contenedor sin señal queda fuera de la red activa sin romper la grilla
+    expect(screen.queryByText("CTR-NEWBIE")).toBeNull();
+    expect(screen.queryByText("sensors.waitingSignal")).toBeNull();
     expect(screen.queryByText(/NaN/i)).toBeNull();
   });
 

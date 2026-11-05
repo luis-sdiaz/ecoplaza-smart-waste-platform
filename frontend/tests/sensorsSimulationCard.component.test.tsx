@@ -75,28 +75,8 @@ beforeEach(() => {
   mocks.getLatestTelemetry.mockResolvedValue(mockTelemetry);
 });
 
-describe("SensorDeviceCard contextual simulation and SensorsPage integration", () => {
-  test("renders accessible simulation button with semantic label and ARIA attributes", () => {
-    const handleSimulate = vi.fn();
-
-    render(
-      <SensorDeviceCard
-        name="CTR-PLAZA-CENTRAL"
-        sensorId="ctr-uuid-sim-77"
-        hasTelemetry={true}
-        fillLevel={60}
-        onSimulateTelemetry={handleSimulate}
-      />,
-    );
-
-    const simulateBtn = screen.getByRole("button", {
-      name: "sensors.simulateCardAriaLabel:CTR-PLAZA-CENTRAL",
-    });
-    expect(simulateBtn).toBeTruthy();
-    expect(screen.getByText("sensors.simulateCardAction")).toBeTruthy();
-  });
-
-  test("does not render simulation button when onSimulateTelemetry prop is omitted", () => {
+describe("Header-only telemetry simulation", () => {
+  test("SensorDeviceCard never renders an individual simulation button", () => {
     render(
       <SensorDeviceCard
         name="CTR-PLAZA-CENTRAL"
@@ -113,46 +93,21 @@ describe("SensorDeviceCard contextual simulation and SensorsPage integration", (
     ).toBeNull();
   });
 
-  test("triggers onSimulateTelemetry callback with containerId when clicked", () => {
-    const handleSimulate = vi.fn();
-
-    render(
-      <SensorDeviceCard
-        name="CTR-PLAZA-CENTRAL"
-        sensorId="ctr-uuid-sim-77"
-        hasTelemetry={true}
-        fillLevel={60}
-        onSimulateTelemetry={handleSimulate}
-      />,
-    );
-
-    const simulateBtn = screen.getByRole("button", {
-      name: "sensors.simulateCardAriaLabel:CTR-PLAZA-CENTRAL",
-    });
-    fireEvent.click(simulateBtn);
-
-    expect(handleSimulate).toHaveBeenCalledTimes(1);
-    expect(handleSimulate).toHaveBeenCalledWith("ctr-uuid-sim-77");
-  });
-
-  test("integrates with SensorsPage to open SimulateTelemetryModal with prefixed container", async () => {
+  test("opens SimulateTelemetryModal exclusively from the page header", async () => {
     render(<SensorsPage />);
 
     expect(await screen.findByText("CTR-PLAZA-CENTRAL")).toBeTruthy();
 
-    const cardSimulateBtn = screen.getByRole("button", {
+    expect(screen.queryByRole("button", {
       name: "sensors.simulateCardAriaLabel:CTR-PLAZA-CENTRAL",
-    });
-    fireEvent.click(cardSimulateBtn);
+    })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "sensors.simulateReading" }));
 
     // Modal should be opened
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeTruthy();
     expect(screen.getByText("sensors.simulateModalTitle")).toBeTruthy();
 
-    // Container should be prefixed
-    expect(screen.getByTestId("selected-container-name").textContent).toBe("CTR-PLAZA-CENTRAL");
-    expect(screen.getByTestId("selected-container-uuid").textContent).toContain("ctr-uuid-sim-77");
   });
 });
 

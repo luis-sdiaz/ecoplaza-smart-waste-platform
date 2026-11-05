@@ -69,16 +69,24 @@ afterEach(() => {
 });
 
 describe("Demonstration data visibility control", () => {
-  test("SensorsPage displays demo sensors when demo data visibility is true and keeps real container management", () => {
+  test("SensorsPage renders three coherent network nodes when demo visibility is true", async () => {
     render(
       <DemoVisibilityContext.Provider value={{ showDemoData: true, setShowDemoData: () => {} }}>
         <SensorsPage />
       </DemoVisibilityContext.Provider>
     );
 
-    expect(screen.getByText("sensors.demoTitle")).toBeTruthy();
-    expect(screen.getByText("sensors.demoDevices")).toBeTruthy();
-    expect(screen.getByText("sensors.realTelemetryTitle")).toBeTruthy();
+    expect(screen.queryByText("sensors.demoTitle")).toBeNull();
+    expect(screen.queryByText("sensors.realTelemetryTitle")).toBeNull();
+    expect(screen.getByText("sensors.activeMonitoringTitle")).toBeTruthy();
+    expect(await screen.findByText("waste.container 01")).toBeTruthy();
+    expect(screen.getByText("waste.container 02")).toBeTruthy();
+    expect(screen.getByText("waste.container 03")).toBeTruthy();
+    expect(screen.getByTestId("real-telemetry-grid").children).toHaveLength(3);
+    expect(screen.getByTestId("registered-sensors-kpi").textContent).toContain("4");
+    expect(screen.getByTestId("active-sensors-kpi").textContent).toContain("3");
+    expect(screen.getByTestId("average-fill-kpi").textContent).toContain("64%");
+    expect(screen.getByTestId("sensor-alerts-kpi").textContent).toContain("1");
   });
 
   test("SensorsPage hides demo sensors when demo data visibility is false while keeping real container management intact", () => {
@@ -90,7 +98,8 @@ describe("Demonstration data visibility control", () => {
 
     expect(screen.queryByText("sensors.demoTitle")).toBeNull();
     expect(screen.queryByText("sensors.demoDevices")).toBeNull();
-    expect(screen.getByText("sensors.realTelemetryTitle")).toBeTruthy();
+    expect(screen.queryByText("sensors.realTelemetryTitle")).toBeNull();
+    expect(screen.getByText("sensors.activeMonitoringTitle")).toBeTruthy();
   });
 
   test("SettingsPanel toggles demonstration visibility and persists in storage", () => {

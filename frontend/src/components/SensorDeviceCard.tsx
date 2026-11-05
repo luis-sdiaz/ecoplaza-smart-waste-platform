@@ -10,7 +10,6 @@ import {
   Scale,
   Thermometer,
   Wifi,
-  Zap,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -27,7 +26,6 @@ export interface SensorDeviceCardProps {
   hasTelemetry?: boolean;
   onViewHistory?: () => void;
   onManageContainer?: (containerId: string) => void;
-  onSimulateTelemetry?: (containerId: string) => void;
   isLoading?: boolean;
   className?: string;
   role?: string;
@@ -48,7 +46,6 @@ function SensorDeviceCard({
   hasTelemetry,
   onViewHistory,
   onManageContainer,
-  onSimulateTelemetry,
   isLoading = false,
   className,
   role,
@@ -99,7 +96,7 @@ function SensorDeviceCard({
   const statusBadgeClass = !isDataAvailable
     ? "border-slate-300/60 bg-slate-500/10 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
     : isCritical
-    ? "border-rose-300/60 bg-rose-500/10 text-rose-800 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300"
+    ? "border-red-300/60 bg-red-500/10 text-red-800 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300"
     : "border-emerald-300/60 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300";
 
   const getBatteryIcon = (level: number | null | undefined) => {
@@ -115,7 +112,7 @@ function SensorDeviceCard({
     if (level <= 20) {
       return (
         <BatteryWarning
-          className="shrink-0 text-rose-500 animate-pulse"
+          className="shrink-0 text-red-600 animate-pulse"
           size={14}
           aria-hidden="true"
         />
@@ -152,9 +149,9 @@ function SensorDeviceCard({
       <div>
         {/* Encabezado: Código del contenedor y Badge translúcido con micro-punto */}
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3
-              className="truncate text-base font-bold text-slate-900 dark:text-slate-100"
+              className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100 break-words"
               title={name}
             >
               {name}
@@ -177,8 +174,8 @@ function SensorDeviceCard({
                 !isDataAvailable
                   ? "bg-slate-400"
                   : isCritical
-                  ? "animate-ping bg-rose-500"
-                  : "bg-emerald-500"
+                  ? "animate-ping bg-red-600"
+                  : "bg-emerald-600 dark:bg-emerald-500"
               }`}
               aria-hidden="true"
             />
@@ -195,7 +192,7 @@ function SensorDeviceCard({
             <span
               className={`font-bold ${
                 isCritical
-                  ? "text-rose-600 dark:text-rose-400"
+                  ? "text-red-600 dark:text-red-400"
                   : "text-slate-900 dark:text-slate-100"
               }`}
             >
@@ -214,15 +211,17 @@ function SensorDeviceCard({
                 ? `${validFillLevel}%`
                 : t("sensors.noTelemetry")
             }
-            className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/10"
+            className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700/60"
           >
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                !isDataAvailable
+                !isDataAvailable || validFillLevel === null
                   ? "w-0 bg-slate-400"
-                  : isCritical
-                  ? "bg-gradient-to-r from-amber-500 to-rose-500"
-                  : "bg-gradient-to-r from-emerald-500 to-teal-400"
+                  : validFillLevel >= 90
+                  ? "bg-red-600 dark:bg-red-500"
+                  : validFillLevel >= 70
+                  ? "bg-amber-500 dark:bg-amber-400"
+                  : "bg-emerald-700 dark:bg-emerald-600"
               }`}
               style={{
                 width: validFillLevel !== null ? `${validFillLevel}%` : "0%",
@@ -231,8 +230,8 @@ function SensorDeviceCard({
           </div>
 
           {isCritical && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
-              <AlertTriangle size={13} className="shrink-0" aria-hidden="true" />
+            <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400">
+              <AlertTriangle size={13} className="shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
               <span>{t("sensors.criticalFillAlert")}</span>
               <span className="sr-only">
                 {t("sensors.criticalAlertDescription", "Alerta crítica: capacidad por encima del 80%")}
@@ -309,10 +308,7 @@ function SensorDeviceCard({
             <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
               {t("sensors.lastReading")}:
             </span>
-            <span
-              className="max-w-[140px] truncate font-medium text-slate-900 dark:text-slate-100"
-              title={lastUpdate || ""}
-            >
+            <span className="min-w-0 break-words font-medium text-slate-900 dark:text-slate-100">
               {lastUpdate || (isDataAvailable ? "—" : t("sensors.noTelemetry"))}
             </span>
           </span>
@@ -320,21 +316,13 @@ function SensorDeviceCard({
       </div>
 
       {/* Botones de acción inferiores */}
-      {(onViewHistory || onSimulateTelemetry || onManageContainer) && (
-        <div
-          className={`mt-5 grid gap-2 border-t border-slate-200/60 dark:border-white/10 pt-3 ${
-            [onViewHistory, onSimulateTelemetry, onManageContainer].filter(Boolean).length === 3
-              ? "grid-cols-3"
-              : [onViewHistory, onSimulateTelemetry, onManageContainer].filter(Boolean).length === 2
-              ? "grid-cols-2"
-              : "grid-cols-1"
-          }`}
-        >
+      {(onViewHistory || onManageContainer) && (
+        <div className="mt-5 flex items-center gap-2 border-t border-slate-200/60 dark:border-white/10 pt-3">
           {onViewHistory && (
             <button
               type="button"
               onClick={onViewHistory}
-              className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-2 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+              className="flex w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/40 px-2.5 py-2 text-xs font-semibold text-slate-700 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:text-emerald-400"
               aria-label={t("sensors.viewHistoryFor", { name })}
             >
               <History
@@ -342,23 +330,7 @@ function SensorDeviceCard({
                 className="shrink-0 text-emerald-600 dark:text-emerald-400"
                 aria-hidden="true"
               />
-              <span className="truncate">{t("sensors.viewHistory")}</span>
-            </button>
-          )}
-
-          {onSimulateTelemetry && (
-            <button
-              type="button"
-              onClick={() => onSimulateTelemetry(sensorId)}
-              className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-2 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
-              aria-label={t("sensors.simulateCardAriaLabel", { name })}
-            >
-              <Zap
-                size={14}
-                className="shrink-0 text-emerald-600 dark:text-emerald-400"
-                aria-hidden="true"
-              />
-              <span className="truncate">{t("sensors.simulateCardAction")}</span>
+              <span className="whitespace-nowrap">{t("sensors.historyAction", "Historial")}</span>
             </button>
           )}
 
@@ -366,7 +338,7 @@ function SensorDeviceCard({
             <button
               type="button"
               onClick={() => onManageContainer(sensorId)}
-              className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-2 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+              className="flex w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200/70 bg-white/40 px-2.5 py-2 text-xs font-semibold text-slate-700 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:text-emerald-400"
               aria-label={t("sensors.manageContainerAriaLabel", { name })}
             >
               <ExternalLink
@@ -374,9 +346,10 @@ function SensorDeviceCard({
                 className="shrink-0 text-emerald-600 dark:text-emerald-400"
                 aria-hidden="true"
               />
-              <span className="truncate">{t("sensors.manageContainer")}</span>
+              <span className="whitespace-nowrap">{t("sensors.manageContainer")}</span>
             </button>
           )}
+
         </div>
       )}
     </article>

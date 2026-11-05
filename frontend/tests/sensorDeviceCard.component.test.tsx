@@ -47,9 +47,6 @@ vi.mock("react-i18next", () => ({
           if (key === "sensors.viewHistoryFor") {
             return `Ver historial de ${defaultValueOrOptions.name}`;
           }
-          if (key === "sensors.simulateCardAriaLabel") {
-            return `Simular lectura para contenedor ${defaultValueOrOptions.name}`;
-          }
           if (key === "sensors.manageContainerAriaLabel") {
             return `Gestionar contenedor ${defaultValueOrOptions.name}`;
           }
@@ -69,7 +66,7 @@ vi.mock("react-i18next", () => ({
         "sensors.criticalAlertDescription":
           "Alerta crítica: capacidad por encima del 80%",
         "sensors.viewHistory": "Ver historial",
-        "sensors.simulateCardAction": "Simular",
+        "sensors.historyAction": "Historial",
         "sensors.manageContainer": "Gestionar",
         "sensors.loadingCard": "Cargando información del sensor...",
         "common.active": "Activo",
@@ -156,14 +153,12 @@ describe("SensorDeviceCard Component - Monitoreo de Sensores y Telemetría IoT",
     expect(progressbar.getAttribute("aria-valuenow")).toBe("88");
   });
 
-  it("4. Soporta eventos de clic en botones de acción operativa (Historial, Simular, Gestionar)", () => {
+  it("4. Soporta eventos de clic en los dos botones de acción operativa (Historial y Gestionar)", () => {
     const handleViewHistory = vi.fn();
-    const handleSimulateTelemetry = vi.fn();
     const handleManageContainer = vi.fn();
 
     renderComponent({
       onViewHistory: handleViewHistory,
-      onSimulateTelemetry: handleSimulateTelemetry,
       onManageContainer: handleManageContainer,
     });
 
@@ -173,19 +168,17 @@ describe("SensorDeviceCard Component - Monitoreo de Sensores y Telemetría IoT",
     fireEvent.click(viewHistoryBtn);
     expect(handleViewHistory).toHaveBeenCalledTimes(1);
 
-    const simulateBtn = screen.getByRole("button", {
-      name: "Simular lectura para contenedor Contenedor Plaza Central",
-    });
-    fireEvent.click(simulateBtn);
-    expect(handleSimulateTelemetry).toHaveBeenCalledTimes(1);
-    expect(handleSimulateTelemetry).toHaveBeenCalledWith("CTR-001");
-
     const manageBtn = screen.getByRole("button", {
       name: "Gestionar contenedor Contenedor Plaza Central",
     });
     fireEvent.click(manageBtn);
     expect(handleManageContainer).toHaveBeenCalledTimes(1);
     expect(handleManageContainer).toHaveBeenCalledWith("CTR-001");
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(viewHistoryBtn.className).toContain("w-full");
+    expect(manageBtn.className).toContain("w-full");
+    expect(viewHistoryBtn.className).toContain("whitespace-nowrap");
+    expect(manageBtn.className).toContain("whitespace-nowrap");
   });
 
   it("5. Maneja adecuadamente el estado de ausencia de telemetría (espera de señal) sin errores ni NaN", () => {

@@ -95,6 +95,24 @@ describe("LiveTelemetryCard Component (Tarea 3)", () => {
     expect(progressBar.getAttribute("aria-valuemax")).toBe("100");
   });
 
+  test("notifica cada lectura activa al agregador de la página", async () => {
+    const onTelemetryChange = vi.fn();
+    const mockTelemetry: SensorTelemetry = {
+      id: "telem-reactive-001",
+      containerId: "CTR-BOG-001",
+      distanceCm: 20,
+      fillPercentage: 78.8,
+      recordedAt: "2026-11-05T12:00:00.000Z",
+      status: "warning",
+    };
+    mockFetchLatestTelemetryByContainer.mockResolvedValueOnce(mockTelemetry);
+
+    render(<LiveTelemetryCard onTelemetryChange={onTelemetryChange} />);
+
+    expect(await screen.findByText("78.8%")).toBeTruthy();
+    expect(onTelemetryChange).toHaveBeenCalledWith(mockTelemetry);
+  });
+
   test("3. Maneja estado vacío cuando el sensor aún no ha emitido lecturas ('Esperando hardware')", async () => {
     mockFetchLatestTelemetryByContainer.mockResolvedValueOnce(null);
 

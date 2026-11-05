@@ -11,6 +11,7 @@ export interface LiveTelemetryCardProps {
   containerId?: string;
   containerName?: string;
   refreshIntervalMs?: number;
+  onTelemetryChange?: (telemetry: SensorTelemetry | null) => void;
 }
 
 function formatTelemetryTimestamp(
@@ -34,6 +35,7 @@ export default function LiveTelemetryCard({
   containerId = "CTR-BOG-001",
   containerName,
   refreshIntervalMs,
+  onTelemetryChange,
 }: LiveTelemetryCardProps) {
   const { t, i18n } = useTranslation();
   const revisionRef = useRef(0);
@@ -47,6 +49,7 @@ export default function LiveTelemetryCard({
         const data = await fetchLatestTelemetryByContainer(containerId);
         if (revision !== revisionRef.current) return;
         setTelemetry(data);
+        onTelemetryChange?.(data);
         setError(null);
         setLoading(false);
       } catch (err: unknown) {
@@ -54,10 +57,11 @@ export default function LiveTelemetryCard({
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
         setTelemetry(null);
+        onTelemetryChange?.(null);
         setLoading(false);
       }
     },
-    [containerId],
+    [containerId, onTelemetryChange],
   );
 
   const handleManualRefresh = useCallback(() => {
@@ -87,17 +91,17 @@ export default function LiveTelemetryCard({
 
   const progressColorClass =
     status === "critical"
-      ? "bg-rose-500"
+      ? "bg-red-600 dark:bg-red-500"
       : status === "warning"
-        ? "bg-amber-500"
-        : "bg-emerald-500";
+        ? "bg-amber-500 dark:bg-amber-400"
+        : "bg-emerald-700 dark:bg-emerald-600";
 
   const statusTextColorClass =
     status === "critical"
-      ? "text-rose-600 dark:text-rose-400"
+      ? "text-red-600 dark:text-red-400"
       : status === "warning"
         ? "text-amber-600 dark:text-amber-400"
-        : "text-emerald-600 dark:text-emerald-400";
+        : "text-emerald-700 dark:text-emerald-400";
 
   const displayName = containerName || containerId;
   const locale = i18n.resolvedLanguage || "es";
@@ -188,7 +192,7 @@ export default function LiveTelemetryCard({
       ) : error ? (
         <div
           role="alert"
-          className="mt-6 flex flex-col items-center justify-center rounded-xl border border-rose-200/70 dark:border-rose-900/30 bg-rose-50/50 dark:bg-rose-950/10 p-5 text-center text-xs text-rose-600 dark:text-rose-400"
+          className="mt-6 flex flex-col items-center justify-center rounded-xl border border-red-200/80 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/10 p-5 text-center text-xs text-red-600 dark:text-red-400"
         >
           <p className="font-semibold">{error}</p>
           <button
@@ -236,7 +240,7 @@ export default function LiveTelemetryCard({
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-label={t("sensors.fillLevel")}
-                className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+                className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700/60"
               >
                 <div
                   className={`h-full transition-all duration-500 ${progressColorClass}`}
