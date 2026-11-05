@@ -71,6 +71,7 @@ export default function DeleteSaleModal({
             <div>
               <h2
                 id="delete-sale-title"
+                data-testid="delete-sale-modal-title"
                 className="text-lg font-semibold text-ecoplaza-text"
               >
                 {t("sales.deleteSaleModalTitle", "Eliminar venta")}
@@ -189,6 +190,7 @@ export default function DeleteSaleModal({
         <div className="mt-6 flex justify-end gap-3 border-t border-ecoplaza-border pt-4">
           <button
             type="button"
+            data-testid="cancel-delete-sale-button"
             disabled={isDeleting}
             onClick={onClose}
             className="rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text transition-colors hover:bg-ecoplaza-background disabled:cursor-not-allowed disabled:opacity-60"

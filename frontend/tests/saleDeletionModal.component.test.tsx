@@ -42,17 +42,22 @@ expect.extend({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) => {
+    t: (key: string, defaultValueOrOptions?: unknown, options?: Record<string, unknown>) => {
+      const defaultValue = typeof defaultValueOrOptions === "string" ? defaultValueOrOptions : undefined;
+      const effectiveOptions =
+        typeof defaultValueOrOptions === "object" && defaultValueOrOptions !== null
+          ? (defaultValueOrOptions as Record<string, unknown>)
+          : options;
       const keys = key.split(".");
       let val: unknown = es;
       for (const k of keys) {
         val = (val as Record<string, unknown>)?.[k];
       }
       if (typeof val === "string") {
-        if (options?.name) return val.replace("{{name}}", String(options.name));
+        if (effectiveOptions?.name) return val.replace("{{name}}", String(effectiveOptions.name));
         return val;
       }
-      return key;
+      return defaultValue ?? key;
     },
     i18n: { language: "es", changeLanguage: vi.fn(), resolvedLanguage: "es" },
   }),
@@ -108,6 +113,7 @@ describe("DeleteSaleModal Component - Eliminación Segura de Ventas", () => {
     expect(dialog).toBeInTheDocument();
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(screen.getByRole("heading", { name: "Eliminar venta" })).toBeInTheDocument();
+    expect(screen.getByTestId("delete-sale-modal-title")).toBeInTheDocument();
     expect(
       screen.getByText(/Al eliminar esta venta, el residuo volverá a estar disponible en el inventario activo/i),
     ).toBeInTheDocument();
@@ -229,7 +235,9 @@ describe("DeleteSaleModal Component - Eliminación Segura de Ventas", () => {
       />,
     );
 
-    const cancelButton = screen.getByRole("button", { name: "Cancelar" });
+    const cancelButton =
+      screen.queryByTestId("cancel-delete-sale-button") ||
+      screen.getByRole("button", { name: "Cancelar" });
     fireEvent.click(cancelButton);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });

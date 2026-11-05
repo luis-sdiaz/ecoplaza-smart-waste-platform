@@ -20,6 +20,10 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      CI: "true"
+      VITE_SUPABASE_URL: "https://mock-project.supabase.co"
+      VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ci_dummy_key_0000000000"
 
     steps:
       - name: Check out repository

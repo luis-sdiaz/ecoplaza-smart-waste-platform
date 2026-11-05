@@ -64,12 +64,16 @@ export default function DeleteBuyerModal({
             <div>
               <h2
                 id="delete-buyer-title"
+                data-testid="delete-buyer-modal-title"
                 className="text-lg font-semibold text-ecoplaza-text"
               >
-                {t("buyers.deleteBuyerModalTitle")}
+                {t("buyers.deleteBuyerModalTitle", "Eliminar comprador")}
               </h2>
               <p className="text-xs text-ecoplaza-text-muted">
-                {t("buyers.deleteBuyerModalSubtitle")}
+                {t(
+                  "buyers.deleteBuyerModalSubtitle",
+                  "Elimina de forma segura un comprador que no tenga ventas vinculadas.",
+                )}
               </p>
             </div>
           </div>
@@ -90,12 +94,20 @@ export default function DeleteBuyerModal({
             className="flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs leading-5 text-amber-800 dark:text-amber-300"
           >
             <AlertCircle size={18} className="shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-            <span>{t("buyers.deleteBuyerIntegrityNotice")}</span>
+            <span>
+              {t(
+                "buyers.deleteBuyerIntegrityNotice",
+                "Solo pueden eliminarse compradores sin historial de compras para preservar los registros comerciales.",
+              )}
+            </span>
           </div>
 
           {eligibleBuyers.length === 0 ? (
             <p className="py-4 text-center text-sm text-ecoplaza-text-muted">
-              {t("buyers.noDeletableBuyers")}
+              {t(
+                "buyers.noDeletableBuyers",
+                "No hay compradores sin historial de compras disponibles para eliminar.",
+              )}
             </p>
           ) : (
             <div>
@@ -103,7 +115,7 @@ export default function DeleteBuyerModal({
                 htmlFor="delete-buyer-select"
                 className="block text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70"
               >
-                {t("buyers.selectBuyerToDelete")}
+                {t("buyers.selectBuyerToDelete", "Selecciona el comprador a eliminar")}
               </label>
               <select
                 id="delete-buyer-select"
@@ -123,7 +135,10 @@ export default function DeleteBuyerModal({
               {selectedBuyer && (
                 <div className="mt-3 rounded-xl border border-ecoplaza-border/60 bg-ecoplaza-background/60 p-3 text-xs text-ecoplaza-text-muted">
                   <p className="font-medium text-ecoplaza-text">
-                    {t("buyers.confirmDeleteBuyerPrompt")}
+                    {t(
+                      "buyers.confirmDeleteBuyerPrompt",
+                      "¿Estás seguro de que deseas eliminar este comprador? Esta acción no se puede deshacer.",
+                    )}
                   </p>
                   <p className="mt-1">
                     <span className="font-medium text-ecoplaza-text">BUY-{selectedBuyer.id.slice(0, 8).toUpperCase()}</span>
@@ -145,11 +160,12 @@ export default function DeleteBuyerModal({
         <div className="mt-6 flex justify-end gap-3 border-t border-ecoplaza-border pt-4">
           <button
             type="button"
+            data-testid="cancel-delete-buyer-button"
             disabled={isDeleting}
             onClick={onClose}
             className="rounded-xl border border-ecoplaza-border px-4 py-2.5 text-sm font-medium text-ecoplaza-text transition-colors hover:bg-ecoplaza-background disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {t("buyers.cancel")}
+            {t("buyers.cancel", "Cancelar")}
           </button>
           <button
             type="button"
@@ -163,8 +179,8 @@ export default function DeleteBuyerModal({
             )}
             <span>
               {isDeleting
-                ? t("buyers.deletingBuyer")
-                : t("buyers.deleteBuyerConfirm")}
+                ? t("buyers.deletingBuyer", "Eliminando comprador...")
+                : t("buyers.deleteBuyerConfirm", "Eliminar comprador")}
             </span>
           </button>
         </div>
