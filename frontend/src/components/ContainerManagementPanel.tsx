@@ -11,11 +11,13 @@ import {
   Radio,
   RefreshCw,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   createContainer,
+  deleteContainer,
   listContainers,
   type Container,
   type ContainerErrorCode,
@@ -45,12 +47,16 @@ type Feedback = {
   key: string;
 };
 
+const ESTIMATED_CONTAINER_CAPACITY_KG = 100;
+
 function getContainerErrorKey(code: ContainerErrorCode): string {
   if (code === "unauthorized") return "containers.unauthorized";
   if (code === "invalid_code") return "containers.invalidCode";
   if (code === "duplicate_code") return "containers.duplicateCode";
   if (code === "network_error") return "containers.networkError";
   if (code === "permission_denied") return "containers.permissionError";
+  if (code === "CONTAINER_PROTECTED") return "containers.deleteProtected";
+  if (code === "not_found") return "containers.deleteNotFound";
   return "containers.databaseError";
 }
 
@@ -89,6 +95,9 @@ function ContainerManagementPanel({
   const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
   const isCreatingRef = useRef(false);
+  const deleteDialogRef = useRef<HTMLDivElement>(null);
+  const deleteSelectRef = useRef<HTMLSelectElement>(null);
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
   const [containers, setContainers] = useState<Container[]>(
     () => initialContainers ?? [],
   );
@@ -129,6 +138,9 @@ function ContainerManagementPanel({
   );
   const [stockLoadError, setStockLoadError] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Container | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState<"success" | "error" | null>(null);
   const isFormUnavailable = isCreating || isLoading || loadError !== null;
 
   const applyLoadResults = useCallback(
@@ -313,6 +325,17 @@ function ContainerManagementPanel({
     sortOption,
     locale,
   );
+  const deletionOptions = effectiveContainers;
+  const deletableContainers = deletionOptions.filter(
+    (container) => container.code.trim().toUpperCase() !== "CTR-BOG-001",
+  );
+  const selectedStockSummary = deleteTarget
+    ? stockByContainer.get(deleteTarget.id)
+    : undefined;
+  const selectedHasAssociatedRecords =
+    selectedStockSummary !== undefined &&
+    (selectedStockSummary.availableRecordCount > 0 ||
+      selectedStockSummary.availableWeightKg > 0);
   const hasActiveSearch = normalizedSearch !== "";
   const hasActiveStockFilter = stockFilter !== "all";
   const hasAppliedStockFilter =
@@ -380,6 +403,44 @@ function ContainerManagementPanel({
     }
   };
 
+  const handleDeleteContainer = async (): Promise<void> => {
+    if (!deleteTarget || isDeleting) return;
+
+    setIsDeleting(true);
+    setDeleteNotice(null);
+    const result = await deleteContainer(deleteTarget.id);
+
+    if (result.ok) {
+      setContainers((current) => current.filter((container) => container.id !== result.data));
+      setStockByContainer((current) => {
+        const next = new Map(current);
+        next.delete(result.data);
+        return next;
+      });
+      setDeleteTarget(null);
+      setDeleteNotice("success");
+    } else {
+      setDeleteTarget(null);
+      setDeleteNotice("error");
+    }
+    setIsDeleting(false);
+  };
+
+  useEffect(() => {
+    if (!deleteTarget) return;
+    const previousFocus = document.activeElement;
+    const deleteTrigger = deleteTriggerRef.current;
+    deleteSelectRef.current?.focus();
+
+    return () => {
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      } else {
+        deleteTrigger?.focus();
+      }
+    };
+  }, [deleteTarget]);
+
   if (!isOpen) {
     return null;
   }
@@ -397,23 +458,21 @@ function ContainerManagementPanel({
         }
       }}
     >
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div className="flex items-start justify-between gap-4 w-full sm:w-auto">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2
-                id="user-containers-title"
-                className="text-lg font-semibold text-slate-900 dark:text-slate-100"
-              >
-                {t("containers.title")}
-              </h2>
-              <span className="rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
-                {t("containers.remoteData")}
+      <h2 id="user-containers-title" className="sr-only">
+        {t("containers.title")}
+      </h2>
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
+              {t("containers.remoteData")}
+            </span>
+            {!isLoading && !loadError && (
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {t("containers.count", { count: visibleContainers.length })}
               </span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {t("containers.description")}
-            </p>
+            )}
           </div>
           {onClose && (
             <button
@@ -427,12 +486,10 @@ function ContainerManagementPanel({
           )}
         </div>
         {!isLoading && !loadError && (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              {t("containers.count", { count: visibleContainers.length })}
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              data-testid="export-csv-button"
               disabled={visibleContainers.length === 0 || exportKind !== null}
               aria-busy={exportKind === "csv"}
               onClick={() => void exportContainers()}
@@ -457,10 +514,11 @@ function ContainerManagementPanel({
             </button>
             <button
               type="button"
+              data-testid="export-excel-button"
               disabled={visibleContainers.length === 0 || exportKind !== null}
               aria-busy={exportKind === "excel"}
               onClick={() => void exportContainersExcel()}
-              className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300 shadow-2xs transition-all hover:border-emerald-500 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-emerald-700 bg-emerald-700 px-3 text-xs font-semibold text-white shadow-sm transition-all hover:border-emerald-800 hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-600 dark:bg-emerald-700 dark:hover:bg-emerald-600"
             >
               {exportKind === "excel" ? (
                 <LoaderCircle
@@ -471,7 +529,7 @@ function ContainerManagementPanel({
               ) : (
                 <Download
                   size={15}
-                  className="text-emerald-600 dark:text-emerald-400"
+                  className="text-white"
                   aria-hidden="true"
                 />
               )}
@@ -483,7 +541,7 @@ function ContainerManagementPanel({
         )}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-6">
+      <div className="mt-6 flex flex-col gap-6">
         <div className="min-h-48 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 p-5 backdrop-blur-sm">
           {!isLoading && !loadError && containers.length > 0 && (
             <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_190px_190px]">
@@ -499,6 +557,7 @@ function ContainerManagementPanel({
                 />
                 <input
                   id="container-search"
+                  data-testid="container-search-input"
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -522,6 +581,7 @@ function ContainerManagementPanel({
                 </label>
                 <select
                   id="container-stock-filter"
+                  data-testid="stock-filter-select"
                   aria-label={t("containers.stockFilterLabel")}
                   value={stockFilter}
                   disabled={isStockLoading || stockLoadError}
@@ -658,142 +718,230 @@ function ContainerManagementPanel({
                   <span>{t("containers.stockLoadError")}</span>
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr items-stretch">
                 {visibleContainers.map((container) => {
                   const isTargetPhysical =
                     liveTelemetry !== null &&
                     liveTelemetry !== undefined &&
                     container.code.trim().toUpperCase() ===
                       liveTelemetry.containerId.trim().toUpperCase();
+                  const stockSummary = stockByContainer.get(container.id);
+                  const availableWeightKg = stockSummary?.availableWeightKg ?? 0;
+                  const hasAvailableStock =
+                    !isStockLoading &&
+                    !stockLoadError &&
+                    (availableWeightKg > 0 || (stockSummary?.availableRecordCount ?? 0) > 0);
+                  const inventoryOccupancyPercent =
+                    isStockLoading || stockLoadError
+                      ? 0
+                      : Math.min(
+                          100,
+                          Math.max(
+                            0,
+                            Math.round(
+                              (availableWeightKg / ESTIMATED_CONTAINER_CAPACITY_KG) * 100,
+                            ),
+                          ),
+                        );
+
+                  const formattedDate = isTargetPhysical
+                    ? `${t("sensors.lastReading")}: ${formatTelemetryTimestamp(liveTelemetry.recordedAt, locale)}`
+                    : t("containers.createdAt", {
+                        date: new Intl.DateTimeFormat(locale, {
+                          dateStyle: "medium",
+                        }).format(new Date(container.createdAt)),
+                      });
 
                   return (
                     <article
                       key={container.id}
-                      className={`glass-card rounded-xl border p-4 transition-all ${
+                      title={`ID: ${container.id}`}
+                      className={`glass-card flex h-full min-h-[220px] flex-col justify-between rounded-2xl border p-5 transition-all duration-200 ${
                         isTargetPhysical
                           ? "border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-sm"
                           : "border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:border-emerald-500/40"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <span
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                            isTargetPhysical
-                              ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                          }`}
-                        >
-                          {isTargetPhysical ? (
-                            <Radio
-                              size={18}
-                              strokeWidth={2}
-                              className="animate-pulse"
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <Database
-                              size={18}
-                              strokeWidth={1.8}
-                              aria-hidden="true"
-                            />
-                          )}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h3 className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
-                              {container.code}
-                            </h3>
-                            {isTargetPhysical && (
-                              <>
-                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                                  <span
-                                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
-                                    aria-hidden="true"
-                                  />
-                                  IoT Live
-                                </span>
+                      <div>
+                        {/* Fila 1: Icono a la izquierda y Badge de estado en el extremo derecho */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                            {isTargetPhysical ? (
+                              <Radio
+                                size={20}
+                                strokeWidth={2}
+                                className="animate-pulse"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <Database
+                                size={20}
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                              />
+                            )}
+                          </div>
+
+                          <div>
+                            {isTargetPhysical ? (
+                              <span
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold backdrop-blur-md whitespace-nowrap ${
+                                  liveTelemetry.status === "critical"
+                                    ? "border-red-400/30 bg-red-500/10 text-red-700 dark:text-red-300"
+                                    : liveTelemetry.status === "warning"
+                                      ? "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                      : "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                }`}
+                              >
                                 <span
-                                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                  className={`h-1.5 w-1.5 rounded-full ${
                                     liveTelemetry.status === "critical"
-                                      ? "border-rose-400/30 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                                      ? "bg-red-500 animate-ping"
                                       : liveTelemetry.status === "warning"
-                                        ? "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                                        : "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                                        ? "bg-amber-500 animate-pulse"
+                                        : "bg-emerald-500"
                                   }`}
-                                >
+                                  aria-hidden="true"
+                                />
+                                <span>IoT Live</span>
+                                <span className="opacity-60" aria-hidden="true">•</span>
+                                <span>
                                   {liveTelemetry.status === "critical"
                                     ? "Critical"
                                     : liveTelemetry.status === "warning"
                                       ? "Warning"
                                       : "Normal"}
                                 </span>
-                              </>
+                              </span>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold backdrop-blur-md whitespace-nowrap ${
+                                  hasAvailableStock
+                                    ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                    : "border-slate-200/70 bg-slate-100/70 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                                }`}
+                              >
+                                <span
+                                  className={`h-1.5 w-1.5 rounded-full ${
+                                    hasAvailableStock ? "bg-emerald-500" : "bg-slate-400"
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                                {t(
+                                  hasAvailableStock
+                                    ? "containers.withStockStatus"
+                                    : "containers.readyForCollection",
+                                )}
+                              </span>
                             )}
                           </div>
-                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                            {isTargetPhysical
-                              ? `${t("sensors.lastReading")}: ${formatTelemetryTimestamp(liveTelemetry.recordedAt, locale)}`
-                              : t("containers.createdAt", {
-                                  date: new Intl.DateTimeFormat(locale, {
-                                    dateStyle: "medium",
-                                  }).format(new Date(container.createdAt)),
-                                })}
+                        </div>
+
+                        {/* Fila 2: Código completo al 100% de ancho y Fecha fluida */}
+                        <div className="mb-4">
+                          <h3
+                            className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight break-words"
+                            title={container.code}
+                          >
+                            {container.code}
+                          </h3>
+                          <p
+                            className="text-xs text-slate-500 dark:text-slate-400 mt-0.5"
+                            title={formattedDate}
+                          >
+                            {formattedDate}
                           </p>
                         </div>
+
+                        {/* Cuerpo Central Fluido sin cajas anidadas */}
+                        {isTargetPhysical && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-xs font-medium">
+                              <span className="text-slate-500 dark:text-slate-400">
+                                {t("sensors.fillLevel")}
+                              </span>
+                              <span className="font-bold text-slate-800 dark:text-slate-100">
+                                {liveTelemetry.fillPercentage}%
+                              </span>
+                            </div>
+                            <div
+                              role="progressbar"
+                              aria-valuenow={liveTelemetry.fillPercentage}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-label={`${t("sensors.fillLevel")}: ${liveTelemetry.fillPercentage}%`}
+                              className="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700/60"
+                            >
+                              <div
+                                className={`h-full transition-all duration-500 ${
+                                  liveTelemetry.status === "critical"
+                                    ? "bg-red-600"
+                                    : liveTelemetry.status === "warning"
+                                      ? "bg-amber-500"
+                                      : "bg-emerald-600"
+                                }`}
+                                style={{
+                                  width: `${Math.min(Math.max(liveTelemetry.fillPercentage, 0), 100)}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="mt-2.5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                              <span>{t("sensors.ultrasonicDistance")}</span>
+                              <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
+                                {liveTelemetry.distanceCm} cm
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {!isTargetPhysical && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-xs font-medium">
+                              <span className="text-slate-500 dark:text-slate-400">
+                                {t(
+                                  hasAvailableStock
+                                    ? "containers.storageAvailable"
+                                    : "containers.noAccumulatedWaste",
+                                )}
+                              </span>
+                              <span className="font-bold text-slate-800 dark:text-slate-100">
+                                {inventoryOccupancyPercent}%
+                              </span>
+                            </div>
+                            <div
+                              role="progressbar"
+                              aria-valuenow={inventoryOccupancyPercent}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-label={`${t("containers.inventoryOccupancy")}: ${inventoryOccupancyPercent}%`}
+                              className="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700/60"
+                            >
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  hasAvailableStock ? "bg-emerald-600" : "bg-slate-300 dark:bg-slate-600"
+                                }`}
+                                style={{ width: `${inventoryOccupancyPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {isTargetPhysical && (
-                        <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 dark:bg-white/5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-500 dark:text-slate-400">
-                              {t("sensors.fillLevel")}
-                            </span>
-                            <span className="font-bold text-slate-900 dark:text-slate-100">
-                              {liveTelemetry.fillPercentage}%
-                            </span>
-                          </div>
-                          <div
-                            role="progressbar"
-                            aria-valuenow={liveTelemetry.fillPercentage}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-label={`${t("sensors.fillLevel")}: ${liveTelemetry.fillPercentage}%`}
-                            className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10"
-                          >
-                            <div
-                              className={`h-full transition-all duration-500 ${
-                                liveTelemetry.status === "critical"
-                                  ? "bg-rose-500"
-                                  : liveTelemetry.status === "warning"
-                                    ? "bg-amber-500"
-                                    : "bg-emerald-500"
-                              }`}
-                              style={{
-                                width: `${Math.min(Math.max(liveTelemetry.fillPercentage, 0), 100)}%`,
-                              }}
-                            />
-                          </div>
-                          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                            <span>{t("sensors.ultrasonicDistance")}</span>
-                            <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
-                              {liveTelemetry.distanceCm} cm
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
+                      {/* UUID mantenido accesible para tests y screen-readers, oculto visualmente */}
                       <p
-                        className="mt-3 break-all font-mono text-[10px] leading-4 text-slate-400 dark:text-slate-500"
+                        className="sr-only"
                         title={container.id}
                       >
-                        {container.id}
+                        ID: {container.id.length > 12 ? `${container.id.slice(0, 8)}…` : container.id}
                       </p>
-                      <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200/60 dark:border-white/10 pt-3">
+
+                      {/* Pie de tarjeta con separador sutil */}
+                      <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-slate-100 dark:border-slate-800/60 pt-3 mt-4">
                         <div>
-                          <dt className="text-[11px] text-slate-500 dark:text-slate-400">
+                          <dt className="text-xs text-slate-500 dark:text-slate-400">
                             {t("containers.availableRecords")}
                           </dt>
-                          <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          <dd className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
                             {isStockLoading || stockLoadError
                               ? "—"
                               : (stockByContainer.get(container.id)
@@ -801,10 +949,10 @@ function ContainerManagementPanel({
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-[11px] text-slate-500 dark:text-slate-400">
+                          <dt className="text-xs text-slate-500 dark:text-slate-400">
                             {t("containers.availableWeight")}
                           </dt>
-                          <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          <dd className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
                             {isStockLoading || stockLoadError
                               ? "—"
                               : formatWeight(
@@ -825,7 +973,7 @@ function ContainerManagementPanel({
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="self-start rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-white/5 p-5 backdrop-blur-sm shadow-sm"
+          className="w-full rounded-2xl border border-slate-200/70 bg-white/50 p-5 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5"
         >
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             {t("containers.registerTitle")}
@@ -892,26 +1040,145 @@ function ContainerManagementPanel({
               <span>{t(feedback.key)}</span>
             </p>
           )}
-          <button
-            type="submit"
-            disabled={isFormUnavailable}
-            aria-busy={isCreating}
-            className="mt-4 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition-all focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
-          >
-            {isCreating ? (
-              <LoaderCircle
-                className="animate-spin"
-                size={17}
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
-            ) : (
-              <Plus size={17} strokeWidth={1.8} aria-hidden="true" />
-            )}
-            {t(isCreating ? "containers.registering" : "containers.register")}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <button
+              type="submit"
+              disabled={isFormUnavailable}
+              aria-busy={isCreating}
+              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
+            >
+              {isCreating ? (
+                <LoaderCircle
+                  className="animate-spin"
+                  size={17}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              ) : (
+                <Plus size={17} strokeWidth={1.8} aria-hidden="true" />
+              )}
+              {t(isCreating ? "containers.registering" : "containers.register")}
+            </button>
+            <button
+              ref={deleteTriggerRef}
+              type="button"
+              disabled={deletableContainers.length === 0 || isDeleting}
+              aria-label={t("containers.deleteAction")}
+              title={deletableContainers.length === 0 ? t("containers.deleteNoneEligible") : t("containers.deleteAction")}
+              onClick={() => setDeleteTarget(deletableContainers[0] ?? null)}
+              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 active:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 size={17} aria-hidden="true" />
+              {t("containers.deleteAction")}
+            </button>
+          </div>
+          {deletableContainers.length === 0 && !isStockLoading && (
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              {t("containers.deleteNoneEligible")}
+            </p>
+          )}
         </form>
       </div>
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]">
+          <div
+            ref={deleteDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-container-title"
+            aria-describedby="delete-container-description"
+            data-testid="delete-container-dialog"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900"
+            onKeyDown={(event) => {
+              event.stopPropagation();
+              if (event.key === "Escape" && !isDeleting) {
+                setDeleteTarget(null);
+                return;
+              }
+              if (event.key !== "Tab") return;
+              const focusable = Array.from(
+                deleteDialogRef.current?.querySelectorAll<HTMLElement>(
+                  'select:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+                ) ?? [],
+              );
+              if (focusable.length === 0) return;
+              const first = focusable[0];
+              const last = focusable[focusable.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-600">
+              <Trash2 size={20} aria-hidden="true" />
+            </div>
+            <h2 id="delete-container-title" className="mt-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {t("containers.deleteModalTitle")}
+            </h2>
+            <p id="delete-container-description" className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {t("containers.deleteIntegrityWarning")}
+            </p>
+            <label htmlFor="delete-container-select" className="mt-5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              {t("containers.deleteSelectLabel")}
+            </label>
+            <select
+              ref={deleteSelectRef}
+              id="delete-container-select"
+              data-testid="delete-container-select"
+              value={deleteTarget.id}
+              disabled={isDeleting}
+              onChange={(event) => {
+                const selected = deletionOptions.find((container) => container.id === event.target.value);
+                if (selected) setDeleteTarget(selected);
+              }}
+              className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 focus-visible:border-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-slate-950 dark:text-slate-100"
+            >
+              {deletionOptions.map((container) => {
+                const isProtected = container.code.trim().toUpperCase() === "CTR-BOG-001";
+                return (
+                <option key={container.id} value={container.id} disabled={isProtected}>
+                  {isProtected
+                    ? `${container.code} (${t("containers.deleteProtectedOption")})`
+                    : container.code}
+                </option>
+                );
+              })}
+            </select>
+            {selectedHasAssociatedRecords && (
+              <p className="mt-3 rounded-xl border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-sm leading-5 text-amber-800 dark:text-amber-300">
+                {t("containers.deleteCascadeWarning")}
+              </p>
+            )}
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              {t("containers.deleteConfirmDescription", { code: deleteTarget.code })}
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteTarget(null)}
+                className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+              >
+                {t("containers.deleteCancel")}
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                aria-busy={isDeleting}
+                onClick={() => void handleDeleteContainer()}
+                className="flex cursor-pointer items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeleting && <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />}
+                {t(isDeleting ? "containers.deleting" : "containers.deleteConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {exportNotice !== null && (
         <SuccessToast
           title={t(
@@ -931,6 +1198,15 @@ function ContainerManagementPanel({
           closeLabel={t("containers.dismissNotification")}
           variant={exportNotice === "error" ? "error" : "success"}
           onClose={() => setExportNotice(null)}
+        />
+      )}
+      {deleteNotice !== null && (
+        <SuccessToast
+          title={t(deleteNotice === "success" ? "containers.deleteSuccessTitle" : "containers.deleteErrorTitle")}
+          description={t(deleteNotice === "success" ? "containers.deleteSuccessDescription" : "containers.deleteErrorDescription")}
+          closeLabel={t("containers.dismissNotification")}
+          variant={deleteNotice === "success" ? "success" : "error"}
+          onClose={() => setDeleteNotice(null)}
         />
       )}
     </section>

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   listContainers: vi.fn(),
   listAvailableWasteRecords: vi.fn(),
   createContainer: vi.fn(),
+  deleteContainer: vi.fn(),
   saveContainerCsv: vi.fn(),
   saveContainerExcel: vi.fn(),
 }));
@@ -19,6 +20,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("../src/services/containerService", () => ({
   listContainers: mocks.listContainers,
   createContainer: mocks.createContainer,
+  deleteContainer: mocks.deleteContainer,
 }));
 
 vi.mock("../src/services/wasteService", () => ({
@@ -70,6 +72,13 @@ describe("container stock visibility", () => {
     expect(screen.getByText("1")).toBeTruthy();
     expect(screen.getByText("0 common.kg")).toBeTruthy();
     expect(screen.getByText("0")).toBeTruthy();
+    expect(screen.getByText("containers.withStockStatus")).toBeTruthy();
+    expect(screen.getByText("containers.readyForCollection")).toBeTruthy();
+    expect(screen.getByText("containers.storageAvailable")).toBeTruthy();
+    expect(screen.getByText("containers.noAccumulatedWaste")).toBeTruthy();
+    const occupancyBars = screen.getAllByRole("progressbar");
+    expect(occupancyBars).toHaveLength(2);
+    expect(occupancyBars.map((bar) => bar.getAttribute("aria-valuenow"))).toEqual(["13", "0"]);
   });
 
   test("keeps the container directory usable when stock loading fails", async () => {

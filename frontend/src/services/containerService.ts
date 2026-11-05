@@ -12,6 +12,8 @@ export type ContainerErrorCode =
   | "duplicate_code"
   | "network_error"
   | "permission_denied"
+  | "CONTAINER_PROTECTED"
+  | "not_found"
   | "database_error";
 
 export type ContainerServiceResult<T> =
@@ -219,6 +221,63 @@ export async function createContainer(
     }
 
     return { ok: true, data: container };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function deleteContainer(
+  id: string,
+): Promise<ContainerServiceResult<string>> {
+  const normalizedId = id?.trim();
+  if (!normalizedId || !UUID_PATTERN.test(normalizedId)) {
+    return { ok: false, error: { code: "not_found", retryable: false } };
+  }
+
+  const userResult = await getAuthenticatedUserId();
+  if (!userResult.ok) return userResult;
+
+  try {
+    const { data: containerRow, error: lookupError } = await supabase
+      .from("containers")
+      .select("id, owner_id, code, created_at")
+      .eq("id", normalizedId)
+      .eq("owner_id", userResult.data)
+      .maybeSingle<ContainerRow>();
+
+    if (lookupError) return failure(lookupError);
+    if (!containerRow) {
+      return { ok: false, error: { code: "not_found", retryable: false } };
+    }
+    if (containerRow.code.trim().toUpperCase() === "CTR-BOG-001") {
+      return {
+        ok: false,
+        error: { code: "CONTAINER_PROTECTED", retryable: false },
+      };
+    }
+
+    const { error: recordsError } = await supabase
+      .from("waste_records")
+      .delete()
+      .eq("container_id", normalizedId)
+      .eq("owner_id", userResult.data);
+
+    if (recordsError) return failure(recordsError);
+
+    const { data: deletedRow, error: deleteError } = await supabase
+      .from("containers")
+      .delete()
+      .eq("id", normalizedId)
+      .eq("owner_id", userResult.data)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+
+    if (deleteError) return failure(deleteError);
+    if (!deletedRow || deletedRow.id !== normalizedId) {
+      return { ok: false, error: { code: "not_found", retryable: false } };
+    }
+
+    return { ok: true, data: normalizedId };
   } catch (error) {
     return failure(error);
   }

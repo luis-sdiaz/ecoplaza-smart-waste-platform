@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   listContainers: vi.fn(),
   listAvailableWasteRecords: vi.fn(),
   createContainer: vi.fn(),
+  deleteContainer: vi.fn(),
   saveContainerCsv: vi.fn(),
   saveContainerExcel: vi.fn(),
 }));
@@ -21,6 +22,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("../src/services/containerService", () => ({
   listContainers: mocks.listContainers,
   createContainer: mocks.createContainer,
+  deleteContainer: mocks.deleteContainer,
 }));
 
 vi.mock("../src/services/wasteService", () => ({

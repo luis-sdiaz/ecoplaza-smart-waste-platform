@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   listContainers: vi.fn(),
   listAvailableWasteRecords: vi.fn(),
   createContainer: vi.fn(),
+  deleteContainer: vi.fn(),
   saveContainerCsv: vi.fn(),
   saveContainerExcel: vi.fn(),
   fetchLatestTelemetryByContainer: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("../src/services/containerService", () => ({
   listContainers: mocks.listContainers,
   createContainer: mocks.createContainer,
+  deleteContainer: mocks.deleteContainer,
 }));
 
 vi.mock("../src/services/wasteService", () => ({
@@ -117,7 +119,7 @@ describe("ContainersPage & ContainerManagementPanel - Telemetría IoT en Vivo (C
     expect(await screen.findByText("CONT-ORG-01")).toBeInTheDocument();
     expect(screen.getByText("CONT-REC-01")).toBeInTheDocument();
 
-    expect(screen.getByText("iot-ctr-bog-001")).toBeInTheDocument();
+    expect(screen.getByText("ID: iot-ctr-…")).toBeInTheDocument();
   });
 
   it("3. Unifica la información si CTR-BOG-001 ya existe en la base de datos sin duplicar tarjetas", async () => {
@@ -131,8 +133,8 @@ describe("ContainersPage & ContainerManagementPanel - Telemetría IoT en Vivo (C
 
     expect(await screen.findByText("CONT-REC-01")).toBeInTheDocument();
 
-    expect(screen.getByText("cont-real-bog")).toBeInTheDocument();
-    expect(screen.queryByText("iot-ctr-bog-001")).toBeNull();
+    expect(screen.getByText("ID: cont-rea…")).toBeInTheDocument();
+    expect(screen.queryByText("ID: iot-ctr-…")).toBeNull();
   });
 
   it("4. No renderiza tarjeta destacada ni inyecta contenedor físico cuando no hay telemetría (null)", async () => {
@@ -148,19 +150,19 @@ describe("ContainersPage & ContainerManagementPanel - Telemetría IoT en Vivo (C
         name: /Telemetría en vivo del contenedor físico/i,
       }),
     ).toBeNull();
-    expect(screen.queryByText("iot-ctr-bog-001")).toBeNull();
+    expect(screen.queryByText("ID: iot-ctr-…")).toBeNull();
   });
 
   it("5. Mantiene la funcionalidad de búsqueda filtrando contenedores y preservando CTR-BOG-001", async () => {
     render(<ContainersPage pollIntervalMs={0} />);
 
     expect(await screen.findByText("CONT-ORG-01")).toBeInTheDocument();
-    expect(screen.getByText("iot-ctr-bog-001")).toBeInTheDocument();
+    expect(screen.getByText("ID: iot-ctr-…")).toBeInTheDocument();
 
     const searchInput = screen.getByLabelText("containers.searchLabel");
     fireEvent.change(searchInput, { target: { value: "BOG" } });
 
-    expect(screen.getByText("iot-ctr-bog-001")).toBeInTheDocument();
+    expect(screen.getByText("ID: iot-ctr-…")).toBeInTheDocument();
     expect(screen.queryByText("CONT-ORG-01")).toBeNull();
     expect(screen.queryByText("CONT-REC-01")).toBeNull();
   });

@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   listContainers: vi.fn(),
   listAvailableWasteRecords: vi.fn(),
   createContainer: vi.fn(),
+  deleteContainer: vi.fn(),
   saveContainerCsv: vi.fn(),
   saveContainerExcel: vi.fn(),
 }));
@@ -50,6 +51,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("../src/services/containerService", () => ({
   listContainers: mocks.listContainers,
   createContainer: mocks.createContainer,
+  deleteContainer: mocks.deleteContainer,
 }));
 
 vi.mock("../src/services/wasteService", () => ({
@@ -91,6 +93,7 @@ describe("ContainerManagementPanel Component - Gestión Operativa de Contenedore
     mocks.createContainer.mockResolvedValue(
       success({ id: "cont-3", code: "CONT-NEW-01", createdAt: "2026-10-26T12:00:00.000Z" }),
     );
+    mocks.deleteContainer.mockImplementation(async (id: string) => success(id));
   });
 
   afterEach(cleanup);
@@ -111,10 +114,13 @@ describe("ContainerManagementPanel Component - Gestión Operativa de Contenedore
     const title = screen.getByRole("heading", { name: /containers\.title/i });
     expect(title).toBeInTheDocument();
     expect(screen.getByText("containers.remoteData")).toBeInTheDocument();
-    expect(screen.getByText("containers.description")).toBeInTheDocument();
+    expect(screen.queryByText("containers.description")).toBeNull();
 
     expect(await screen.findByText("CONT-ORG-01")).toBeInTheDocument();
     expect(screen.getByText("CONT-REC-01")).toBeInTheDocument();
+    expect(screen.getByTestId("container-search-input")).toBeInTheDocument();
+    expect(screen.getByTestId("stock-filter-select")).toBeInTheDocument();
+    expect(screen.getByTestId("export-excel-button").className).toContain("bg-emerald-700");
   });
 
   it("2. No renderiza ningún elemento en el DOM cuando isOpen es false", () => {
@@ -219,5 +225,58 @@ describe("ContainerManagementPanel Component - Gestión Operativa de Contenedore
 
     expect(codeInput.value).toBe("");
     expect(await screen.findByText("CONT-NEW-01")).toBeInTheDocument();
+  });
+
+  it("7. Permite eliminar contenedores con registros y mantiene protegido el hardware físico", async () => {
+    const deletionContainers = [
+      { id: "physical-container", code: "CTR-BOG-001", createdAt: "2026-10-01T12:00:00.000Z" },
+      { id: "stock-container", code: "ECO-001", createdAt: "2026-10-02T12:00:00.000Z" },
+      { id: "empty-container", code: "ECO-EMPTY", createdAt: "2026-10-03T12:00:00.000Z" },
+    ];
+    mocks.listContainers.mockResolvedValueOnce(success(deletionContainers));
+    mocks.listAvailableWasteRecords.mockResolvedValueOnce(success([
+      {
+        id: "waste-stock",
+        recordNumber: "2",
+        containerId: "stock-container",
+        category: "organic" as const,
+        weightKg: 8,
+        registeredAt: "2026-10-04T12:00:00.000Z",
+        status: "available" as const,
+      },
+    ]));
+
+    render(<ContainerManagementPanel />);
+
+    expect(await screen.findByText("ECO-EMPTY")).toBeInTheDocument();
+    expect(screen.getByText("CTR-BOG-001").closest("article")?.querySelector("button")).toBeNull();
+    expect(screen.getByText("ECO-001").closest("article")?.querySelector("button")).toBeNull();
+    expect(screen.getByText("ECO-EMPTY").closest("article")?.querySelector("button")).toBeNull();
+
+    const deleteAction = screen.getByRole("button", { name: "containers.deleteAction" }) as HTMLButtonElement;
+    expect(deleteAction.disabled).toBe(false);
+    expect(deleteAction.className).toContain("bg-red-600");
+    expect(deleteAction.className).toContain("text-white");
+    fireEvent.click(deleteAction);
+
+    expect(screen.getByRole("dialog", { name: "containers.deleteModalTitle" })).toBeInTheDocument();
+    const selector = screen.getByLabelText("containers.deleteSelectLabel") as HTMLSelectElement;
+    expect(selector.options).toHaveLength(3);
+    expect(selector.options[0].disabled).toBe(true);
+    expect(selector.options[0].textContent).toContain("CTR-BOG-001");
+    expect(Array.from(selector.options).some((option) => option.textContent === "ECO-001")).toBe(true);
+
+    fireEvent.change(selector, { target: { value: "stock-container" } });
+    expect(selector.value).toBe("stock-container");
+    expect(screen.getByText("containers.deleteCascadeWarning")).toBeInTheDocument();
+    expect(mocks.deleteContainer).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "containers.deleteConfirm" }));
+
+    await waitFor(() => {
+      expect(mocks.deleteContainer).toHaveBeenCalledWith("stock-container");
+      expect(screen.queryByText("ECO-001")).toBeNull();
+    });
+    expect(screen.getByText("containers.deleteSuccessTitle")).toBeInTheDocument();
   });
 });
