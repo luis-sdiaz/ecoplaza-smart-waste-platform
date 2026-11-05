@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Trash2,
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -15,11 +16,11 @@ import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import SuccessToast from "../components/SuccessToast";
-import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import WasteRecordTable, { type WasteRecord } from "../components/WasteRecordTable";
 import WasteRegistrationModal, {
   type WasteRegistrationValues,
 } from "../components/WasteRegistrationModal";
+import DeleteWasteRecordModal from "../components/DeleteWasteRecordModal";
 import DateRangePickerButton from "../components/common/DateRangePickerButton";
 import { formatColombianDate } from "../services/colombianDate";
 import {
@@ -30,6 +31,7 @@ import {
 import {
   calculateWasteStatistics,
   createWasteRecord,
+  deleteWasteRecord,
   listWasteRecords,
   type RemoteWasteRecord,
   type WasteCategory,
@@ -51,8 +53,6 @@ import {
 } from "../services/reportDateRange";
 import { saveWasteExcel, type WasteExcelLabels } from "../services/wasteExcelService";
 
-const WASTE_RECORDS_STORAGE_PREFIX = "ecoplaza-waste-records:";
-
 type WasteRegistrationNotification = {
   id: number;
   variant: "success" | "error";
@@ -63,48 +63,13 @@ type WasteRegistrationNotification = {
 type WasteListResult = Awaited<ReturnType<typeof listWasteRecords>>;
 type ContainerListResult = Awaited<ReturnType<typeof listContainers>>;
 
-const baseWasteRecords: WasteRecord[] = [
-  { id: "RES-001", category: "Orgánicos", weight: "18.4 kg", container: "Contenedor 01", date: "03/10/2026", status: "Disponible" },
-  { id: "RES-002", category: "Reciclables", weight: "12.7 kg", container: "Contenedor 02", date: "03/10/2026", status: "Disponible" },
-  { id: "RES-003", category: "No aprovechables", weight: "23.1 kg", container: "Contenedor 03", date: "02/10/2026", status: "Registrado" },
-  { id: "RES-004", category: "Orgánicos", weight: "15.8 kg", container: "Contenedor 01", date: "02/10/2026", status: "Disponible" },
-];
-
-function getWasteRecordsStorageKey(userId: string): string {
-  return `${WASTE_RECORDS_STORAGE_PREFIX}${userId}`;
-}
-
-function readSavedWasteRecords(userId: string): WasteRecord[] {
-  try {
-    const storedRecords = localStorage.getItem(getWasteRecordsStorageKey(userId));
-    if (!storedRecords) return [];
-
-    const parsedRecords: unknown = JSON.parse(storedRecords);
-    if (!Array.isArray(parsedRecords)) return [];
-
-    return parsedRecords.filter(
-      (record): record is WasteRecord =>
-        typeof record === "object" &&
-        record !== null &&
-        typeof record.id === "string" &&
-        typeof record.category === "string" &&
-        typeof record.weight === "number" &&
-        Number.isFinite(record.weight) &&
-        record.weight > 0 &&
-        typeof record.container === "string" &&
-        typeof record.date === "string" &&
-        record.status === "available",
-    );
-  } catch {
-    return [];
-  }
-}
-
 function getWasteErrorKey(code: WasteErrorCode): string {
   if (code === "unauthorized") return "waste.unauthorized";
   if (code === "invalid_container" || code === "container_not_found") return "waste.containerNotFound";
   if (code === "invalid_category") return "waste.selectCategory";
   if (code === "invalid_weight") return "waste.invalidWeight";
+  if (code === "record_not_found") return "waste.recordNotFound";
+  if (code === "cannot_delete_sold") return "waste.cannotDeleteSold";
   if (code === "network_error") return "waste.networkError";
   if (code === "permission_denied") return "waste.permissionError";
   if (code === "constraint_violation") return "waste.constraintError";
@@ -118,19 +83,16 @@ function getContainerLoadErrorKey(code: ContainerErrorCode): string {
   return "waste.databaseError";
 }
 
-function UserWastePage({ userId }: { userId: string }) {
+function UserWastePage() {
   const { t, i18n } = useTranslation();
-  const { showDemoData } = useDemoVisibility();
-  const [legacyRecords] = useState<WasteRecord[]>(() => [
-    ...baseWasteRecords,
-    ...readSavedWasteRecords(userId),
-  ]);
   const [remoteRecords, setRemoteRecords] = useState<RemoteWasteRecord[]>([]);
   const [containers, setContainers] = useState<Container[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [statusFilter, setStatusFilter] = useState<WasteStatus | "all">("all");
   const [categoryFilter, setCategoryFilter] = useState<WasteCategory | "all">("all");
@@ -264,6 +226,36 @@ function UserWastePage({ userId }: { userId: string }) {
     }
   };
 
+  const handleDeleteWasteRecord = async (recordId: string): Promise<void> => {
+    if (isDeleting) return;
+
+    setIsDeleting(true);
+    setNotification(null);
+    const lifecycleRevision = requestRevisionRef.current;
+
+    try {
+      const result = await deleteWasteRecord(recordId);
+      if (lifecycleRevision !== requestRevisionRef.current) return;
+
+      if (!result.ok) {
+        showNotification("error", "waste.deleteWasteErrorTitle", getWasteErrorKey(result.error.code));
+        return;
+      }
+
+      setRemoteRecords((current) => current.filter((record) => record.id !== recordId));
+      setIsDeleteModalOpen(false);
+      showNotification("success", "waste.deleteWasteSuccessTitle", "waste.deleteWasteSuccessDescription");
+    } catch {
+      if (lifecycleRevision === requestRevisionRef.current) {
+        showNotification("error", "waste.deleteWasteErrorTitle", "waste.databaseError");
+      }
+    } finally {
+      if (lifecycleRevision === requestRevisionRef.current) {
+        setIsDeleting(false);
+      }
+    }
+  };
+
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const containerCodes = new Map(containers.map((container) => [container.id, container.code]));
   const timestampRange = activeDateRange === null ? undefined : toTimestampRange(activeDateRange);
@@ -298,6 +290,9 @@ function UserWastePage({ userId }: { userId: string }) {
     status: record.status,
   }));
   const statistics = calculateWasteStatistics(remoteRecords);
+  const deletableRecords = remoteRecords.filter(
+    (record) => record.status === "available" || record.status === "registered",
+  );
   const formatWeight = (value: number): string =>
     `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value)} ${t("common.kg")}`;
   const registrationUnavailable = isLoading || loadError !== null || containers.length === 0;
@@ -395,11 +390,7 @@ function UserWastePage({ userId }: { userId: string }) {
     <section className="p-8">
       <PageHeader eyebrow={t("waste.eyebrow")} title={t("waste.title")} description={t("waste.description")} />
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold text-ecoplaza-text">{t("waste.remoteRecords")}</h2>
-      </div>
-
-      <div className="mt-4 grid grid-cols-4 gap-4">
+      <div className="mt-8 grid grid-cols-4 gap-4">
         <MetricCard title={t("waste.totalRegistered")} value={metricsUnavailable ? "—" : formatWeight(statistics.totalWeightKg)} description={t("waste.remoteAccumulatedWaste")} />
         <MetricCard title={t("common.organic")} value={metricsUnavailable ? "—" : formatWeight(statistics.organicWeightKg)} description={t("waste.percentageOfTotal", { percentage: Math.round(statistics.organicPercentage) })} />
         <MetricCard title={t("common.recyclable")} value={metricsUnavailable ? "—" : formatWeight(statistics.recyclableWeightKg)} description={t("waste.percentageOfTotal", { percentage: Math.round(statistics.recyclablePercentage) })} />
@@ -424,6 +415,16 @@ function UserWastePage({ userId }: { userId: string }) {
               className="flex items-center gap-2 rounded-xl border border-ecoplaza-primary px-4 py-3 text-sm font-semibold text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-60">
               {exportKind === "excel" ? <LoaderCircle className="animate-spin" size={17} aria-hidden="true" /> : <Download size={17} aria-hidden="true" />}
               {exportKind === "excel" ? t("waste.exportingExcel") : t("waste.exportExcel")}
+            </button>
+            <button
+              type="button"
+              data-testid="open-delete-waste-modal"
+              disabled={isLoading || loadError !== null || deletableRecords.length === 0}
+              onClick={() => { setNotification(null); setIsDeleteModalOpen(true); }}
+              className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Trash2 size={17} aria-hidden="true" />
+              <span>{t("waste.deleteWasteButton")}</span>
             </button>
             <button type="button" disabled={registrationUnavailable}
               onClick={() => { setNotification(null); setIsModalOpen(true); }}
@@ -690,22 +691,21 @@ function UserWastePage({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {showDemoData && (
-        <div className="mt-10 border-t border-ecoplaza-border pt-8">
-          <div>
-            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("waste.localRecords")}</h2>
-            <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("waste.localDescription")}</p>
-          </div>
-          <div className="mt-4"><WasteRecordTable records={legacyRecords} /></div>
-        </div>
-      )}
-
       {isModalOpen && (
         <WasteRegistrationModal
           containers={containers}
           isSubmitting={isSubmitting}
           onClose={() => { if (!isSubmitting) setIsModalOpen(false); }}
           onSubmit={(values) => void handleRegisterWaste(values)}
+        />
+      )}
+      {isDeleteModalOpen && (
+        <DeleteWasteRecordModal
+          records={deletableRecords}
+          containers={containers}
+          isDeleting={isDeleting}
+          onClose={() => { if (!isDeleting) setIsDeleteModalOpen(false); }}
+          onConfirm={(recordId) => void handleDeleteWasteRecord(recordId)}
         />
       )}
       {notification && (
@@ -725,7 +725,7 @@ function UserWastePage({ userId }: { userId: string }) {
 
 function WastePage() {
   const { user } = useAuth();
-  return user ? <UserWastePage key={user.id} userId={user.id} /> : null;
+  return user ? <UserWastePage key={user.id} /> : null;
 }
 
 export default WastePage;

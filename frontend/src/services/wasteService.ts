@@ -48,6 +48,8 @@ export type WasteErrorCode =
   | "container_not_found"
   | "invalid_category"
   | "invalid_weight"
+  | "record_not_found"
+  | "cannot_delete_sold"
   | "network_error"
   | "permission_denied"
   | "constraint_violation"
@@ -433,6 +435,47 @@ export async function createWasteRecord(
     }
 
     return { ok: true, data: record };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function deleteWasteRecord(
+  id: string,
+): Promise<WasteServiceResult<void>> {
+  if (!UUID_PATTERN.test(id)) {
+    return { ok: false, error: { code: "record_not_found", retryable: false } };
+  }
+
+  const userResult = await getAuthenticatedUserId();
+  if (!userResult.ok) return userResult;
+
+  try {
+    const { data: existing, error: fetchError } = await supabase
+      .from("waste_records")
+      .select("id, owner_id, status")
+      .eq("id", id)
+      .eq("owner_id", userResult.data)
+      .maybeSingle<{ id: string; owner_id: string; status: string }>();
+
+    if (fetchError) return failure(fetchError);
+    if (!existing) {
+      return { ok: false, error: { code: "record_not_found", retryable: false } };
+    }
+
+    if (existing.status === "sold") {
+      return { ok: false, error: { code: "cannot_delete_sold", retryable: false } };
+    }
+
+    const { error: deleteError } = await supabase
+      .from("waste_records")
+      .delete()
+      .eq("id", id)
+      .eq("owner_id", userResult.data);
+
+    if (deleteError) return failure(deleteError);
+
+    return { ok: true, data: undefined };
   } catch (error) {
     return failure(error);
   }
