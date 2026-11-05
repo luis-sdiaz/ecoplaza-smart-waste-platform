@@ -91,7 +91,7 @@ function SensorStatusCard({
             !isDataAvailable
               ? "border border-slate-300/60 bg-slate-500/10 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
               : isCritical
-                ? "border border-rose-300/60 bg-rose-500/10 text-rose-800 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300"
+                ? "border border-red-300/60 bg-red-500/10 text-red-800 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300"
                 : isWarning
                   ? "border border-amber-300/60 bg-amber-500/10 text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300"
                   : "border border-emerald-300/60 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
@@ -102,7 +102,7 @@ function SensorStatusCard({
               !isDataAvailable
                 ? "bg-slate-400"
                 : isCritical
-                  ? "animate-pulse bg-rose-500"
+                  ? "animate-pulse bg-red-600"
                   : isWarning
                     ? "bg-amber-500"
                     : "bg-emerald-500"
@@ -147,7 +147,7 @@ function SensorStatusCard({
             <span
               className={`font-bold ${
                 isCritical
-                  ? "text-rose-600 dark:text-rose-400"
+                  ? "text-red-600 dark:text-red-400"
                   : isWarning
                     ? "text-amber-600 dark:text-amber-400"
                     : "text-slate-900 dark:text-slate-100"
@@ -165,17 +165,17 @@ function SensorStatusCard({
             aria-label={`${t("sensors.fillLevel", "Nivel de llenado")}: ${
               validFillLevel !== null ? `${validFillLevel}%` : t("sensors.noTelemetry", "Sin telemetría reciente")
             }`}
-            className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/10"
+            className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-200/80 dark:bg-zinc-800/60"
           >
             <div
               className={`h-full rounded-full transition-all duration-300 ${
                 !isDataAvailable
-                  ? "w-0 bg-slate-400"
+                  ? "w-0 bg-zinc-400"
                   : isCritical
-                    ? "bg-gradient-to-r from-amber-500 to-rose-500"
+                    ? "bg-red-600 dark:bg-red-500"
                     : isWarning
-                      ? "bg-gradient-to-r from-emerald-500 to-amber-500"
-                      : "bg-gradient-to-r from-emerald-500 to-teal-400"
+                      ? "bg-amber-500 dark:bg-amber-400"
+                      : "bg-emerald-700 dark:bg-emerald-600"
               }`}
               style={{
                 width: validFillLevel !== null ? `${validFillLevel}%` : "0%",

@@ -80,10 +80,10 @@ function WasteSummaryCard({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label={`${title ?? ""}: ${displayPercentage}`}
-          className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/10"
+          className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-200/80 dark:bg-zinc-800/60"
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+            className="h-full rounded-full bg-emerald-700 dark:bg-emerald-600 transition-all duration-300"
             style={{ width: `${Math.min(100, Math.max(0, safePercentage))}%` }}
           />
         </div>

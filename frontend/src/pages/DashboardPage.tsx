@@ -6,7 +6,6 @@ import {
   Clock,
   Info,
   LoaderCircle,
-  PackageOpen,
   Radio,
   Receipt,
   RefreshCw,
@@ -17,15 +16,12 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import MetricCard from "../components/MetricCard";
 import SensorStatusCard from "../components/SensorStatusCard";
-import WasteSummaryCard from "../components/WasteSummaryCard";
 import {
   getReportStatistics,
   type ReportErrorCode,
   type ReportStatistics,
-  type ReportWasteCategory,
 } from "../services/reportService";
 import { MAX_MONETARY_FRACTION_DIGITS } from "../services/monetarySafety";
-import { calculateMaterialStatusBreakdown } from "../services/dashboardMaterialStatus";
 import { listSales, type SaleHistoryItem } from "../services/salesService";
 import { sortSalesHistory } from "../services/coreWorkflow";
 import { listAvailableWasteRecords } from "../services/wasteService";
@@ -263,17 +259,8 @@ function UserDashboardPage({ userId }: { userId: string }) {
   const realValueUnavailable = isLoading || loadError !== null || statistics === null;
   const metricValue = (format: (data: ReportStatistics) => string): string =>
     realValueUnavailable || statistics === null ? "—" : format(statistics);
-  const categoryValue = (
-    category: ReportWasteCategory,
-    field: "weightKg" | "percentage",
-  ): number => statistics?.distribution.find((item) => item.category === category)?.[field] ?? 0;
   const hasNoCommercialActivity = !realValueUnavailable && statistics !== null &&
     statistics.availableWeightKg === 0 && statistics.salesCount === 0;
-  const materialStatus = statistics === null ? null : calculateMaterialStatusBreakdown(
-    statistics.totalRegisteredWeightKg,
-    statistics.availableWeightKg,
-    statistics.soldWeightKg,
-  );
   const topRevenueCategory = statistics === null
     ? null
     : findTopRevenueCategory(statistics.salesByCategory, statistics.grossSalesValue);
@@ -317,15 +304,15 @@ function UserDashboardPage({ userId }: { userId: string }) {
       )}
 
       {!isLoading && loadError && (
-        <div role="alert" className="glass-panel mt-6 flex items-center justify-between gap-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
-          <div className="flex items-center gap-3 text-sm text-rose-700 dark:text-rose-400">
+        <div role="alert" className="glass-panel mt-6 flex items-center justify-between gap-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
+          <div className="flex items-center gap-3 text-sm text-red-700 dark:text-red-400">
             <AlertTriangle size={18} strokeWidth={1.8} aria-hidden="true" />
             <span>{t(loadError)}</span>
           </div>
           <button
             type="button"
             onClick={() => void loadStatistics()}
-            className="flex shrink-0 items-center gap-2 rounded-lg border border-rose-500/30 px-3 py-2 text-sm font-medium text-rose-700 dark:text-rose-400"
+            className="flex shrink-0 items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-400"
           >
             <RefreshCw size={15} strokeWidth={1.8} aria-hidden="true" />
             {t("dashboard.retry")}
@@ -355,7 +342,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
             title={t("dashboard.activeSensors")}
             value="8"
             description={t("dashboard.registeredSensors", { count: 10 })}
-            icon={<Radio size={22} className="text-sky-600 dark:text-sky-400" aria-hidden="true" />}
+            icon={<Radio size={22} className="text-emerald-700 dark:text-emerald-400" aria-hidden="true" />}
           />
         )}
         <MetricCard
@@ -372,187 +359,14 @@ function UserDashboardPage({ userId }: { userId: string }) {
         />
       </div>
 
-      {/* Bento Grid Architecture: 12 Columns */}
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Main Column (8 cols): Material status, Recent sales, Waste by category */}
-        <div className="flex flex-col gap-6 lg:col-span-8">
-          {/* Section: Estado del material */}
-          <div className="glass-panel rounded-2xl p-6">
-            <div>
-              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.materialStatus")}</h2>
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.materialStatusDescription")}</p>
-            </div>
-            {realValueUnavailable || materialStatus === null ? (
-              <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200/80 bg-slate-50/50 p-6 text-center dark:border-white/10 dark:bg-white/5">
-                <PackageOpen size={28} className="text-slate-400 dark:text-slate-500" aria-hidden="true" />
-                <p className="text-sm text-ecoplaza-text-muted">
-                  {realValueUnavailable ? "—" : t("dashboard.materialStatusUnavailable")}
-                </p>
-              </div>
-            ) : materialStatus.totalWeightKg === 0 ? (
-              <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200/80 bg-slate-50/50 p-6 text-center dark:border-white/10 dark:bg-white/5">
-                <PackageOpen size={28} className="text-slate-400 dark:text-slate-500" aria-hidden="true" />
-                <p className="text-sm text-ecoplaza-text-muted">
-                  {t("dashboard.materialStatusEmpty")}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-slate-200/60 dark:bg-white/10" aria-label={t("dashboard.materialStatusChart")}>
-                  <span className="bg-gradient-to-r from-emerald-500 to-teal-400" style={{ width: `${materialStatus.availablePercentage}%` }} />
-                  <span className="bg-gradient-to-r from-teal-500 to-cyan-400" style={{ width: `${materialStatus.soldPercentage}%` }} />
-                  <span className="bg-slate-300 dark:bg-white/20" style={{ width: `${materialStatus.otherPercentage}%` }} />
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {([
-                    ["available", materialStatus.availableWeightKg, materialStatus.availablePercentage],
-                    ["sold", materialStatus.soldWeightKg, materialStatus.soldPercentage],
-                    ["other", materialStatus.otherWeightKg, materialStatus.otherPercentage],
-                  ] as const).map(([status, weight, percentage]) => (
-                    <div key={status} className="glass-card rounded-xl p-3 transition-all duration-200 hover:-translate-y-0.5">
-                      <p className="text-xs text-ecoplaza-text-muted">{t(`dashboard.materialStatus${status[0].toUpperCase()}${status.slice(1)}`)}</p>
-                      <p className="mt-1 text-sm font-semibold text-ecoplaza-text">{formatWeight(weight)} · {formatPercentage(percentage)}</p>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Section: Ventas recientes */}
-          <div className="glass-panel rounded-2xl p-6">
-            <div>
-              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.recentSales")}</h2>
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesDescription")}</p>
-            </div>
-            {areRecentSalesLoading ? (
-              <div role="status" className="mt-4 flex min-h-24 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
-                <LoaderCircle className="animate-spin text-ecoplaza-primary" size={18} aria-hidden="true" />
-                {t("dashboard.loadingRecentSales")}
-              </div>
-            ) : recentSalesError ? (
-              <div role="alert" className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
-                <span>{t("dashboard.recentSalesError")}</span>
-                <button type="button" onClick={() => void loadRecentSales()} className="flex items-center gap-2 rounded-lg border border-rose-500/30 px-3 py-2 font-medium">
-                  <RefreshCw size={15} aria-hidden="true" />{t("dashboard.retry")}
-                </button>
-              </div>
-            ) : recentSales.length === 0 ? (
-              <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200/80 bg-slate-50/50 p-6 text-center dark:border-white/10 dark:bg-white/5">
-                <Receipt size={28} className="text-slate-400 dark:text-slate-500" aria-hidden="true" />
-                <p className="text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesEmpty")}</p>
-              </div>
-            ) : (
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[640px]">
-                  <thead>
-                    <tr className="border-b border-slate-200/60 text-left text-xs text-ecoplaza-text-muted dark:border-white/10">
-                      <th className="px-3 py-2 font-semibold">{t("common.date")}</th>
-                      <th className="px-3 py-2 font-semibold">{t("buyers.buyer")}</th>
-                      <th className="px-3 py-2 font-semibold">{t("common.category")}</th>
-                      <th className="px-3 py-2 font-semibold">{t("sales.soldWeight")}</th>
-                      <th className="px-3 py-2 text-right font-semibold">{t("sales.total")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentSales.map((sale) => (
-                      <tr key={sale.id} className="border-t border-slate-200/40 transition-colors hover:bg-white/30 dark:border-white/5 dark:hover:bg-white/5" title={sale.id}>
-                        <td className="px-3 py-3 text-sm text-ecoplaza-text-muted">{dateFormatter.format(new Date(sale.soldAt))}</td>
-                        <td className="px-3 py-3 text-sm text-ecoplaza-text">{sale.buyerName}</td>
-                        <td className="px-3 py-3 text-sm text-ecoplaza-text">{t(`common.${sale.category}`)}</td>
-                        <td className="px-3 py-3 text-sm text-ecoplaza-text">{formatWeight(sale.weightKg)}</td>
-                        <td className="px-3 py-3 text-right text-sm font-medium text-ecoplaza-text">{currencyFormatter.format(sale.totalValue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Section: Residuos por categoría */}
-          <div className="glass-panel rounded-2xl p-6">
-            <div>
-              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.wasteByCategory")}</h2>
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.realWasteDistribution")}</p>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <WasteSummaryCard
-                title={t("common.organic")}
-                amount={realValueUnavailable ? "—" : formatWeight(categoryValue("organic", "weightKg"))}
-                percentage={realValueUnavailable ? 0 : categoryValue("organic", "percentage")}
-                percentageLabel={realValueUnavailable ? "—" : formatPercentage(categoryValue("organic", "percentage"))}
-              />
-              <WasteSummaryCard
-                title={t("common.recyclable")}
-                amount={realValueUnavailable ? "—" : formatWeight(categoryValue("recyclable", "weightKg"))}
-                percentage={realValueUnavailable ? 0 : categoryValue("recyclable", "percentage")}
-                percentageLabel={realValueUnavailable ? "—" : formatPercentage(categoryValue("recyclable", "percentage"))}
-              />
-              <WasteSummaryCard
-                title={t("common.nonRecyclable")}
-                amount={realValueUnavailable ? "—" : formatWeight(categoryValue("nonRecyclable", "weightKg"))}
-                percentage={realValueUnavailable ? 0 : categoryValue("nonRecyclable", "percentage")}
-                percentageLabel={realValueUnavailable ? "—" : formatPercentage(categoryValue("nonRecyclable", "percentage"))}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Lateral Column of Telemetry & Leaders (4 cols) */}
-        <div className="flex flex-col gap-6 lg:col-span-4">
-          {/* Section: Estado de sensores */}
-          {(showDemoData || liveTelemetry !== null) && (
-            <div className="glass-panel rounded-2xl p-6" data-testid="dashboard-sensor-status-section">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
-                  <p className="mt-1 text-sm text-ecoplaza-text-muted">
-                    {liveTelemetry !== null
-                      ? t("dashboard.sensorMonitoring")
-                      : t("dashboard.sensorMonitoringDemo")}
-                  </p>
-                </div>
-                {liveTelemetry !== null && (
-                  <span
-                    data-testid="iot-live-badge"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
-                  >
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />
-                    <span>IoT Live</span>
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                {liveTelemetry !== null && (
-                  <SensorStatusCard
-                    name={liveTelemetry.containerId}
-                    category={t("common.wasteRecyclable")}
-                    fillLevel={liveTelemetry.fillPercentage}
-                    status={
-                      liveTelemetry.status === "critical"
-                        ? "Critical"
-                        : liveTelemetry.status === "warning"
-                          ? "Warning"
-                          : "Normal"
-                    }
-                    hasTelemetry={true}
-                  />
-                )}
-                <SensorStatusCard name={`${t("waste.container")} 01`} category={t("common.wasteOrganic")} fillLevel={68} status={t("common.active")} />
-                <SensorStatusCard name={`${t("waste.container")} 02`} category={t("common.wasteRecyclable")} fillLevel={42} status={t("common.active")} />
-                <SensorStatusCard name={`${t("waste.container")} 03`} category={t("common.wasteNonRecyclable")} fillLevel={81} status={t("common.active")} />
-              </div>
-            </div>
-          )}
-
-          {/* Section: Categoría líder en ingresos */}
-          <div className="glass-panel rounded-2xl p-6" data-testid="top-revenue-category-card">
+      {/* Primary Row: Top Revenue Category & Live IoT Sensors */}
+      <div className="mt-8 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+        {/* Left Column: Categoría líder en ingresos */}
+        <div className="glass-panel flex h-full min-w-0 flex-col justify-between rounded-2xl p-6" data-testid="top-revenue-category-card">
+          <div>
             <div>
               <h2 id="top-revenue-category-title" className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.topRevenueCategory")}</h2>
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryDescription")}</p>
+              <p className="mt-0.5 text-xs text-ecoplaza-text-muted">{t("dashboard.topRevenueCategoryDescription")}</p>
             </div>
 
             {realValueUnavailable || topRevenueCategory === null ? (
@@ -563,7 +377,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
                 </p>
               </div>
             ) : (
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="glass-card rounded-xl p-3.5 transition-all duration-200 hover:-translate-y-0.5">
                   <p className="text-xs text-ecoplaza-text-muted">{t("common.category")}</p>
                   <p className="mt-1 text-base font-bold text-ecoplaza-text">{t(`common.${topRevenueCategory.category}`)}</p>
@@ -585,35 +399,144 @@ function UserDashboardPage({ userId }: { userId: string }) {
               </div>
             )}
           </div>
+        </div>
 
-          {/* Section: Inventario disponible más antiguo */}
-          <div className="glass-panel rounded-2xl p-6">
+        {/* Right Column: Estado de sensores */}
+        {(showDemoData || liveTelemetry !== null) && (
+          <div className="glass-panel flex h-full min-w-0 flex-col justify-between rounded-2xl p-6" data-testid="dashboard-sensor-status-section">
             <div>
-              <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.oldestInventory")}</h2>
-              <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.oldestInventoryDescription")}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
+                  <p className="mt-0.5 text-xs text-ecoplaza-text-muted">
+                    {liveTelemetry !== null
+                      ? t("dashboard.sensorMonitoring")
+                      : t("dashboard.sensorMonitoringDemo")}
+                  </p>
+                </div>
+                {liveTelemetry !== null && (
+                  <span
+                    data-testid="iot-live-badge"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
+                  >
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />
+                    <span>IoT Live</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {liveTelemetry !== null && (
+                  <SensorStatusCard
+                    name={liveTelemetry.containerId}
+                    category={t("common.wasteRecyclable")}
+                    fillLevel={liveTelemetry.fillPercentage}
+                    status={
+                      liveTelemetry.status === "critical"
+                        ? "Critical"
+                        : liveTelemetry.status === "warning"
+                          ? "Warning"
+                          : "Normal"
+                    }
+                    hasTelemetry={true}
+                  />
+                )}
+                <SensorStatusCard name={`${t("waste.container")} 01`} category={t("common.wasteOrganic")} fillLevel={68} status={t("common.active")} />
+                <SensorStatusCard name={`${t("waste.container")} 02`} category={t("common.wasteRecyclable")} fillLevel={42} status={t("common.active")} />
+                <SensorStatusCard name={`${t("waste.container")} 03`} category={t("common.wasteNonRecyclable")} fillLevel={81} status={t("common.active")} />
+              </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Secondary Row: Activity Tables & Aging Inventory */}
+      <div className="mt-6 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+        {/* Left Column: Ventas recientes */}
+        <div className="glass-panel flex h-full min-w-0 flex-col justify-between rounded-2xl p-6">
+          <div className="shrink-0">
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.recentSales")}</h2>
+            <p className="mt-0.5 text-xs text-ecoplaza-text-muted">{t("dashboard.recentSalesDescription")}</p>
+          </div>
+
+          <div className="mt-4 flex min-w-0 flex-1 flex-col justify-between">
+            {areRecentSalesLoading ? (
+              <div role="status" className="flex min-h-[220px] flex-1 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
+                <LoaderCircle className="animate-spin text-ecoplaza-primary" size={18} aria-hidden="true" />
+                {t("dashboard.loadingRecentSales")}
+              </div>
+            ) : recentSalesError ? (
+              <div role="alert" className="flex flex-1 items-center justify-between gap-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                <span>{t("dashboard.recentSalesError")}</span>
+                <button type="button" onClick={() => void loadRecentSales()} className="flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 font-medium">
+                  <RefreshCw size={15} aria-hidden="true" />{t("dashboard.retry")}
+                </button>
+              </div>
+            ) : recentSales.length === 0 ? (
+              <div className="flex min-h-[220px] flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200/80 bg-slate-50/50 p-6 text-center dark:border-white/10 dark:bg-white/5">
+                <Receipt size={28} className="text-slate-400 dark:text-slate-500" aria-hidden="true" />
+                <p className="text-sm text-ecoplaza-text-muted">{t("dashboard.recentSalesEmpty")}</p>
+              </div>
+            ) : (
+              <div className="w-full overflow-x-auto pb-2">
+                <table data-testid="recent-sales-table" className="w-full min-w-[500px]">
+                  <thead>
+                    <tr className="border-b border-slate-200/60 text-left text-xs whitespace-nowrap text-ecoplaza-text-muted dark:border-white/10">
+                      <th className="px-3 py-2 font-semibold">{t("common.date")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("buyers.buyer")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("common.category")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("sales.soldWeight")}</th>
+                      <th className="px-3 py-2 text-right font-semibold">{t("sales.total")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentSales.map((sale) => (
+                      <tr key={sale.id} className="border-t border-slate-200/40 transition-colors hover:bg-white/30 dark:border-white/5 dark:hover:bg-white/5" title={sale.id}>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-ecoplaza-text-muted">{dateFormatter.format(new Date(sale.soldAt))}</td>
+                        <td className="max-w-[150px] truncate px-3 py-3 text-sm whitespace-nowrap text-ecoplaza-text" title={sale.buyerName}>{sale.buyerName}</td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-ecoplaza-text">{t(`common.${sale.category}`)}</td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-ecoplaza-text">{formatWeight(sale.weightKg)}</td>
+                        <td className="px-3 py-3 text-right text-sm font-medium whitespace-nowrap text-ecoplaza-text">{currencyFormatter.format(sale.totalValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="mt-3 min-h-[1.25rem] shrink-0" aria-hidden="true" />
+          </div>
+        </div>
+
+        {/* Right Column: Inventario disponible más antiguo */}
+        <div className="glass-panel flex h-full min-w-0 flex-col justify-between rounded-2xl p-6">
+          <div className="shrink-0">
+            <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.oldestInventory")}</h2>
+            <p className="mt-0.5 text-xs text-ecoplaza-text-muted">{t("dashboard.oldestInventoryDescription")}</p>
+          </div>
+
+          <div className="mt-4 flex min-w-0 flex-1 flex-col justify-between">
             {isOldestInventoryLoading ? (
-              <div role="status" className="mt-4 flex min-h-24 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
+              <div role="status" className="flex min-h-[220px] flex-1 items-center justify-center gap-2 text-sm text-ecoplaza-text-muted">
                 <LoaderCircle className="animate-spin text-ecoplaza-primary" size={18} aria-hidden="true" />
                 {t("dashboard.loadingOldestInventory")}
               </div>
             ) : oldestInventoryError ? (
-              <div role="alert" className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
+              <div role="alert" className="flex flex-1 items-center justify-between gap-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                 <span>{t("dashboard.oldestInventoryError")}</span>
-                <button type="button" onClick={() => void loadOldestInventory()} className="flex items-center gap-2 rounded-lg border border-rose-500/30 px-3 py-2 font-medium">
+                <button type="button" onClick={() => void loadOldestInventory()} className="flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 font-medium">
                   <RefreshCw size={15} aria-hidden="true" />{t("dashboard.retry")}
                 </button>
               </div>
             ) : oldestInventory.length === 0 ? (
-              <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200/80 bg-slate-50/50 p-6 text-center dark:border-white/10 dark:bg-white/5">
+              <div className="flex min-h-[220px] flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200/80 bg-slate-50/50 p-6 text-center dark:border-white/10 dark:bg-white/5">
                 <Clock size={28} className="text-slate-400 dark:text-slate-500" aria-hidden="true" />
                 <p className="text-sm text-ecoplaza-text-muted">{t("dashboard.oldestInventoryEmpty")}</p>
               </div>
             ) : (
-              <div className="mt-4 overflow-x-auto">
+              <div className="w-full overflow-x-auto pb-2">
                 <table className="w-full min-w-[500px]">
                   <thead>
-                    <tr className="border-b border-slate-200/60 text-left text-xs text-ecoplaza-text-muted dark:border-white/10">
+                    <tr className="border-b border-slate-200/60 text-left text-xs whitespace-nowrap text-ecoplaza-text-muted dark:border-white/10">
                       <th className="px-3 py-2 font-semibold">{t("waste.record")}</th>
                       <th className="px-3 py-2 font-semibold">{t("common.category")}</th>
                       <th className="px-3 py-2 font-semibold">{t("inventory.weight")}</th>
@@ -624,11 +547,11 @@ function UserDashboardPage({ userId }: { userId: string }) {
                   <tbody>
                     {oldestInventory.map((item) => (
                       <tr key={item.id} data-testid="aging-inventory-row" className="border-t border-slate-200/40 transition-colors hover:bg-white/30 dark:border-white/5 dark:hover:bg-white/5" title={item.id}>
-                        <td className="px-3 py-3 text-sm font-medium text-ecoplaza-text">{item.reference}</td>
-                        <td className="px-3 py-3 text-sm text-ecoplaza-text">{t(`common.${item.category}`)}</td>
-                        <td className="px-3 py-3 text-sm text-ecoplaza-text">{formatWeight(item.weightKg)}</td>
-                        <td className="px-3 py-3 text-sm text-ecoplaza-text">{item.containerCode ?? t("inventory.unknownContainer")}</td>
-                        <td className="px-3 py-3 text-right text-sm">
+                        <td className="px-3 py-3 text-sm font-medium whitespace-nowrap text-ecoplaza-text">{item.reference}</td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-ecoplaza-text">{t(`common.${item.category}`)}</td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-ecoplaza-text">{formatWeight(item.weightKg)}</td>
+                        <td className="px-3 py-3 text-sm whitespace-nowrap text-ecoplaza-text">{item.containerCode ?? t("inventory.unknownContainer")}</td>
+                        <td className="px-3 py-3 text-right text-sm whitespace-nowrap">
                           <span className={item.ageDays > 30 ? "inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-800 shadow-2xs backdrop-blur-md dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300" : "text-ecoplaza-text"}>
                             {t("inventory.storageAgeDays", { count: item.ageDays })}
                           </span>
@@ -639,9 +562,11 @@ function UserDashboardPage({ userId }: { userId: string }) {
                 </table>
               </div>
             )}
-            {!isOldestInventoryLoading && !oldestInventoryError && oldestInventory.some((item) => item.ageDays > 30) && (
-              <p className="mt-3 text-xs text-ecoplaza-text-muted">{t("dashboard.olderThanThirtyNote")}</p>
-            )}
+            <div className="mt-3 min-h-[1.25rem] shrink-0">
+              {!isOldestInventoryLoading && !oldestInventoryError && oldestInventory.some((item) => item.ageDays > 30) ? (
+                <p className="text-xs text-ecoplaza-text-muted">{t("dashboard.olderThanThirtyNote")}</p>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
