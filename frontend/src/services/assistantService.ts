@@ -1,3 +1,4 @@
+import { formatColombianDateTime } from "./colombianDate.ts";
 import type { Container } from "./containerService.ts";
 import { geminiAiService } from "./geminiAiService.ts";
 import { getEnrichedSystemPrompt } from "./assistantContextService.ts";
@@ -430,6 +431,10 @@ export function formatIoTFleetResponse(
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+  const isPhysicalTarget =
+    /ctr[-_]?bog[-_]?001|ctr[-_]?bog|sensor\s+(en\s+vivo|fisico|hardware)|hardware\s+(en\s+vivo|fisico)|telemetria\s+en\s+vivo|live\s+sensor|physical\s+sensor|live\s+telemetry/.test(
+      normalized,
+    );
   const isBattery =
     /\b(bateria|baterias|battery|batteries)\b/.test(normalized);
   const isUrgent =
@@ -439,12 +444,100 @@ export function formatIoTFleetResponse(
   const isGeneralIoT =
     /\b(sensor|sensores|telemetria|telemetry|flota|fleet)\b/.test(normalized);
 
-  if (!isBattery && !isUrgent && !isGeneralIoT) {
+  if (!isPhysicalTarget && !isBattery && !isUrgent && !isGeneralIoT) {
     return null;
   }
 
-  const health = calculateFleetHealth(snapshots);
   const isEn = lang === "en";
+
+  if (isPhysicalTarget) {
+    const physicalSnapshot = snapshots.find(
+      (s) =>
+        s.containerName?.toUpperCase() === "CTR-BOG-001" ||
+        s.containerId?.toUpperCase().includes("CTR-BOG-001") ||
+        s.isPhysicalHardware === true,
+    );
+
+    if (physicalSnapshot) {
+      const statusLabel =
+        physicalSnapshot.status === "critical" || physicalSnapshot.fillLevel >= 90
+          ? isEn
+            ? "Critical"
+            : "Crítico (Critical)"
+          : physicalSnapshot.status === "warning" || physicalSnapshot.fillLevel >= 70
+            ? isEn
+              ? "Warning"
+              : "Advertencia (Warning)"
+            : "Normal";
+
+      const formattedDate = formatColombianDateTime(
+        physicalSnapshot.updatedAt,
+        lang,
+      );
+      const distanceText =
+        typeof physicalSnapshot.distanceCm === "number"
+          ? `${physicalSnapshot.distanceCm} cm`
+          : isEn
+            ? "Not available"
+            : "No disponible";
+
+      const recommendationText = isEn
+        ? physicalSnapshot.fillLevel >= 90
+          ? "🚨 Critical Alert: The container exceeds 90% capacity. Immediate collection dispatch is required."
+          : physicalSnapshot.fillLevel >= 70
+            ? "⚠️ Warning Level: Fill level is between 70% and 89%. Scheduled collection is recommended."
+            : "✅ Normal Operation: Adequate capacity available."
+        : physicalSnapshot.fillLevel >= 90
+          ? "🚨 Alerta Crítica: El contenedor supera el 90% de capacidad. Se requiere despacho urgente de recolección."
+          : physicalSnapshot.fillLevel >= 70
+            ? "⚠️ Nivel de Advertencia: Nivel de llenado entre 70% y 89%. Se recomienda programar ruta de recolección próxima."
+            : "✅ Operación Normal: Capacidad disponible adecuada.";
+
+      return isEn
+        ? [
+            "📡 Live IoT Telemetry Sensor Status (CTR-BOG-001):",
+            "",
+            "• Device: CTR-BOG-001 (ESP32 Microcontroller + HC-SR04 Ultrasonic Sensor).",
+            `• Fill level: ${physicalSnapshot.fillLevel}% [Status: ${statusLabel}].`,
+            `• Ultrasonic distance detected: ${distanceText}.`,
+            `• Operational status: ${physicalSnapshot.status ? physicalSnapshot.status.toUpperCase() : "NORMAL"}.`,
+            `• Last synchronization: ${formattedDate} (Colombian Time).`,
+            "",
+            recommendationText,
+          ].join("\n")
+        : [
+            "📡 Estado del Sensor de Telemetría IoT en Vivo (CTR-BOG-001):",
+            "",
+            "• Dispositivo: CTR-BOG-001 (Microcontrolador ESP32 + Sensor ultrasónico HC-SR04).",
+            `• Nivel de llenado: ${physicalSnapshot.fillLevel}% [Estado: ${statusLabel}].`,
+            `• Distancia ultrasónica detectada: ${distanceText}.`,
+            `• Estado operacional: ${physicalSnapshot.status ? physicalSnapshot.status.toUpperCase() : "NORMAL"}.`,
+            `• Última sincronización: ${formattedDate} (Hora de Colombia).`,
+            "",
+            recommendationText,
+          ].join("\n");
+    }
+
+    return isEn
+      ? [
+          "📡 Physical Sensor Status (CTR-BOG-001):",
+          "",
+          "• Device: CTR-BOG-001 (ESP32 Node + HC-SR04 Ultrasonic Sensor).",
+          "• Current status: Waiting for signal.",
+          "",
+          "The physical hardware is currently waiting for signal and has not recorded active readings in Supabase. Once the microcontroller transmits via Wi-Fi, real-time telemetry will be available.",
+        ].join("\n")
+      : [
+          "📡 Estado del Sensor Físico (CTR-BOG-001):",
+          "",
+          "• Dispositivo: CTR-BOG-001 (Nodo ESP32 + Sensor ultrasónico HC-SR04).",
+          "• Estado actual: En espera de señal.",
+          "",
+          "Actualmente el hardware físico está en espera de señal y no registra lecturas activas en la base de datos de Supabase. Una vez el microcontrolador transmita por Wi-Fi, la telemetría en tiempo real estará disponible.",
+        ].join("\n");
+  }
+
+  const health = calculateFleetHealth(snapshots);
 
   if (isBattery) {
     if (snapshots.length === 0) {
@@ -546,35 +639,75 @@ export async function fetchIoTTelemetrySnapshots(): Promise<ContainerTelemetrySn
   try {
     const { listContainers } = await import("./containerService.ts");
     const { getLatestTelemetry } = await import("./sensorService.ts");
+    const { fetchLatestTelemetryByContainer } = await import(
+      "./telemetryService.ts"
+    );
 
-    const containersResult = await listContainers();
-    if (!containersResult.ok || !Array.isArray(containersResult.data)) {
-      return [];
+    const [containersResult, physicalTelemetry] = await Promise.all([
+      listContainers(),
+      fetchLatestTelemetryByContainer("CTR-BOG-001").catch(() => null),
+    ]);
+
+    const snapshots: ContainerTelemetrySnapshot[] = [];
+
+    if (containersResult.ok && Array.isArray(containersResult.data)) {
+      const telemetryPromises: Promise<ContainerTelemetrySnapshot | null>[] =
+        containersResult.data.map(async (c) => {
+          try {
+            const tel = await getLatestTelemetry(c.id);
+            if (!tel) return null;
+            const snapshot: ContainerTelemetrySnapshot = {
+              containerId: c.id,
+              containerName: c.code,
+              fillLevel: tel.fillLevelPercent,
+              batteryLevel: tel.batteryLevelPercent,
+              temperature: tel.temperatureCelsius,
+              updatedAt: tel.recordedAt,
+            };
+            return snapshot;
+          } catch {
+            return null;
+          }
+        });
+
+      const resolved = await Promise.all(telemetryPromises);
+      for (const item of resolved) {
+        if (item) snapshots.push(item);
+      }
     }
 
-    const telemetryPromises: Promise<ContainerTelemetrySnapshot | null>[] =
-      containersResult.data.map(async (c) => {
-        try {
-          const tel = await getLatestTelemetry(c.id);
-          if (!tel) return null;
-          const snapshot: ContainerTelemetrySnapshot = {
-            containerId: c.id,
-            containerName: c.code,
-            fillLevel: tel.fillLevelPercent,
-            batteryLevel: tel.batteryLevelPercent,
-            temperature: tel.temperatureCelsius,
-            updatedAt: tel.recordedAt,
-          };
-          return snapshot;
-        } catch {
-          return null;
-        }
-      });
+    if (physicalTelemetry) {
+      const existingIdx = snapshots.findIndex(
+        (s) =>
+          s.containerName?.toUpperCase() === "CTR-BOG-001" ||
+          s.containerId?.toUpperCase() === "CTR-BOG-001",
+      );
+      const physicalSnapshot: ContainerTelemetrySnapshot = {
+        containerId:
+          existingIdx >= 0
+            ? snapshots[existingIdx].containerId
+            : "iot-ctr-bog-001",
+        containerName: "CTR-BOG-001",
+        fillLevel: physicalTelemetry.fillPercentage,
+        batteryLevel: 100,
+        temperature: 22,
+        updatedAt: physicalTelemetry.recordedAt,
+        distanceCm: physicalTelemetry.distanceCm,
+        status: physicalTelemetry.status,
+        isPhysicalHardware: true,
+      };
 
-    const resolved = await Promise.all(telemetryPromises);
-    return resolved.filter(
-      (item): item is ContainerTelemetrySnapshot => item !== null,
-    );
+      if (existingIdx >= 0) {
+        snapshots[existingIdx] = {
+          ...snapshots[existingIdx],
+          ...physicalSnapshot,
+        };
+      } else {
+        snapshots.unshift(physicalSnapshot);
+      }
+    }
+
+    return snapshots;
   } catch {
     return [];
   }
@@ -585,7 +718,11 @@ export function isIoTFleetResponse(response: string): boolean {
     response.startsWith("🔋") ||
     response.startsWith("🚨") ||
     response.startsWith("📡") ||
-    response.includes("IoT")
+    response.includes("IoT") ||
+    response.includes("CTR-BOG-001") ||
+    response.includes("telemetría") ||
+    response.includes("telemetry") ||
+    response.includes("HC-SR04")
   );
 }
 
@@ -594,6 +731,7 @@ export type AssistantProvider = "gemini" | "local_fallback";
 export interface AssistantResponseResult {
   content: string;
   provider: AssistantProvider;
+  engine: AssistantProvider;
 }
 
 let lastAssistantProvider: AssistantProvider = "local_fallback";
@@ -627,7 +765,8 @@ export async function generateLocalAssistantResponse(
   const isCandidateIoT =
     /\b(sensor|sensores|telemetria|telemetry|flota|fleet|bateria|baterias|battery|batteries|urgente|urgentes|urgencia|urgencias|critico|criticos|critica|criticas|despacho|despachos|urgent|critical|dispatch)\b/.test(
       normalized,
-    );
+    ) ||
+    /ctr[-_]?bog[-_]?001|ctr[-_]?bog|hardware|en vivo|\blive\b/.test(normalized);
 
   if (isCandidateIoT) {
     if (snapshots === null) {
@@ -675,11 +814,13 @@ export async function generateAssistantResponseWithProvider(
     typeof contextOrLang === "string" ? contextOrLang : lang;
   const effectiveContext =
     typeof contextOrLang === "string" ? undefined : contextOrLang;
+  const effectiveTelemetry =
+    typeof contextOrLang === "string" ? telemetryOverride : telemetryOverride;
 
-  // 1. Si la API key de Gemini está configurada, consultar el motor de IA
+  // 1. Si la API key de Gemini está configurada, consultar el motor de IA prioritariamente
   if (geminiAiService.isConfigured()) {
     try {
-      const systemInstruction = await getEnrichedSystemPrompt();
+      const systemInstruction = await getEnrichedSystemPrompt(effectiveTelemetry);
       const generatedText = await geminiAiService.generateText(prompt, {
         systemInstruction,
       });
@@ -689,6 +830,7 @@ export async function generateAssistantResponseWithProvider(
         return {
           content: generatedText.trim(),
           provider: "gemini",
+          engine: "gemini",
         };
       }
     } catch (error: unknown) {
@@ -709,7 +851,7 @@ export async function generateAssistantResponseWithProvider(
   const fallbackText = await generateLocalAssistantResponse(
     prompt,
     effectiveContext,
-    telemetryOverride,
+    effectiveTelemetry,
     effectiveLang,
   );
 
@@ -717,6 +859,7 @@ export async function generateAssistantResponseWithProvider(
   return {
     content: fallbackText,
     provider: "local_fallback",
+    engine: "local_fallback",
   };
 }
 

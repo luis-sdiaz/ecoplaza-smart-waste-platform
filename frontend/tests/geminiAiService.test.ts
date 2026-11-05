@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  CANDIDATE_MODELS,
   DEFAULT_GEMINI_MODEL,
   GeminiAiService,
   geminiAiService,
@@ -117,7 +118,7 @@ describe("GeminiAiService - Infraestructura y Servicio Oficial de IA Generativa"
 
     mockGenerateContent.mockRejectedValue(
       new Error(
-        `Failed to fetch from https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${secretKey}: Network connection failed`,
+        `Failed to fetch from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${secretKey}: Network connection failed`,
       ),
     );
 
@@ -160,7 +161,7 @@ describe("GeminiAiService - Infraestructura y Servicio Oficial de IA Generativa"
   it("9. Permite reconfigurar dinámicamente el modelo y la clave mediante configure() e init()", () => {
     const service = new GeminiAiService();
     expect(service.isConfigured()).toBe(false);
-    expect(service.getModelName()).toBe("gemini-flash-latest");
+    expect(service.getModelName()).toBe("gemini-1.5-flash-latest");
 
     service.configure({ apiKey: "new-key-123", modelName: "gemini-1.5-pro" });
     expect(service.isConfigured()).toBe(true);
@@ -170,7 +171,161 @@ describe("GeminiAiService - Infraestructura y Servicio Oficial de IA Generativa"
 
   it("10. La instancia singleton exportada geminiAiService existe y está disponible", () => {
     expect(geminiAiService).toBeInstanceOf(GeminiAiService);
-    expect(geminiAiService.getModelName()).toBe("gemini-flash-latest");
+    expect(geminiAiService.getModelName()).toBe("gemini-1.5-flash-latest");
+  });
+
+  it("11. Reintenta defensivamente ante error 503 (alta demanda / saturación) y retorna exitoso en el segundo intento", async () => {
+    const service = new GeminiAiService({ apiKey: "AIzaSy503TestKey" });
+
+    // Intento 1: Error 503 transitorio
+    mockGenerateContent.mockRejectedValueOnce(
+      new Error(
+        "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent: [503] This model is currently experiencing high demand.",
+      ),
+    );
+    // Intento 2 (Reintento): Respuesta exitosa
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        text: () => "Respuesta recuperada exitosamente tras reintento defensivo",
+      },
+    });
+
+    const result = await service.generateText("Consulta tras 503", {
+      retryDelayMs: 10,
+    });
+
+    expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+    expect(result).toBe("Respuesta recuperada exitosamente tras reintento defensivo");
+  });
+
+  it("12. Reintenta defensivamente ante error 429 (Resource exhausted) y retorna exitoso en el segundo intento", async () => {
+    const service = new GeminiAiService({ apiKey: "AIzaSy429TestKey" });
+
+    mockGenerateContent.mockRejectedValueOnce(
+      new Error(
+        "[GoogleGenerativeAI Error]: [429 Too Many Requests] Resource has been exhausted",
+      ),
+    );
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        text: () => "Respuesta recuperada exitosamente tras 429",
+      },
+    });
+
+    const result = await service.generateText("Consulta tras 429", {
+      retryDelayMs: 10,
+    });
+
+    expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+    expect(result).toBe("Respuesta recuperada exitosamente tras 429");
+  });
+
+  it("13. Falla con error descriptivo (503) cuando el error persiste tras agotar los reintentos y toda la cascada de modelos", async () => {
+    const service = new GeminiAiService({ apiKey: "AIzaSyPersistent503Key" });
+
+    mockGenerateContent.mockRejectedValue(
+      new Error(
+        "[GoogleGenerativeAI Error]: [503] This model is currently experiencing high demand.",
+      ),
+    );
+
+    await expect(
+      service.generateText("Consulta persistente", { retryDelayMs: 10 }),
+    ).rejects.toThrow(/Servicio de Gemini saturado o no disponible \(503\)/i);
+
+    // Cascada: cada modelo × 2 intentos (1 + 1 reintento)
+    expect(mockGenerateContent).toHaveBeenCalledTimes(CANDIDATE_MODELS.length * 2);
+  });
+
+  it("14. No realiza reintento ni cascada ante errores no transitorios como 400 Bad Request", async () => {
+    const service = new GeminiAiService({ apiKey: "AIzaSyNonTransientKey" });
+
+    mockGenerateContent.mockRejectedValue(
+      new Error("[GoogleGenerativeAI Error]: [400 Bad Request] Invalid argument"),
+    );
+
+    await expect(
+      service.generateText("Consulta inválida", { retryDelayMs: 10 }),
+    ).rejects.toThrow(/Solicitud inválida a la API de Gemini \(400\)/i);
+
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it("15. CANDIDATE_MODELS contiene los identificadores compatibles con v1beta en orden de prioridad", () => {
+    expect(CANDIDATE_MODELS).toEqual([
+      "gemini-1.5-flash-latest",
+      "gemini-flash-latest",
+      "gemini-pro",
+    ]);
+    expect(DEFAULT_GEMINI_MODEL).toBe("gemini-1.5-flash-latest");
+  });
+
+  it("16. Cascada de modelos: resuelve con segundo candidato tras 404 en el primero", async () => {
+    const service = new GeminiAiService({ apiKey: "AIzaSyCascadeTest" });
+
+    // El primer modelo falla con 404
+    mockGenerateContent.mockRejectedValueOnce(
+      new Error(
+        "[404] models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent.",
+      ),
+    );
+    // El segundo modelo resuelve exitosamente
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        text: () => "Respuesta exitosa desde modelo alternativo de la cascada",
+      },
+    });
+
+    const result = await service.generateText("Consulta con cascada", {
+      retryDelayMs: 10,
+    });
+
+    expect(result).toBe("Respuesta exitosa desde modelo alternativo de la cascada");
+    // Se crearon 2 modelos generativos: uno por cada candidato intentado
+    expect(mockGetGenerativeModel).toHaveBeenCalledTimes(2);
+    // El servicio actualiza internamente al modelo que funcionó
+    expect(service.getModelName()).toBe(CANDIDATE_MODELS[1]);
+  });
+
+  it("17. Cascada de modelos: resuelve con tercer candidato tras 404 en el primero y 503 persistente en el segundo", async () => {
+    const service = new GeminiAiService({ apiKey: "AIzaSyCascadeTest3" });
+
+    // Modelo 1: 404
+    mockGenerateContent.mockRejectedValueOnce(
+      new Error("[404] models/gemini-1.5-flash-latest is not found for API version v1beta."),
+    );
+    // Modelo 2: 503 intento 1
+    mockGenerateContent.mockRejectedValueOnce(
+      new Error("[503] This model is currently experiencing high demand."),
+    );
+    // Modelo 2: 503 intento 2 (reintento)
+    mockGenerateContent.mockRejectedValueOnce(
+      new Error("[503] This model is currently experiencing high demand."),
+    );
+    // Modelo 3: exitoso
+    mockGenerateContent.mockResolvedValueOnce({
+      response: {
+        text: () => "Respuesta desde tercer candidato (gemini-pro)",
+      },
+    });
+
+    const result = await service.generateText("Consulta cascada completa", {
+      retryDelayMs: 10,
+    });
+
+    expect(result).toBe("Respuesta desde tercer candidato (gemini-pro)");
+    expect(service.getModelName()).toBe("gemini-pro");
+  });
+
+  it("18. Cascada de modelos: falla con error 404 descriptivo cuando ningún modelo está disponible", async () => {
+    const service = new GeminiAiService({ apiKey: "AIzaSyAllFailKey" });
+
+    mockGenerateContent.mockRejectedValue(
+      new Error("[404] models/gemini is not found for API version v1beta."),
+    );
+
+    await expect(
+      service.generateText("Consulta sin modelo", { retryDelayMs: 10 }),
+    ).rejects.toThrow(/Ningún modelo de la cascada Gemini está disponible \(404\)/i);
   });
 });
-

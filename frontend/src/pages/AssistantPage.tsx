@@ -10,16 +10,39 @@ import {
   DEFAULT_WELCOME_MESSAGE,
   type AssistantMessage,
 } from "../services/assistantStorage";
+import {
+  fetchLatestTelemetryByContainer,
+  type SensorTelemetry,
+} from "../services/telemetryService";
 
-function AssistantPage() {
+export type AssistantPageProps = {
+  initialMessages?: AssistantMessage[];
+  initialTelemetry?: SensorTelemetry | null;
+};
+
+export function AssistantPage({
+  initialMessages,
+  initialTelemetry,
+}: AssistantPageProps = {}) {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<AssistantMessage[]>(() =>
-    loadAssistantMessages(DEFAULT_WELCOME_MESSAGE),
+    initialMessages ?? loadAssistantMessages(DEFAULT_WELCOME_MESSAGE),
   );
+  const [physicalTelemetry, setPhysicalTelemetry] =
+    useState<SensorTelemetry | null>(
+      initialTelemetry !== undefined ? initialTelemetry : null,
+    );
 
   useEffect(() => {
     saveAssistantMessages(messages);
   }, [messages]);
+
+  useEffect(() => {
+    if (initialTelemetry !== undefined) return;
+    void fetchLatestTelemetryByContainer("CTR-BOG-001")
+      .then((data) => setPhysicalTelemetry(data))
+      .catch(() => setPhysicalTelemetry(null));
+  }, [initialTelemetry]);
 
   const handleClearMessages = () => {
     clearAssistantMessages();
@@ -45,6 +68,7 @@ function AssistantPage() {
           messages={messages}
           onMessagesChange={setMessages}
           onClearMessages={handleClearMessages}
+          physicalTelemetry={physicalTelemetry}
         />
       </div>
     </section>

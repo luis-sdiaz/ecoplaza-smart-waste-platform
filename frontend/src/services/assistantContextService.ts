@@ -1,3 +1,6 @@
+import { formatColombianDateTime } from "./colombianDate.ts";
+import type { ContainerTelemetrySnapshot } from "./iotAnalyticsService.ts";
+
 export interface EcoPlazaLiveContext {
   inventorySummary: {
     totalWeightKg: number;
@@ -16,6 +19,7 @@ export interface EcoPlazaLiveContext {
       materialType: string;
       fillPercentage: number;
       alertLevel: "normal" | "warning" | "critical";
+      distanceCm?: number;
     }>;
   };
   iotTelemetrySummary: {
@@ -23,6 +27,13 @@ export interface EcoPlazaLiveContext {
     totalSensors: number;
     lastUpdateIso: string | null;
   };
+  physicalTelemetry?: {
+    containerId: string;
+    fillPercentage: number;
+    distanceCm: number;
+    status: "normal" | "warning" | "critical";
+    recordedAt: string;
+  } | null;
 }
 
 type LiveContextProvider = () => Promise<EcoPlazaLiveContext>;
@@ -104,20 +115,31 @@ export async function fetchEcoPlazaLiveContext(): Promise<EcoPlazaLiveContext> {
   };
 
   try {
-    const [wasteModule, salesModule, containerModule, sensorModule, insightsModule] =
-      await Promise.all([
-        import("./wasteService.ts"),
-        import("./salesService.ts"),
-        import("./containerService.ts"),
-        import("./sensorService.ts"),
-        import("./assistantInsightsService.ts"),
-      ]);
-
-    const [wasteRes, salesRes, containersRes] = await Promise.allSettled([
-      wasteModule.listAvailableWasteRecords(),
-      salesModule.listSales(),
-      containerModule.listContainers(),
+    const [
+      wasteModule,
+      salesModule,
+      containerModule,
+      sensorModule,
+      insightsModule,
+      telemetryModule,
+    ] = await Promise.all([
+      import("./wasteService.ts"),
+      import("./salesService.ts"),
+      import("./containerService.ts"),
+      import("./sensorService.ts"),
+      import("./assistantInsightsService.ts"),
+      import("./telemetryService.ts"),
     ]);
+
+    const [wasteRes, salesRes, containersRes, physicalTelRes] =
+      await Promise.allSettled([
+        wasteModule.listAvailableWasteRecords(),
+        salesModule.listSales(),
+        containerModule.listContainers(),
+        telemetryModule
+          .fetchLatestTelemetryByContainer("CTR-BOG-001")
+          .catch(() => null),
+      ]);
 
     const inventory =
       wasteRes.status === "fulfilled" && wasteRes.value?.ok
@@ -210,6 +232,47 @@ export async function fetchEcoPlazaLiveContext(): Promise<EcoPlazaLiveContext> {
       }
     }
 
+    let physicalTelemetry: EcoPlazaLiveContext["physicalTelemetry"] = null;
+    if (
+      physicalTelRes.status === "fulfilled" &&
+      physicalTelRes.value !== null &&
+      physicalTelRes.value !== undefined
+    ) {
+      const pt = physicalTelRes.value;
+      physicalTelemetry = {
+        containerId: pt.containerId,
+        fillPercentage: pt.fillPercentage,
+        distanceCm: pt.distanceCm,
+        status: pt.status,
+        recordedAt: pt.recordedAt,
+      };
+
+      onlineSensors++;
+      if (pt.recordedAt) {
+        if (!latestTimestamp || new Date(pt.recordedAt) > new Date(latestTimestamp)) {
+          latestTimestamp = pt.recordedAt;
+        }
+      }
+
+      const existingIdx = evaluatedContainers.findIndex(
+        (c) => c.containerId.toUpperCase() === "CTR-BOG-001",
+      );
+      if (existingIdx >= 0) {
+        evaluatedContainers[existingIdx].fillPercentage = pt.fillPercentage;
+        evaluatedContainers[existingIdx].alertLevel = pt.status;
+        evaluatedContainers[existingIdx].distanceCm = pt.distanceCm;
+      } else {
+        evaluatedContainers.push({
+          containerId: "CTR-BOG-001",
+          location: "Pasto, Nariño (Nodo Físico IoT)",
+          materialType: "Sensor Ultrasónico HC-SR04",
+          fillPercentage: pt.fillPercentage,
+          alertLevel: pt.status,
+          distanceCm: pt.distanceCm,
+        });
+      }
+    }
+
     evaluatedContainers.sort((a, b) => b.fillPercentage - a.fillPercentage);
 
     return {
@@ -223,6 +286,7 @@ export async function fetchEcoPlazaLiveContext(): Promise<EcoPlazaLiveContext> {
         totalSensors: containers.length,
         lastUpdateIso: latestTimestamp,
       },
+      physicalTelemetry,
     };
   } catch {
     return fallbackContext;
@@ -305,6 +369,28 @@ export function buildSystemInstruction(context: EcoPlazaLiveContext): string {
     ...(warningLines.length > 0
       ? ["", "CONTENEDORES EN ADVERTENCIA (Llenado entre 60% y 79%):", ...warningLines]
       : []),
+    ...(context.physicalTelemetry
+      ? [
+          "",
+          "• Sensor de Telemetría IoT Físico en Vivo (Hardware real):",
+          `  - Identificador: ${context.physicalTelemetry.containerId} (Microcontrolador ESP32 + Sensor ultrasónico HC-SR04).`,
+          `  - Nivel volumétrico de llenado: ${context.physicalTelemetry.fillPercentage}%.`,
+          `  - Distancia ultrasónica detectada: ${context.physicalTelemetry.distanceCm} cm.`,
+          `  - Estado operacional semántico: ${context.physicalTelemetry.status.toUpperCase()} (${
+            context.physicalTelemetry.status === "critical"
+              ? "Crítico"
+              : context.physicalTelemetry.status === "warning"
+                ? "Advertencia"
+                : "Normal"
+          }).`,
+          `  - Fecha y hora colombiana de última sincronización: ${formatColombianDateTime(
+            context.physicalTelemetry.recordedAt,
+          )}.`,
+        ]
+      : [
+          "",
+          "• Sensor de Telemetría IoT Físico en Vivo (CTR-BOG-001): En espera de señal (sin telemetría reciente registrada en Supabase).",
+        ]),
   ].join("\n");
 
   // 5. Comportamiento, Tono y Recomendaciones
@@ -337,9 +423,70 @@ export function buildSystemInstruction(context: EcoPlazaLiveContext): string {
 /**
  * Método de conveniencia que extrae el contexto en vivo y construye
  * la instrucción de sistema enriquecida para el LLM.
+ * Admite opcionalmente telemetría viva (por ejemplo de CTR-BOG-001) para
+ * inyectarla directamente al prompt maestro de Gemini.
  */
-export async function getEnrichedSystemPrompt(): Promise<string> {
+export async function getEnrichedSystemPrompt(
+  telemetryOverrideOrContext?:
+    | ContainerTelemetrySnapshot[]
+    | EcoPlazaLiveContext,
+): Promise<string> {
+  if (
+    telemetryOverrideOrContext &&
+    !Array.isArray(telemetryOverrideOrContext) &&
+    "inventorySummary" in telemetryOverrideOrContext
+  ) {
+    return buildSystemInstruction(telemetryOverrideOrContext);
+  }
+
   const context = await fetchEcoPlazaLiveContext();
+
+  if (Array.isArray(telemetryOverrideOrContext)) {
+    const physicalItem = telemetryOverrideOrContext.find(
+      (s) =>
+        s.containerName?.toUpperCase() === "CTR-BOG-001" ||
+        s.containerId?.toUpperCase().includes("CTR-BOG-001") ||
+        s.isPhysicalHardware === true,
+    );
+
+    if (physicalItem) {
+      context.physicalTelemetry = {
+        containerId: physicalItem.containerName || "CTR-BOG-001",
+        fillPercentage: physicalItem.fillLevel,
+        distanceCm:
+          typeof physicalItem.distanceCm === "number"
+            ? physicalItem.distanceCm
+            : 0,
+        status:
+          (physicalItem.status as "normal" | "warning" | "critical") || "normal",
+        recordedAt: physicalItem.updatedAt || new Date().toISOString(),
+      };
+
+      const existingIdx = context.containersSummary.criticalContainers.findIndex(
+        (c) => c.containerId.toUpperCase() === "CTR-BOG-001",
+      );
+      if (existingIdx >= 0) {
+        context.containersSummary.criticalContainers[existingIdx].fillPercentage =
+          physicalItem.fillLevel;
+        context.containersSummary.criticalContainers[existingIdx].alertLevel =
+          (physicalItem.status as "normal" | "warning" | "critical") || "normal";
+        context.containersSummary.criticalContainers[existingIdx].distanceCm =
+          physicalItem.distanceCm;
+      } else {
+        context.containersSummary.criticalContainers.push({
+          containerId: "CTR-BOG-001",
+          location: "Pasto, Nariño (Nodo Físico IoT)",
+          materialType: "Sensor Ultrasónico HC-SR04",
+          fillPercentage: physicalItem.fillLevel,
+          alertLevel:
+            (physicalItem.status as "normal" | "warning" | "critical") ||
+            "normal",
+          distanceCm: physicalItem.distanceCm,
+        });
+      }
+    }
+  }
+
   return buildSystemInstruction(context);
 }
 

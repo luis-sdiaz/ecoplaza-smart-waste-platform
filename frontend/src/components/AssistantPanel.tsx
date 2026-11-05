@@ -11,9 +11,11 @@ import {
   RotateCcw,
   Send,
   Sparkles,
+  User,
   Users,
   X,
 } from "lucide-react";
+import { formatColombianTime } from "../services/colombianDate";
 import { listContainers } from "../services/containerService";
 import { getLatestTelemetry } from "../services/sensorService";
 import {
@@ -32,6 +34,7 @@ import {
 import type { RemoteWasteRecord } from "../services/wasteService";
 import type { SaleHistoryItem } from "../services/salesService";
 import type { Buyer } from "../services/buyerService";
+import type { SensorTelemetry } from "../services/telemetryService";
 import {
   clearAssistantMessages,
   loadAssistantMessages,
@@ -52,6 +55,7 @@ export interface AssistantPanelProps {
   messages?: AssistantMessage[];
   onMessagesChange?: (messages: AssistantMessage[]) => void;
   onClearMessages?: () => void;
+  physicalTelemetry?: SensorTelemetry | null;
 }
 
 function parseInlineMarkdown(text: string): React.ReactNode[] {
@@ -132,37 +136,75 @@ const QUICK_PROMPTS = [
   "📡 Consultar estado de sensores IoT",
 ];
 
-async function fetchLiveTelemetrySnapshots(): Promise<
-  ContainerTelemetrySnapshot[]
-> {
+async function fetchLiveTelemetrySnapshots(
+  physicalTelemetryOverride?: SensorTelemetry | null,
+): Promise<ContainerTelemetrySnapshot[]> {
   try {
     const containersResult = await listContainers();
-    if (!containersResult.ok || !Array.isArray(containersResult.data)) {
-      return [];
+    const snapshots: ContainerTelemetrySnapshot[] = [];
+
+    if (containersResult.ok && Array.isArray(containersResult.data)) {
+      const telemetryPromises = containersResult.data.map(async (c) => {
+        try {
+          const tel = await getLatestTelemetry(c.id);
+          if (!tel) return null;
+          const snapshot: ContainerTelemetrySnapshot = {
+            containerId: c.id,
+            containerName: c.code,
+            fillLevel: tel.fillLevelPercent,
+            batteryLevel: tel.batteryLevelPercent,
+            temperature: tel.temperatureCelsius,
+            updatedAt: tel.recordedAt,
+          };
+          return snapshot;
+        } catch {
+          return null;
+        }
+      });
+
+      const resolved = await Promise.all(telemetryPromises);
+      for (const item of resolved) {
+        if (item) snapshots.push(item);
+      }
     }
 
-    const telemetryPromises = containersResult.data.map(async (c) => {
-      try {
-        const tel = await getLatestTelemetry(c.id);
-        if (!tel) return null;
-        const snapshot: ContainerTelemetrySnapshot = {
-          containerId: c.id,
-          containerName: c.code,
-          fillLevel: tel.fillLevelPercent,
-          batteryLevel: tel.batteryLevelPercent,
-          temperature: tel.temperatureCelsius,
-          updatedAt: tel.recordedAt,
-        };
-        return snapshot;
-      } catch {
-        return null;
-      }
-    });
+    const physicalTelemetry =
+      physicalTelemetryOverride !== undefined
+        ? physicalTelemetryOverride
+        : null;
 
-    const resolved = await Promise.all(telemetryPromises);
-    return resolved.filter(
-      (item): item is ContainerTelemetrySnapshot => item !== null,
-    );
+    if (physicalTelemetry) {
+      const existingIdx = snapshots.findIndex(
+        (s) =>
+          s.containerName?.toUpperCase() === "CTR-BOG-001" ||
+          s.containerId?.toUpperCase() === "CTR-BOG-001",
+      );
+      const physicalSnapshot: ContainerTelemetrySnapshot = {
+        containerId:
+          existingIdx >= 0
+            ? snapshots[existingIdx].containerId
+            : "iot-ctr-bog-001",
+        containerName: "CTR-BOG-001",
+        fillLevel: physicalTelemetry.fillPercentage,
+        batteryLevel: 100,
+        temperature: 22,
+        updatedAt: physicalTelemetry.recordedAt,
+        distanceCm: physicalTelemetry.distanceCm,
+        status: physicalTelemetry.status,
+        isPhysicalHardware: true,
+      };
+
+      if (existingIdx >= 0) {
+        snapshots[existingIdx] = {
+          ...snapshots[existingIdx],
+          ...physicalSnapshot,
+        };
+      } else {
+        snapshots.unshift(physicalSnapshot);
+      }
+    }
+
+    return snapshots;
   } catch {
     return [];
   }
@@ -177,6 +219,7 @@ function AssistantPanel({
   messages: controlledMessages,
   onMessagesChange,
   onClearMessages,
+  physicalTelemetry,
 }: AssistantPanelProps) {
   const { t, i18n } = useTranslation();
 
@@ -195,22 +238,22 @@ function AssistantPanel({
   );
 
   const messages = controlledMessages ?? internalMessages;
+  const messagesRef = useRef<AssistantMessage[]>(messages);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const setMessages = (updater: React.SetStateAction<AssistantMessage[]>) => {
-    if (typeof updater === "function") {
-      const nextMessages = updater(messages);
-      if (onMessagesChange) {
-        onMessagesChange(nextMessages);
-      }
-      setInternalMessages(nextMessages);
-      saveAssistantMessages(nextMessages);
-    } else {
-      if (onMessagesChange) {
-        onMessagesChange(updater);
-      }
-      setInternalMessages(updater);
-      saveAssistantMessages(updater);
+    const currentMessages = messagesRef.current;
+    const nextMessages =
+      typeof updater === "function" ? updater(currentMessages) : updater;
+    messagesRef.current = nextMessages;
+    if (onMessagesChange) {
+      onMessagesChange(nextMessages);
     }
+    setInternalMessages(nextMessages);
+    saveAssistantMessages(nextMessages);
   };
 
   const handleClearConversation = () => {
@@ -218,6 +261,7 @@ function AssistantPanel({
     if (onClearMessages) {
       onClearMessages();
     }
+    messagesRef.current = [defaultWelcomeMessage];
     setInternalMessages([defaultWelcomeMessage]);
     saveAssistantMessages([defaultWelcomeMessage]);
     setActiveInsight(null);
@@ -225,6 +269,7 @@ function AssistantPanel({
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
 
@@ -241,7 +286,14 @@ function AssistantPanel({
 
   const scrollToBottom = () => {
     if (typeof messagesEndRef.current?.scrollIntoView === "function") {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      try {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      } catch {
+        messagesEndRef.current.scrollIntoView();
+      }
+    } else if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   };
 
@@ -286,7 +338,7 @@ function AssistantPanel({
   const triggerAssistantResponse = async (promptText: string) => {
     setIsTyping(true);
     try {
-      const snapshots = await fetchLiveTelemetrySnapshots();
+      const snapshots = await fetchLiveTelemetrySnapshots(physicalTelemetry);
       const lang = (i18n.resolvedLanguage === "en" ? "en" : "es") as
         "es" | "en";
       const result = await generateAssistantResponseWithProvider(
@@ -306,6 +358,7 @@ function AssistantPanel({
           content: result.content,
           isIoT,
           provider: result.provider,
+          timestamp: new Date().toISOString(),
         },
       ]);
     } catch {
@@ -320,6 +373,7 @@ function AssistantPanel({
             "Lo sentimos, ocurrió un error al consultar las métricas de la plataforma. Por favor, verifica tu conexión e inténtalo de nuevo.",
           isIoT: false,
           provider: "local_fallback",
+          timestamp: new Date().toISOString(),
         },
       ]);
     } finally {
@@ -344,6 +398,7 @@ function AssistantPanel({
         id: String(prev.length + 1),
         role: "user",
         content: trimmed,
+        timestamp: new Date().toISOString(),
       },
     ]);
     setInput("");
@@ -360,6 +415,7 @@ function AssistantPanel({
         id: String(prev.length + 1),
         role: "user",
         content: promptText,
+        timestamp: new Date().toISOString(),
       },
     ]);
     void triggerAssistantResponse(promptText);
@@ -762,26 +818,57 @@ function AssistantPanel({
       )}
 
       {/* Área de mensajes con scroll */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:p-6">
+      <div
+        ref={messagesContainerRef}
+        role="log"
+        aria-live="polite"
+        aria-label={t("assistant.conversationHistory", {
+          defaultValue: "Historial de conversación",
+        })}
+        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:p-6"
+      >
         {messages.map((message) =>
           message.role === "assistant" ? (
-            <div key={message.id} className="flex items-start gap-3">
+            <article
+              key={message.id}
+              role="article"
+              aria-label={t("assistant.assistantMessage", {
+                defaultValue: "Respuesta del asistente",
+              })}
+              className="flex items-start gap-3"
+            >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-ecoplaza-border bg-ecoplaza-background text-ecoplaza-primary">
                 <Bot size={18} aria-hidden="true" />
               </div>
               <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-ecoplaza-border bg-ecoplaza-surface px-4 py-3 text-sm text-ecoplaza-text shadow-xs sm:max-w-[75%]">
-                {message.provider && (
-                  <div className="mb-2 flex items-center gap-1.5">
-                    {message.provider === "gemini" ? (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 px-2 py-0.5 text-[11px] font-medium text-purple-600 dark:text-purple-400">
-                        <Sparkles size={11} aria-hidden="true" />
-                        <span>Gemini AI</span>
-                      </span>
+                {(message.provider || message.timestamp) && (
+                  <div className="mb-2 flex items-center justify-between gap-2 border-b border-ecoplaza-border/40 pb-1.5">
+                    {message.provider ? (
+                      message.provider === "gemini" ? (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 px-2 py-0.5 text-[11px] font-medium text-purple-600 dark:text-purple-400">
+                          <Sparkles size={11} aria-hidden="true" />
+                          <span>Gemini AI</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                          <Bot size={11} aria-hidden="true" />
+                          <span>Modo Local / Heurístico</span>
+                        </span>
+                      )
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                        <Bot size={11} aria-hidden="true" />
-                        <span>Modo Local / Heurístico</span>
-                      </span>
+                      <span />
+                    )}
+
+                    {message.timestamp && (
+                      <time
+                        dateTime={message.timestamp}
+                        className="text-[10px] text-ecoplaza-text-muted select-none"
+                      >
+                        {formatColombianTime(
+                          message.timestamp,
+                          i18n.resolvedLanguage === "en" ? "en" : "es",
+                        )}
+                      </time>
                     )}
                   </div>
                 )}
@@ -803,15 +890,40 @@ function AssistantPanel({
                   </div>
                 )}
               </div>
-            </div>
+            </article>
           ) : (
-            <div key={message.id} className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-ecoplaza-primary px-4 py-3 text-sm text-white shadow-xs sm:max-w-[75%]">
-                <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">
-                  {message.content}
-                </p>
+            <article
+              key={message.id}
+              role="article"
+              aria-label={t("assistant.userMessage", {
+                defaultValue: "Mensaje del usuario",
+              })}
+              className="flex justify-end"
+            >
+              <div className="flex items-end justify-end gap-2.5 max-w-[85%] sm:max-w-[75%]">
+                <div className="rounded-2xl rounded-tr-xs bg-ecoplaza-primary px-4 py-3 text-sm text-white shadow-xs">
+                  <p className="whitespace-pre-wrap wrap-break-word leading-relaxed">
+                    {message.content}
+                  </p>
+                  {message.timestamp && (
+                    <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-white/80 select-none">
+                      <time dateTime={message.timestamp}>
+                        {formatColombianTime(
+                          message.timestamp,
+                          i18n.resolvedLanguage === "en" ? "en" : "es",
+                        )}
+                      </time>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ecoplaza-primary text-white shadow-2xs"
+                  aria-hidden="true"
+                >
+                  <User size={16} />
+                </div>
               </div>
-            </div>
+            </article>
           ),
         )}
 
@@ -833,7 +945,11 @@ function AssistantPanel({
         )}
 
         {isTyping && (
-          <div className="flex items-start gap-3">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-start gap-3"
+          >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-ecoplaza-border bg-ecoplaza-background text-ecoplaza-primary">
               <Bot size={18} aria-hidden="true" />
             </div>

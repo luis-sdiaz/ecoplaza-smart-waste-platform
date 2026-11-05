@@ -31,6 +31,10 @@ vi.mock("../src/services/salesService.ts", () => ({
   listSales: vi.fn(),
 }));
 
+vi.mock("../src/services/telemetryService.ts", () => ({
+  fetchLatestTelemetryByContainer: vi.fn().mockResolvedValue(null),
+}));
+
 describe("assistantContextService - Inyección de Contexto Operativo y Comercial para Gemini", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -366,5 +370,47 @@ describe("assistantContextService - Inyección de Contexto Operativo y Comercial
     expect(calculateAlertLevel(85)).toBe("critical");
     expect(calculateAlertLevel(70)).toBe("warning");
     expect(calculateAlertLevel(40)).toBe("normal");
+  });
+
+  it("9. Inyecta la telemetría viva de CTR-BOG-001 en getEnrichedSystemPrompt cuando se suministra telemetryOverride", async () => {
+    const customProviderMock = vi.fn().mockResolvedValue({
+      inventorySummary: {
+        totalWeightKg: 100,
+        totalEstimatedValueCop: 150000,
+        breakdownByCategory: [],
+      },
+      containersSummary: {
+        totalContainers: 2,
+        criticalContainers: [],
+      },
+      iotTelemetrySummary: {
+        onlineSensors: 2,
+        totalSensors: 2,
+        lastUpdateIso: "2026-11-04T20:00:00.000Z",
+      },
+      physicalTelemetry: null,
+    });
+
+    setEcoPlazaLiveContextProvider(customProviderMock);
+
+    const prompt = await getEnrichedSystemPrompt([
+      {
+        containerId: "CTR-BOG-001",
+        containerName: "CTR-BOG-001",
+        fillLevel: 82,
+        batteryLevel: 100,
+        distanceCm: 18.2,
+        status: "critical",
+        updatedAt: "2026-11-04T21:00:00.000Z",
+        isPhysicalHardware: true,
+      },
+    ]);
+
+    expect(prompt).toContain("CTR-BOG-001");
+    expect(prompt).toContain("82%");
+    expect(prompt).toContain("18.2 cm");
+    expect(prompt).toContain("CRÍTICO");
+
+    setEcoPlazaLiveContextProvider(null);
   });
 });

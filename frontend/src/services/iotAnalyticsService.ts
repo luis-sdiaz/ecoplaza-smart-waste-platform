@@ -5,6 +5,9 @@ export interface ContainerTelemetrySnapshot {
   batteryLevel: number;
   temperature?: number | null;
   updatedAt: string;
+  distanceCm?: number;
+  status?: "normal" | "warning" | "critical";
+  isPhysicalHardware?: boolean;
 }
 
 export interface IoTUrgentDispatchItem {

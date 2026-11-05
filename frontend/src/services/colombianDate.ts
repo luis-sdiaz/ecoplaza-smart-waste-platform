@@ -17,3 +17,46 @@ export function formatColombianDateRange(startDate: string, endDate: string): st
   return `... - ${formatColombianDate(endDate)}`;
 }
 
+export function formatColombianDateTime(
+  isoDateStr: string | null | undefined,
+  locale: "es" | "en" = "es",
+): string {
+  if (!isoDateStr) return "—";
+  try {
+    const date = new Date(isoDateStr);
+    if (isNaN(date.getTime())) return isoDateStr;
+    return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-CO", {
+      timeZone: "America/Bogota",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }).format(date);
+  } catch {
+    return isoDateStr;
+  }
+}
+
+export function formatColombianTime(
+  isoDateStr: string | null | undefined,
+  locale: "es" | "en" = "es",
+): string {
+  if (!isoDateStr) return "";
+  try {
+    const date = new Date(isoDateStr);
+    if (isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-CO", {
+      timeZone: "America/Bogota",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date);
+  } catch {
+    return "";
+  }
+}
+
+

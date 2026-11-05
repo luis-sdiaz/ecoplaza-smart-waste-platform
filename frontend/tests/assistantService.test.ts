@@ -472,6 +472,66 @@ test("formatIoTFleetResponse: e) responde adecuadamente ante una flota sin telem
   assert.match(resUrg, /No hay contenedores con telemetría activa/);
 });
 
+test("formatIoTFleetResponse: f) responde con precisión sobre el estado del contenedor físico CTR-BOG-001 y fallback en espera de señal", () => {
+  const physicalSnapshot: ContainerTelemetrySnapshot = {
+    containerId: "iot-ctr-bog-001",
+    containerName: "CTR-BOG-001",
+    fillLevel: 75.5,
+    batteryLevel: 100,
+    distanceCm: 24.5,
+    status: "warning",
+    updatedAt: "2026-11-04T20:00:00.000Z",
+    isPhysicalHardware: true,
+  };
+
+  // 1. Consulta específica por CTR-BOG-001 en español
+  const resBog = formatIoTFleetResponse(
+    [physicalSnapshot],
+    "¿Cuál es el estado del contenedor CTR-BOG-001?",
+    "es",
+  );
+  assert.ok(resBog !== null);
+  assert.match(resBog, /CTR-BOG-001/);
+  assert.match(resBog, /75\.5%/);
+  assert.match(resBog, /24\.5 cm/);
+  assert.match(resBog, /Warning|Advertencia/);
+  assert.match(resBog, /ESP32/);
+  assert.match(resBog, /HC-SR04/);
+  assert.match(resBog, /Hora de Colombia/);
+
+  // 2. Consulta sobre telemetría en vivo
+  const resLive = formatIoTFleetResponse(
+    [physicalSnapshot],
+    "¿Cómo está el sensor de telemetría en vivo?",
+    "es",
+  );
+  assert.ok(resLive !== null);
+  assert.match(resLive, /CTR-BOG-001/);
+  assert.match(resLive, /75\.5%/);
+
+  // 3. Consulta en inglés
+  const resEn = formatIoTFleetResponse(
+    [physicalSnapshot],
+    "What is the status of container CTR-BOG-001?",
+    "en",
+  );
+  assert.ok(resEn !== null);
+  assert.match(resEn, /Live IoT Telemetry Sensor Status/);
+  assert.match(resEn, /CTR-BOG-001/);
+  assert.match(resEn, /75\.5%/);
+  assert.match(resEn, /24\.5 cm/);
+
+  // 4. Fallback resiliente cuando no hay telemetría activa (en espera de señal)
+  const resEmpty = formatIoTFleetResponse(
+    [],
+    "¿Cuál es el estado del contenedor CTR-BOG-001?",
+    "es",
+  );
+  assert.ok(resEmpty !== null);
+  assert.match(resEmpty, /CTR-BOG-001/);
+  assert.match(resEmpty, /En espera de señal/);
+});
+
 test("generateAssistantResponse: responde con análisis IoT cuando se consulta sobre sensores y telemetría", async () => {
   // Con snapshots provistos directamente
   const responseWithOverride = await generateAssistantResponse(
@@ -555,7 +615,188 @@ test("generateAssistantResponseWithProvider: fallback local cuando isConfigured(
     context,
   );
   assert.strictEqual(result.provider, "local_fallback");
+  assert.strictEqual(result.engine, "local_fallback");
   assert.match(result.content, /proyección|stock/i);
 });
+
+test("generateAssistantResponseWithProvider: prioriza Gemini AI para consultas de CTR-BOG-001 e inyecta telemetría en systemInstruction", async () => {
+  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  const originalGenerate = geminiAiService.generateText;
+  let capturedOptions: { systemInstruction?: string } | undefined;
+
+  geminiAiService.generateText = async (_prompt, options) => {
+    capturedOptions = options;
+    return "Diagnóstico Gemini AI: El contenedor CTR-BOG-001 presenta 75% de llenado y 24.5 cm de distancia ultrasónica.";
+  };
+
+  const mockTelemetry: ContainerTelemetrySnapshot[] = [
+    {
+      containerId: "CTR-BOG-001",
+      containerName: "CTR-BOG-001",
+      fillLevel: 75,
+      batteryLevel: 100,
+      temperature: 22,
+      updatedAt: "2026-11-04T20:00:00.000Z",
+      distanceCm: 24.5,
+      status: "warning",
+      isPhysicalHardware: true,
+    },
+  ];
+
+  try {
+    const result = await generateAssistantResponseWithProvider(
+      "¿Cuál es el estado del contenedor CTR-BOG-001?",
+      "es",
+      mockTelemetry,
+    );
+
+    assert.strictEqual(result.provider, "gemini");
+    assert.strictEqual(result.engine, "gemini");
+    assert.match(result.content, /Diagnóstico Gemini AI/);
+    assert.match(result.content, /CTR-BOG-001/);
+    assert.strictEqual(getLastAssistantProvider(), "gemini");
+
+    // Verificar que options.systemInstruction contenga la telemetría viva de CTR-BOG-001
+    assert.ok(capturedOptions?.systemInstruction);
+    assert.match(capturedOptions.systemInstruction, /CTR-BOG-001/);
+    assert.match(capturedOptions.systemInstruction, /75%/);
+    assert.match(capturedOptions.systemInstruction, /24\.5 cm/);
+  } finally {
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ apiKey: "" });
+  }
+});
+
+test("generateAssistantResponseWithProvider: fallback a formatIoTFleetResponse ante error de red o cuota (429) en CTR-BOG-001", async () => {
+  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  const originalGenerate = geminiAiService.generateText;
+
+  geminiAiService.generateText = async () => {
+    throw new Error("HTTP 429: Resource exhausted / Quota exceeded");
+  };
+
+  const mockTelemetry: ContainerTelemetrySnapshot[] = [
+    {
+      containerId: "CTR-BOG-001",
+      containerName: "CTR-BOG-001",
+      fillLevel: 75,
+      batteryLevel: 100,
+      temperature: 22,
+      updatedAt: "2026-11-04T20:00:00.000Z",
+      distanceCm: 24.5,
+      status: "warning",
+      isPhysicalHardware: true,
+    },
+  ];
+
+  try {
+    const result = await generateAssistantResponseWithProvider(
+      "¿Cuál es el estado del contenedor CTR-BOG-001?",
+      "es",
+      mockTelemetry,
+    );
+
+    assert.strictEqual(result.provider, "local_fallback");
+    assert.strictEqual(result.engine, "local_fallback");
+    assert.match(result.content, /Estado del Sensor de Telemetría IoT en Vivo \(CTR-BOG-001\)/i);
+    assert.match(result.content, /24\.5 cm/);
+    assert.strictEqual(getLastAssistantProvider(), "local_fallback");
+  } finally {
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ apiKey: "" });
+  }
+});
+
+test("generateAssistantResponseWithProvider: utiliza el modelo estable gemini-1.5-flash-latest con cascada de modelos por defecto", async () => {
+  assert.strictEqual(geminiAiService.getModelName(), "gemini-1.5-flash-latest");
+
+  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  const originalGenerate = geminiAiService.generateText;
+
+  geminiAiService.generateText = async () => {
+    return "Respuesta procesada por cascada de modelos Gemini";
+  };
+
+  try {
+    const result = await generateAssistantResponseWithProvider(
+      "Análisis general de la planta",
+    );
+    assert.strictEqual(result.provider, "gemini");
+    assert.strictEqual(result.engine, "gemini");
+    assert.strictEqual(result.content, "Respuesta procesada por cascada de modelos Gemini");
+    assert.strictEqual(getLastAssistantProvider(), "gemini");
+  } finally {
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ apiKey: "" });
+  }
+});
+
+test("generateAssistantResponseWithProvider: fallback a modo local heurístico ante error 503 (alta demanda / saturación) en Gemini", async () => {
+  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  const originalGenerate = geminiAiService.generateText;
+
+  geminiAiService.generateText = async () => {
+    throw new Error(
+      "Servicio de Gemini saturado o no disponible (503): [503] This model is currently experiencing high demand.",
+    );
+  };
+
+  const context = buildAssistantAnalyticsContext(
+    mockWasteRecords,
+    mockSales,
+    mockContainers,
+    fixedNow,
+  );
+
+  try {
+    const result = await generateAssistantResponseWithProvider(
+      "Estado de ventas y facturación",
+      context,
+    );
+
+    assert.strictEqual(result.provider, "local_fallback");
+    assert.strictEqual(result.engine, "local_fallback");
+    assert.match(result.content, /rendimiento|ventas/i);
+    assert.strictEqual(getLastAssistantProvider(), "local_fallback");
+  } finally {
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ apiKey: "" });
+  }
+});
+
+test("generateAssistantResponseWithProvider: fallback a modo local ante error 404 (modelo no encontrado) agotando toda la cascada", async () => {
+  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  const originalGenerate = geminiAiService.generateText;
+
+  geminiAiService.generateText = async () => {
+    throw new Error(
+      "Ningún modelo de la cascada Gemini está disponible (404): [404] models/gemini is not found.",
+    );
+  };
+
+  const context = buildAssistantAnalyticsContext(
+    mockWasteRecords,
+    mockSales,
+    mockContainers,
+    fixedNow,
+  );
+
+  try {
+    const result = await generateAssistantResponseWithProvider(
+      "Resumen de inventario y stock",
+      context,
+    );
+
+    assert.strictEqual(result.provider, "local_fallback");
+    assert.strictEqual(result.engine, "local_fallback");
+    assert.match(result.content, /inventario|stock|disponible/i);
+    assert.strictEqual(getLastAssistantProvider(), "local_fallback");
+  } finally {
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ apiKey: "" });
+  }
+});
+
+
 
 

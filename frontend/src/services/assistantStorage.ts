@@ -4,6 +4,7 @@ export interface AssistantMessage {
   content: string;
   isIoT?: boolean;
   provider?: "gemini" | "local_fallback";
+  timestamp?: string;
 }
 
 export type Message = AssistantMessage;

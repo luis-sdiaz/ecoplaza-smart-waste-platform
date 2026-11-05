@@ -48,6 +48,7 @@ const translations: Record<string, string> = {
   "assistant.insights.lastPurchase": "Última compra",
   "assistant.insights.contact": "Contacto",
   "assistant.insights.goToBuyersAction": "Ver directorio de compradores",
+  "assistant.goToSensorsAction": "Ver consola de sensores IoT",
   "assistant.clearConversation": "Limpiar conversación",
   "assistant.clearConversationAria": "Limpiar conversación y reiniciar mensajes",
   "categories.organic": "Orgánicos",
@@ -307,7 +308,9 @@ describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", 
     fireEvent.change(input, { target: { value: "resumen general" } });
     fireEvent.click(sendButton);
 
+    expect(screen.getByText("resumen general")).toBeTruthy();
     expect(await screen.findByText(/Resumen Operativo General/i)).toBeTruthy();
+    expect(screen.getByText("resumen general")).toBeTruthy();
     const badges = screen.getAllByText("Modo Local / Heurístico");
     expect(badges.length).toBeGreaterThanOrEqual(1);
   });
@@ -333,9 +336,11 @@ describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", 
     fireEvent.change(input, { target: { value: "¿Qué hacer con el stock?" } });
     fireEvent.click(sendButton);
 
+    expect(screen.getByText("¿Qué hacer con el stock?")).toBeTruthy();
     expect(await screen.findByText("Gemini AI")).toBeTruthy();
     expect(await screen.findByText(/Diagnóstico Gemini/)).toBeTruthy();
     expect(await screen.findByText(/Estrategia:/)).toBeTruthy();
+    expect(screen.getByText("¿Qué hacer con el stock?")).toBeTruthy();
   });
 
   test("h) limpia la conversación y restaura el saludo inicial al hacer clic en 'Limpiar conversación'", async () => {
@@ -356,6 +361,7 @@ describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", 
     fireEvent.change(input, { target: { value: "¿Hola?" } });
     fireEvent.click(sendButton);
 
+    expect(screen.getByText("¿Hola?")).toBeTruthy();
     expect(await screen.findByText("Respuesta de prueba antes de limpiar")).toBeTruthy();
 
     const clearButton = screen.getByRole("button", {
@@ -368,6 +374,80 @@ describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", 
     expect(
       screen.getByText(/¡Hola! Soy el asistente inteligente de EcoPlaza/i),
     ).toBeTruthy();
+  });
+
+  test("i) mantiene el hilo conversacional acumulativo preservando mensajes de usuario y asistente con timestamps", async () => {
+    mockGenerateAssistantResponseWithProvider
+      .mockResolvedValueOnce({
+        content: "Primera respuesta de la IA",
+        provider: "local_fallback",
+      })
+      .mockResolvedValueOnce({
+        content: "Segunda respuesta de la IA",
+        provider: "gemini",
+      });
+
+    render(
+      <MemoryRouter>
+        <AssistantPanel />
+      </MemoryRouter>,
+    );
+
+    const input = screen.getByRole("textbox");
+    const sendButton = screen.getByRole("button", { name: "Enviar mensaje" });
+
+    // Turno 1
+    fireEvent.change(input, { target: { value: "Primer mensaje de prueba" } });
+    fireEvent.click(sendButton);
+
+    expect(await screen.findByText("Primera respuesta de la IA")).toBeTruthy();
+    expect(screen.getByText("Primer mensaje de prueba")).toBeTruthy();
+
+    // Turno 2
+    fireEvent.change(input, { target: { value: "Segundo mensaje de prueba" } });
+    fireEvent.click(sendButton);
+
+    expect(await screen.findByText("Segunda respuesta de la IA")).toBeTruthy();
+    expect(screen.getByText("Segundo mensaje de prueba")).toBeTruthy();
+
+    // Validar que el primer turno permanece en el documento (hilo acumulativo)
+    expect(screen.getByText("Primer mensaje de prueba")).toBeTruthy();
+    expect(screen.getByText("Primera respuesta de la IA")).toBeTruthy();
+
+    // Validar accesibilidad semántica de artículos y log conversacional
+    const articles = screen.getAllByRole("article");
+    expect(articles.length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByRole("log")).toBeTruthy();
+  });
+
+  test("j) muestra la insignia 'Gemini AI' y telemetría de CTR-BOG-001 cuando la respuesta proviene del motor Gemini", async () => {
+    mockGenerateAssistantResponseWithProvider.mockResolvedValueOnce({
+      content:
+        "📡 Diagnóstico Gemini AI: El contenedor físico CTR-BOG-001 presenta un nivel volumétrico de 75% con distancia ultrasónica de 24.5 cm. Se recomienda programar recolección preventiva.",
+      provider: "gemini",
+      engine: "gemini",
+    });
+
+    render(
+      <MemoryRouter>
+        <AssistantPanel />
+      </MemoryRouter>,
+    );
+
+    const input = screen.getByRole("textbox");
+    const sendButton = screen.getByRole("button", { name: "Enviar mensaje" });
+
+    fireEvent.change(input, {
+      target: { value: "¿Cuál es el estado del contenedor CTR-BOG-001?" },
+    });
+    fireEvent.click(sendButton);
+
+    expect(await screen.findByText("Gemini AI")).toBeTruthy();
+    expect(
+      await screen.findByText(/El contenedor físico CTR-BOG-001 presenta un nivel volumétrico de 75%/),
+    ).toBeTruthy();
+    expect(screen.getByText("¿Cuál es el estado del contenedor CTR-BOG-001?")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Ver consola de sensores IoT" })).toBeTruthy();
   });
 });
 
