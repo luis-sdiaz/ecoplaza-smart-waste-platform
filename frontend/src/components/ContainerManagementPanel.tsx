@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   AlertTriangle,
@@ -8,6 +8,7 @@ import {
   Download,
   LoaderCircle,
   Plus,
+  Radio,
   RefreshCw,
   Search,
   X,
@@ -36,6 +37,7 @@ import {
   saveContainerExcel,
   type ContainerExcelLabels,
 } from "../services/containerExcelService";
+import type { SensorTelemetry } from "../services/telemetryService";
 import SuccessToast from "./SuccessToast";
 
 type Feedback = {
@@ -52,11 +54,29 @@ function getContainerErrorKey(code: ContainerErrorCode): string {
   return "containers.databaseError";
 }
 
+function formatTelemetryTimestamp(
+  isoDateStr: string | null | undefined,
+  locale: string,
+): string {
+  if (!isoDateStr) return "—";
+  try {
+    const date = new Date(isoDateStr);
+    if (isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: "short",
+      timeStyle: "medium",
+    }).format(date);
+  } catch {
+    return "—";
+  }
+}
+
 export type ContainerManagementPanelProps = {
   isOpen?: boolean;
   onClose?: () => void;
   testId?: string;
   initialContainers?: Container[];
+  liveTelemetry?: SensorTelemetry | null;
 };
 
 function ContainerManagementPanel({
@@ -64,6 +84,7 @@ function ContainerManagementPanel({
   onClose,
   testId = "container-management-panel",
   initialContainers,
+  liveTelemetry = null,
 }: ContainerManagementPanelProps = {}) {
   const { t, i18n } = useTranslation();
   const requestRevisionRef = useRef(0);
@@ -227,6 +248,25 @@ function ContainerManagementPanel({
     }
   };
 
+  const effectiveContainers = useMemo(() => {
+    if (!liveTelemetry) {
+      return containers;
+    }
+    const targetCode = liveTelemetry.containerId.trim().toUpperCase();
+    const alreadyExists = containers.some(
+      (c) => c.code.trim().toUpperCase() === targetCode,
+    );
+    if (alreadyExists) {
+      return containers;
+    }
+    const physicalContainer: Container = {
+      id: "iot-" + liveTelemetry.containerId.toLowerCase(),
+      code: liveTelemetry.containerId,
+      createdAt: liveTelemetry.recordedAt,
+    };
+    return [physicalContainer, ...containers];
+  }, [containers, liveTelemetry]);
+
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const normalizedSearch = searchQuery
     .normalize("NFD")
@@ -235,8 +275,8 @@ function ContainerManagementPanel({
     .toLowerCase();
   const filteredContainers =
     normalizedSearch === ""
-      ? containers
-      : containers.filter((container) => {
+      ? effectiveContainers
+      : effectiveContainers.filter((container) => {
           const c = container as {
             code: string;
             category?: string | null;
@@ -619,66 +659,164 @@ function ContainerManagementPanel({
                 </div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {visibleContainers.map((container) => (
-                  <article
-                    key={container.id}
-                    className="glass-card rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-white/5 p-4 hover:border-emerald-500/40 transition-all"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                        <Database
-                          size={18}
-                          strokeWidth={1.8}
-                          aria-hidden="true"
-                        />
-                      </span>
-                      <div className="min-w-0">
-                        <h3 className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
-                          {container.code}
-                        </h3>
-                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                          {t("containers.createdAt", {
-                            date: new Intl.DateTimeFormat(locale, {
-                              dateStyle: "medium",
-                            }).format(new Date(container.createdAt)),
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <p
-                      className="mt-3 break-all font-mono text-[10px] leading-4 text-slate-400 dark:text-slate-500"
-                      title={container.id}
+                {visibleContainers.map((container) => {
+                  const isTargetPhysical =
+                    liveTelemetry !== null &&
+                    liveTelemetry !== undefined &&
+                    container.code.trim().toUpperCase() ===
+                      liveTelemetry.containerId.trim().toUpperCase();
+
+                  return (
+                    <article
+                      key={container.id}
+                      className={`glass-card rounded-xl border p-4 transition-all ${
+                        isTargetPhysical
+                          ? "border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-sm"
+                          : "border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-white/5 hover:border-emerald-500/40"
+                      }`}
                     >
-                      {container.id}
-                    </p>
-                    <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200/60 dark:border-white/10 pt-3">
-                      <div>
-                        <dt className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {t("containers.availableRecords")}
-                        </dt>
-                        <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {isStockLoading || stockLoadError
-                            ? "—"
-                            : (stockByContainer.get(container.id)
-                                ?.availableRecordCount ?? 0)}
-                        </dd>
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                            isTargetPhysical
+                              ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          }`}
+                        >
+                          {isTargetPhysical ? (
+                            <Radio
+                              size={18}
+                              strokeWidth={2}
+                              className="animate-pulse"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Database
+                              size={18}
+                              strokeWidth={1.8}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                              {container.code}
+                            </h3>
+                            {isTargetPhysical && (
+                              <>
+                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                                  <span
+                                    className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+                                    aria-hidden="true"
+                                  />
+                                  IoT Live
+                                </span>
+                                <span
+                                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                    liveTelemetry.status === "critical"
+                                      ? "border-rose-400/30 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                                      : liveTelemetry.status === "warning"
+                                        ? "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                        : "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                                  }`}
+                                >
+                                  {liveTelemetry.status === "critical"
+                                    ? "Critical"
+                                    : liveTelemetry.status === "warning"
+                                      ? "Warning"
+                                      : "Normal"}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            {isTargetPhysical
+                              ? `${t("sensors.lastReading")}: ${formatTelemetryTimestamp(liveTelemetry.recordedAt, locale)}`
+                              : t("containers.createdAt", {
+                                  date: new Intl.DateTimeFormat(locale, {
+                                    dateStyle: "medium",
+                                  }).format(new Date(container.createdAt)),
+                                })}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <dt className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {t("containers.availableWeight")}
-                        </dt>
-                        <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {isStockLoading || stockLoadError
-                            ? "—"
-                            : formatWeight(
-                                stockByContainer.get(container.id)
-                                  ?.availableWeightKg ?? 0,
-                              )}
-                        </dd>
-                      </div>
-                    </dl>
-                  </article>
-                ))}
+
+                      {isTargetPhysical && (
+                        <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 dark:bg-white/5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">
+                              {t("sensors.fillLevel")}
+                            </span>
+                            <span className="font-bold text-slate-900 dark:text-slate-100">
+                              {liveTelemetry.fillPercentage}%
+                            </span>
+                          </div>
+                          <div
+                            role="progressbar"
+                            aria-valuenow={liveTelemetry.fillPercentage}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${t("sensors.fillLevel")}: ${liveTelemetry.fillPercentage}%`}
+                            className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10"
+                          >
+                            <div
+                              className={`h-full transition-all duration-500 ${
+                                liveTelemetry.status === "critical"
+                                  ? "bg-rose-500"
+                                  : liveTelemetry.status === "warning"
+                                    ? "bg-amber-500"
+                                    : "bg-emerald-500"
+                              }`}
+                              style={{
+                                width: `${Math.min(Math.max(liveTelemetry.fillPercentage, 0), 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                            <span>{t("sensors.ultrasonicDistance")}</span>
+                            <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                              {liveTelemetry.distanceCm} cm
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      <p
+                        className="mt-3 break-all font-mono text-[10px] leading-4 text-slate-400 dark:text-slate-500"
+                        title={container.id}
+                      >
+                        {container.id}
+                      </p>
+                      <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200/60 dark:border-white/10 pt-3">
+                        <div>
+                          <dt className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {t("containers.availableRecords")}
+                          </dt>
+                          <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {isStockLoading || stockLoadError
+                              ? "—"
+                              : (stockByContainer.get(container.id)
+                                  ?.availableRecordCount ?? 0)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {t("containers.availableWeight")}
+                          </dt>
+                          <dd className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {isStockLoading || stockLoadError
+                              ? "—"
+                              : formatWeight(
+                                  stockByContainer.get(container.id)
+                                    ?.availableWeightKg ?? 0,
+                                )}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
+                  );
+                })}
               </div>
             </div>
           )}
