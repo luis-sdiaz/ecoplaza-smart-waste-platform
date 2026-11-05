@@ -36,6 +36,10 @@ import {
 } from "../services/dashboardAgingInventory";
 import { findTopRevenueCategory } from "../services/dashboardRevenueCategory";
 import { useDemoVisibility } from "../context/DemoVisibilityContext";
+import {
+  fetchLatestTelemetryByContainer,
+  type SensorTelemetry,
+} from "../services/telemetryService";
 
 type StatisticsResult = Awaited<ReturnType<typeof getReportStatistics>>;
 type AvailableWasteResult = Awaited<ReturnType<typeof listAvailableWasteRecords>>;
@@ -54,6 +58,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
   const requestRevisionRef = useRef(0);
   const salesRevisionRef = useRef(0);
   const inventoryRevisionRef = useRef(0);
+  const telemetryRevisionRef = useRef(0);
   const [statistics, setStatistics] = useState<ReportStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -63,6 +68,7 @@ function UserDashboardPage({ userId }: { userId: string }) {
   const [oldestInventory, setOldestInventory] = useState<AgingInventoryItem[]>([]);
   const [isOldestInventoryLoading, setIsOldestInventoryLoading] = useState(true);
   const [oldestInventoryError, setOldestInventoryError] = useState(false);
+  const [liveTelemetry, setLiveTelemetry] = useState<SensorTelemetry | null>(null);
 
   const applyStatisticsResult = useCallback((
     result: StatisticsResult,
@@ -215,6 +221,30 @@ function UserDashboardPage({ userId }: { userId: string }) {
       inventoryRevisionRef.current += 1;
     };
   }, [applyOldestInventoryResults, userId]);
+
+  useEffect(() => {
+    const syncTelemetry = (): void => {
+      const requestRevision = ++telemetryRevisionRef.current;
+      void fetchLatestTelemetryByContainer("CTR-BOG-001")
+        .then((data) => {
+          if (requestRevision !== telemetryRevisionRef.current) return;
+          setLiveTelemetry(data);
+        })
+        .catch(() => {
+          if (requestRevision !== telemetryRevisionRef.current) return;
+          setLiveTelemetry(null);
+        });
+    };
+
+    syncTelemetry();
+
+    const intervalId = window.setInterval(syncTelemetry, 10000);
+
+    return () => {
+      telemetryRevisionRef.current += 1;
+      window.clearInterval(intervalId);
+    };
+  }, [userId]);
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
   const formatWeight = (weightKg: number): string =>
@@ -472,15 +502,45 @@ function UserDashboardPage({ userId }: { userId: string }) {
 
         {/* Lateral Column of Telemetry & Leaders (4 cols) */}
         <div className="flex flex-col gap-6 lg:col-span-4">
-          {/* Section: Estado de sensores (Demo) */}
-          {showDemoData && (
-            <div className="glass-panel rounded-2xl p-6">
-              <div>
-                <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
-                <p className="mt-1 text-sm text-ecoplaza-text-muted">{t("dashboard.sensorMonitoringDemo")}</p>
+          {/* Section: Estado de sensores */}
+          {(showDemoData || liveTelemetry !== null) && (
+            <div className="glass-panel rounded-2xl p-6" data-testid="dashboard-sensor-status-section">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-ecoplaza-text">{t("dashboard.sensorStatus")}</h2>
+                  <p className="mt-1 text-sm text-ecoplaza-text-muted">
+                    {liveTelemetry !== null
+                      ? t("dashboard.sensorMonitoring")
+                      : t("dashboard.sensorMonitoringDemo")}
+                  </p>
+                </div>
+                {liveTelemetry !== null && (
+                  <span
+                    data-testid="iot-live-badge"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/60 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
+                  >
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />
+                    <span>IoT Live</span>
+                  </span>
+                )}
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                {liveTelemetry !== null && (
+                  <SensorStatusCard
+                    name={liveTelemetry.containerId}
+                    category={t("common.wasteRecyclable")}
+                    fillLevel={liveTelemetry.fillPercentage}
+                    status={
+                      liveTelemetry.status === "critical"
+                        ? "Critical"
+                        : liveTelemetry.status === "warning"
+                          ? "Warning"
+                          : "Normal"
+                    }
+                    hasTelemetry={true}
+                  />
+                )}
                 <SensorStatusCard name={`${t("waste.container")} 01`} category={t("common.wasteOrganic")} fillLevel={68} status={t("common.active")} />
                 <SensorStatusCard name={`${t("waste.container")} 02`} category={t("common.wasteRecyclable")} fillLevel={42} status={t("common.active")} />
                 <SensorStatusCard name={`${t("waste.container")} 03`} category={t("common.wasteNonRecyclable")} fillLevel={81} status={t("common.active")} />

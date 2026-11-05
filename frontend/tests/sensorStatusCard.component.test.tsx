@@ -144,5 +144,26 @@ describe("SensorStatusCard Component - Telemetría y Accesibilidad", () => {
     fireEvent.keyDown(interactiveCard, { key: "Enter" });
     expect(handleClick).toHaveBeenCalledTimes(2);
   });
+
+  it("7. Soporta estados explícitos 'Warning', 'Critical' y 'Normal' con estilos semánticos", () => {
+    const { rerender } = renderCard({ fillLevel: 75, status: "Warning" });
+
+    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(screen.getByText("Warning")).toBeInTheDocument();
+    expect(screen.getByText(/advertencia: nivel de llenado/i)).toBeInTheDocument();
+
+    rerender(
+      <SensorStatusCard
+        name="CTR-BOG-001"
+        category="Residuos Reciclables"
+        fillLevel={95}
+        status="Critical"
+      />,
+    );
+
+    expect(screen.getByText("95%")).toBeInTheDocument();
+    expect(screen.getByText("Critical")).toBeInTheDocument();
+    expect(screen.getByText(/alerta crítica: nivel de llenado/i)).toBeInTheDocument();
+  });
 });
 

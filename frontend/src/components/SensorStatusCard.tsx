@@ -43,7 +43,15 @@ function SensorStatusCard({
       ? Math.min(Math.max(0, fillLevel), 100)
       : null;
 
-  const isCritical = validFillLevel !== null && validFillLevel > 80;
+  const isCritical =
+    (validFillLevel !== null && validFillLevel > 80) ||
+    (typeof status === "string" && status.toLowerCase() === "critical");
+
+  const isWarning =
+    !isCritical &&
+    ((validFillLevel !== null && validFillLevel >= 70 && validFillLevel <= 80) ||
+      (typeof status === "string" && status.toLowerCase() === "warning"));
+
   const isInteractive = typeof onClick === "function";
   const cardRole = role ?? (isInteractive ? "button" : "region");
   const cardAriaLabel = ariaLabel ?? `${name} - ${category}`;
@@ -84,7 +92,9 @@ function SensorStatusCard({
               ? "border border-slate-300/60 bg-slate-500/10 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
               : isCritical
                 ? "border border-rose-300/60 bg-rose-500/10 text-rose-800 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300"
-                : "border border-emerald-300/60 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
+                : isWarning
+                  ? "border border-amber-300/60 bg-amber-500/10 text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300"
+                  : "border border-emerald-300/60 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300"
           }`}
         >
           <span
@@ -93,7 +103,9 @@ function SensorStatusCard({
                 ? "bg-slate-400"
                 : isCritical
                   ? "animate-pulse bg-rose-500"
-                  : "bg-emerald-500"
+                  : isWarning
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
             }`}
             aria-hidden="true"
           />
@@ -101,6 +113,11 @@ function SensorStatusCard({
           {isCritical && (
             <span className="sr-only">
               {t("sensors.criticalLevel", "Alerta crítica: nivel de llenado superior al 80%")}
+            </span>
+          )}
+          {isWarning && (
+            <span className="sr-only">
+              {t("sensors.warningLevel", "Advertencia: nivel de llenado entre 70% y 80%")}
             </span>
           )}
         </span>
@@ -131,7 +148,9 @@ function SensorStatusCard({
               className={`font-bold ${
                 isCritical
                   ? "text-rose-600 dark:text-rose-400"
-                  : "text-slate-900 dark:text-slate-100"
+                  : isWarning
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-slate-900 dark:text-slate-100"
               }`}
             >
               {validFillLevel !== null ? `${validFillLevel}%` : "—"}
@@ -154,7 +173,9 @@ function SensorStatusCard({
                   ? "w-0 bg-slate-400"
                   : isCritical
                     ? "bg-gradient-to-r from-amber-500 to-rose-500"
-                    : "bg-gradient-to-r from-emerald-500 to-teal-400"
+                    : isWarning
+                      ? "bg-gradient-to-r from-emerald-500 to-amber-500"
+                      : "bg-gradient-to-r from-emerald-500 to-teal-400"
               }`}
               style={{
                 width: validFillLevel !== null ? `${validFillLevel}%` : "0%",
