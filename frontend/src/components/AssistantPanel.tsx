@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -8,6 +8,7 @@ import {
   Bot,
   Coins,
   Loader2,
+  RefreshCw,
   RotateCcw,
   Send,
   Sparkles,
@@ -273,6 +274,21 @@ function AssistantPanel({
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
 
+  // Helper robusto para nombres de categorías de residuos
+  const getCategoryLabel = (category: string): string => {
+    const raw = category.replace(/^(categories|common)\./, "");
+    if (raw === "organic") {
+      return t("common.organic", t("categories.organic", "Orgánicos"));
+    }
+    if (raw === "recyclable") {
+      return t("common.recyclable", t("categories.recyclable", "Reciclables"));
+    }
+    if (raw === "nonRecyclable") {
+      return t("common.nonRecyclable", t("categories.nonRecyclable", "No aprovechables"));
+    }
+    return t(category, category);
+  };
+
   // Estado del motor de análisis predictivo
   const [activeInsight, setActiveInsight] = useState<ActiveInsightType>(null);
   const [fetchedInsightsData, setFetchedInsightsData] = useState<{
@@ -282,7 +298,7 @@ function AssistantPanel({
   } | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
 
-  const insightsData = initialInsightsData ?? fetchedInsightsData;
+  const insightsData = fetchedInsightsData ?? initialInsightsData ?? null;
 
   const scrollToBottom = () => {
     if (typeof messagesEndRef.current?.scrollIntoView === "function") {
@@ -308,8 +324,8 @@ function AssistantPanel({
     };
   }, []);
 
-  const loadInsightsDataIfNeeded = async () => {
-    if (insightsData !== null) return insightsData;
+  const refreshInsightsData = useCallback(async (force = false) => {
+    if (!force && fetchedInsightsData !== null) return fetchedInsightsData;
     setIsLoadingInsights(true);
     try {
       const data = await fetchOperationalInsightsData();
@@ -322,7 +338,22 @@ function AssistantPanel({
         setIsLoadingInsights(false);
       }
     }
-  };
+  }, [fetchedInsightsData]);
+
+  // Si no se pasaron datos iniciales, consultar automáticamente al montar para tener los diagnósticos listos
+  useEffect(() => {
+    let ignore = false;
+    if (!initialInsightsData) {
+      void fetchOperationalInsightsData().then((data) => {
+        if (!ignore && isMountedRef.current) {
+          setFetchedInsightsData(data);
+        }
+      });
+    }
+    return () => {
+      ignore = true;
+    };
+  }, [initialInsightsData]);
 
   const handleToggleInsight = async (
     type: "valuation" | "risks" | "buyers",
@@ -332,7 +363,13 @@ function AssistantPanel({
       return;
     }
     setActiveInsight(type);
-    await loadInsightsDataIfNeeded();
+    if (!insightsData) {
+      await refreshInsightsData(true);
+    }
+  };
+
+  const handleRefreshInsights = async () => {
+    await refreshInsightsData(true);
   };
 
   const triggerAssistantResponse = async (promptText: string) => {
@@ -511,56 +548,83 @@ function AssistantPanel({
       </div>
 
       {/* Barra de Chips de Análisis Estratégico */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-ecoplaza-border bg-ecoplaza-background/50 px-4 py-2.5 sm:px-6">
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-ecoplaza-text-muted">
-          <Sparkles
-            size={14}
-            className="text-ecoplaza-primary"
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ecoplaza-border bg-ecoplaza-background/50 px-4 py-2.5 sm:px-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-ecoplaza-text-muted">
+            <Sparkles
+              size={14}
+              className="text-ecoplaza-primary"
+              aria-hidden="true"
+            />
+            <span>{t("assistant.insights.title")}:</span>
+          </span>
+
+          <button
+            type="button"
+            data-testid="insight-chip-valuation"
+            onClick={() => void handleToggleInsight("valuation")}
+            aria-pressed={activeInsight === "valuation"}
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              activeInsight === "valuation"
+                ? "border-emerald-500 bg-emerald-500 text-white shadow-xs"
+                : "border-ecoplaza-border bg-ecoplaza-surface text-ecoplaza-text hover:border-emerald-500/50 hover:bg-emerald-500/5"
+            }`}
+          >
+            <Coins size={13} aria-hidden="true" />
+            <span>{t("assistant.insights.valuationChip")}</span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="insight-chip-risks"
+            onClick={() => void handleToggleInsight("risks")}
+            aria-pressed={activeInsight === "risks"}
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              activeInsight === "risks"
+                ? "border-amber-500 bg-amber-500 text-white shadow-xs"
+                : "border-ecoplaza-border bg-ecoplaza-surface text-ecoplaza-text hover:border-amber-500/50 hover:bg-amber-500/5"
+            }`}
+          >
+            <AlertTriangle size={13} aria-hidden="true" />
+            <span>{t("assistant.insights.agingChip")}</span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="insight-chip-buyers"
+            onClick={() => void handleToggleInsight("buyers")}
+            aria-pressed={activeInsight === "buyers"}
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              activeInsight === "buyers"
+                ? "border-sky-500 bg-sky-500 text-white shadow-xs"
+                : "border-ecoplaza-border bg-ecoplaza-surface text-ecoplaza-text hover:border-sky-500/50 hover:bg-sky-500/5"
+            }`}
+          >
+            <Users size={13} aria-hidden="true" />
+            <span>{t("assistant.insights.buyersChip")}</span>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          data-testid="refresh-insights-button"
+          disabled={isLoadingInsights}
+          onClick={() => void handleRefreshInsights()}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-ecoplaza-border bg-ecoplaza-surface px-2.5 py-1 text-xs font-medium text-ecoplaza-text-muted transition hover:bg-ecoplaza-background hover:text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label={t(
+            "assistant.insights.refreshAria",
+            "Actualizar diagnósticos estratégicos en vivo",
+          )}
+          title={t("assistant.insights.refresh", "Actualizar diagnóstico")}
+        >
+          <RefreshCw
+            size={13}
+            className={isLoadingInsights ? "animate-spin text-ecoplaza-primary" : ""}
             aria-hidden="true"
           />
-          <span>{t("assistant.insights.title")}:</span>
-        </span>
-
-        <button
-          type="button"
-          onClick={() => void handleToggleInsight("valuation")}
-          aria-pressed={activeInsight === "valuation"}
-          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-            activeInsight === "valuation"
-              ? "border-emerald-500 bg-emerald-500 text-white shadow-xs"
-              : "border-ecoplaza-border bg-ecoplaza-surface text-ecoplaza-text hover:border-emerald-500/50 hover:bg-emerald-500/5"
-          }`}
-        >
-          <Coins size={13} aria-hidden="true" />
-          <span>{t("assistant.insights.valuationChip")}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => void handleToggleInsight("risks")}
-          aria-pressed={activeInsight === "risks"}
-          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-            activeInsight === "risks"
-              ? "border-amber-500 bg-amber-500 text-white shadow-xs"
-              : "border-ecoplaza-border bg-ecoplaza-surface text-ecoplaza-text hover:border-amber-500/50 hover:bg-amber-500/5"
-          }`}
-        >
-          <AlertTriangle size={13} aria-hidden="true" />
-          <span>{t("assistant.insights.agingChip")}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => void handleToggleInsight("buyers")}
-          aria-pressed={activeInsight === "buyers"}
-          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-            activeInsight === "buyers"
-              ? "border-sky-500 bg-sky-500 text-white shadow-xs"
-              : "border-ecoplaza-border bg-ecoplaza-surface text-ecoplaza-text hover:border-sky-500/50 hover:bg-sky-500/5"
-          }`}
-        >
-          <Users size={13} aria-hidden="true" />
-          <span>{t("assistant.insights.buyersChip")}</span>
+          <span className="hidden sm:inline">
+            {t("assistant.insights.refresh", "Actualizar diagnóstico")}
+          </span>
         </button>
       </div>
 
@@ -639,7 +703,7 @@ function AssistantPanel({
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-semibold text-ecoplaza-text">
-                            {t(item.categoryLabelKey)}
+                            {getCategoryLabel(item.categoryLabelKey)}
                           </span>
                           <span className="text-ecoplaza-text-muted">
                             {item.percentageOfTotalValue}%
@@ -730,7 +794,7 @@ function AssistantPanel({
                           className="flex items-center gap-2 rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-1.5 text-xs text-ecoplaza-text"
                         >
                           <span className="font-semibold">
-                            {t(item.categoryLabelKey)}:
+                            {getCategoryLabel(item.categoryLabelKey)}:
                           </span>
                           <span>
                             {item.atRiskLots} lotes ·{" "}

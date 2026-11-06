@@ -151,6 +151,11 @@ const es = {
     loadingPage: "Cargando página...", loading: "Cargando...",
     increase: "Incremento", decrease: "Reducción",
   },
+  categories: {
+    organic: "Orgánicos",
+    recyclable: "Reciclables",
+    nonRecyclable: "No aprovechables",
+  },
   dashboard: {
     eyebrow: "Resumen general", title: "Panel de control",
     description: "Supervisa el estado general de EcoPlaza y la gestión inteligente de residuos.",
@@ -819,6 +824,8 @@ const es = {
       lastPurchase: "Última compra",
       contact: "Contacto",
       goToBuyersAction: "Ver directorio de compradores",
+      refresh: "Actualizar diagnóstico",
+      refreshAria: "Actualizar diagnósticos estratégicos en vivo",
     },
     iotDiagnostic: {
       cardTitle: "Diagnóstico Predictivo IoT",

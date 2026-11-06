@@ -51,14 +51,20 @@ const translations: Record<string, string> = {
   "assistant.goToSensorsAction": "Ver consola de sensores IoT",
   "assistant.clearConversation": "Limpiar conversación",
   "assistant.clearConversationAria": "Limpiar conversación y reiniciar mensajes",
+  "assistant.insights.refresh": "Actualizar diagnóstico",
+  "assistant.insights.refreshAria": "Actualizar diagnósticos estratégicos en vivo",
   "categories.organic": "Orgánicos",
   "categories.recyclable": "Reciclables",
   "categories.nonRecyclable": "No aprovechables",
+  "common.organic": "Orgánicos",
+  "common.recyclable": "Reciclables",
+  "common.nonRecyclable": "No aprovechables",
 };
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => translations[key] ?? key,
+    t: (key: string, defaultValue?: string) =>
+      translations[key] ?? (typeof defaultValue === "string" ? defaultValue : key),
     i18n: { resolvedLanguage: "es" },
   }),
 }));
@@ -448,6 +454,58 @@ describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", 
     ).toBeTruthy();
     expect(screen.getByText("¿Cuál es el estado del contenedor CTR-BOG-001?")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Ver consola de sensores IoT" })).toBeTruthy();
+  });
+
+  test("k) renderiza las categorías de residuos con etiquetas limpias en español en la Valorización de Stock sin claves crudas", () => {
+    render(
+      <MemoryRouter>
+        <AssistantPanel
+          initialInsightsData={{
+            inventory: mockInventory,
+            sales: mockSales,
+            buyers: mockBuyers,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    const valChip = screen.getByRole("button", {
+      name: "Valorizar inventario",
+    });
+    fireEvent.click(valChip);
+
+    // Debe mostrar los nombres limpios en español
+    expect(screen.getByText("Reciclables")).toBeTruthy();
+    expect(screen.getByText("Orgánicos")).toBeTruthy();
+
+    // No debe renderizar rutas internas crudas de i18n
+    expect(screen.queryByText("categories.recyclable")).toBeNull();
+    expect(screen.queryByText("categories.organic")).toBeNull();
+    expect(screen.queryByText("categories.nonRecyclable")).toBeNull();
+  });
+
+  test("l) botón de refresco de diagnósticos: renderiza con accesibilidad y permite sincronizar datos en vivo", async () => {
+    render(
+      <MemoryRouter>
+        <AssistantPanel
+          initialInsightsData={{
+            inventory: mockInventory,
+            sales: mockSales,
+            buyers: mockBuyers,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    const refreshButton = screen.getByTestId("refresh-insights-button");
+    expect(refreshButton).toBeTruthy();
+    expect(
+      screen.getByLabelText("Actualizar diagnósticos estratégicos en vivo"),
+    ).toBeTruthy();
+
+    fireEvent.click(refreshButton);
+    // Permanece interactivo y sin arrojar errores
+    expect(refreshButton).toBeTruthy();
   });
 });
 

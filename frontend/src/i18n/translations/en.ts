@@ -151,6 +151,11 @@ const en = {
     loadingPage: "Loading page...", loading: "Loading...",
     increase: "Increase", decrease: "Decrease",
   },
+  categories: {
+    organic: "Organic",
+    recyclable: "Recyclable",
+    nonRecyclable: "Non-recyclable",
+  },
   dashboard: {
     eyebrow: "General overview", title: "Dashboard",
     description: "Monitor EcoPlaza's overall status and smart waste management.",
@@ -819,6 +824,8 @@ const en = {
       lastPurchase: "Last purchase",
       contact: "Contact",
       goToBuyersAction: "View buyers directory",
+      refresh: "Refresh diagnosis",
+      refreshAria: "Refresh live strategic diagnostics",
     },
     iotDiagnostic: {
       cardTitle: "Predictive IoT Diagnostic",
