@@ -117,7 +117,6 @@ function UserReportsPage({ userId }: { userId: string }) {
   const metricValue = (format: (data: ReportStatistics) => string): string =>
     metricsUnavailable || statistics === null ? "—" : format(statistics);
   const isFiltered = activeDateRange !== null;
-  const metricBadge = t(isFiltered ? "reports.filteredData" : "reports.realData");
   const isEmptyPeriod = isFiltered && statistics !== null &&
     statistics.wasteRecordCount === 0 && statistics.salesCount === 0;
   const highestRevenueDay = statistics === null
@@ -260,69 +259,92 @@ function UserReportsPage({ userId }: { userId: string }) {
         description={t("reports.description")}
       />
 
-      <div className="mt-6 flex flex-wrap justify-end gap-2">
+      <div className="mt-6 flex flex-wrap justify-end gap-2.5">
         <button
           type="button"
           onClick={() => void exportReport()}
           disabled={metricsUnavailable || exportKind !== null}
-          className="flex items-center gap-2 rounded-xl bg-ecoplaza-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex items-center gap-2 rounded-xl border border-emerald-600/40 bg-emerald-600/10 px-4 py-2.5 text-sm font-semibold text-emerald-800 shadow-xs transition-colors hover:bg-emerald-600/20 active:bg-emerald-600/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
         >
           {exportKind === "csv" ? (
-            <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
+            <LoaderCircle className="animate-spin text-emerald-600 dark:text-emerald-400" size={17} aria-hidden="true" />
           ) : (
             <Download size={17} aria-hidden="true" />
           )}
-          {exportKind === "csv" ? t("reports.exporting") : t("reports.exportCsv")}
+          <span>{exportKind === "csv" ? t("reports.exporting") : t("reports.exportCsv")}</span>
         </button>
         <button
           type="button"
           onClick={() => void exportReportExcel()}
           disabled={metricsUnavailable || exportKind !== null}
-          className="flex items-center gap-2 rounded-xl bg-ecoplaza-secondary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {exportKind === "excel" ? (
             <LoaderCircle className="animate-spin" size={17} aria-hidden="true" />
           ) : (
             <Download size={17} aria-hidden="true" />
           )}
-          {exportKind === "excel" ? t("reports.exportingExcel") : t("reports.exportExcel")}
+          <span>{exportKind === "excel" ? t("reports.exportingExcel") : t("reports.exportExcel")}</span>
         </button>
       </div>
 
       <form
         onSubmit={applyDateRange}
-        className="mt-6 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5"
+        className="mt-6 rounded-2xl border border-slate-200/80 bg-white/70 p-5 shadow-xs backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/70"
       >
-        <div className="flex items-start gap-3">
-          <CalendarRange className="mt-0.5 text-ecoplaza-primary" size={20} aria-hidden="true" />
-          <div>
-            <h2 className="text-sm font-semibold text-ecoplaza-text">{t("reports.dateRange")}</h2>
-            <p className="mt-1 text-xs text-ecoplaza-text-muted">{t("reports.dateRangeDescription")}</p>
+        <div className="flex flex-col gap-4 border-b border-ecoplaza-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600/10 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+              <CalendarRange size={20} aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-ecoplaza-text">{t("reports.dateRange")}</h2>
+              <p className="text-xs text-ecoplaza-text-muted">{t("reports.dateRangeDescription")}</p>
+            </div>
+          </div>
+
+          <div
+            className="flex flex-wrap items-center gap-1.5 rounded-xl border border-ecoplaza-border/60 bg-ecoplaza-background/80 p-1"
+            aria-label={t("reports.quickRanges")}
+          >
+            {(["last7Days", "last30Days", "currentMonth"] as const).map((preset) => {
+              const presetRange = getReportDateRangePreset(preset);
+              const isSelected =
+                activeDateRange?.startDate === presetRange.startDate &&
+                activeDateRange?.endDate === presetRange.endDate;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => applyDateRangePreset(preset)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    isSelected
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-ecoplaza-text hover:bg-ecoplaza-surface hover:text-emerald-600 dark:hover:text-emerald-400"
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  {t(`reports.${preset}`)}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")}
+              onClick={clearDateRange}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                !isFiltered && startDate === "" && endDate === ""
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-ecoplaza-text hover:bg-ecoplaza-surface hover:text-emerald-600 dark:hover:text-emerald-400"
+              } disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              {t("reports.allHistory")}
+            </button>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2" aria-label={t("reports.quickRanges")}>
-          {(["last7Days", "last30Days", "currentMonth"] as const).map((preset) => (
-            <button
-              key={preset}
-              type="button"
-              disabled={isLoading}
-              onClick={() => applyDateRangePreset(preset)}
-              className="rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {t(`reports.${preset}`)}
-            </button>
-          ))}
-          <button
-            type="button"
-            disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")}
-            onClick={clearDateRange}
-            className="rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t("reports.allHistory")}
-          </button>
-        </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
-          <label className="text-xs font-medium text-ecoplaza-text-muted">
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+          <label className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
             {t("reports.startDate")}
             <input
               type="date"
@@ -331,10 +353,10 @@ function UserReportsPage({ userId }: { userId: string }) {
               required
               disabled={isLoading}
               onChange={(event) => setStartDate(event.target.value)}
-              className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text"
+              className="mt-1.5 block h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 text-sm text-ecoplaza-text transition-colors focus-visible:outline-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </label>
-          <label className="text-xs font-medium text-ecoplaza-text-muted">
+          <label className="text-xs font-semibold uppercase tracking-wider text-ecoplaza-text/70">
             {t("reports.endDate")}
             <input
               type="date"
@@ -343,13 +365,13 @@ function UserReportsPage({ userId }: { userId: string }) {
               required
               disabled={isLoading}
               onChange={(event) => setEndDate(event.target.value)}
-              className="mt-1 block w-full rounded-lg border border-ecoplaza-border bg-ecoplaza-background px-3 py-2 text-sm text-ecoplaza-text"
+              className="mt-1.5 block h-10 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-3 text-sm text-ecoplaza-text transition-colors focus-visible:outline-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
             />
           </label>
           <button
             type="submit"
             disabled={isLoading}
-            className="rounded-lg bg-ecoplaza-secondary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t("reports.applyDateRange")}
           </button>
@@ -357,16 +379,18 @@ function UserReportsPage({ userId }: { userId: string }) {
             type="button"
             disabled={isLoading || (!isFiltered && startDate === "" && endDate === "")}
             onClick={clearDateRange}
-            className="rounded-lg border border-ecoplaza-border px-4 py-2 text-sm font-medium text-ecoplaza-text disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 items-center justify-center gap-2 rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-4 text-sm font-medium text-ecoplaza-text shadow-xs transition-colors hover:bg-ecoplaza-background disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t("reports.clearDateRange")}
           </button>
         </div>
+
         {dateRangeError !== null && (
-          <p role="alert" className="mt-3 text-sm text-ecoplaza-danger">{t(dateRangeError)}</p>
+          <p role="alert" className="mt-3 text-xs font-medium text-ecoplaza-danger">{t(dateRangeError)}</p>
         )}
         {activeDateRange !== null && (
-          <p className="mt-3 text-sm font-medium text-ecoplaza-primary">
+          <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
             {t("reports.activeDateRange", {
               start: formatInputDate(activeDateRange.startDate),
               end: formatInputDate(activeDateRange.endDate),
@@ -416,42 +440,36 @@ function UserReportsPage({ userId }: { userId: string }) {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           title={t("reports.wasteRecords")}
           value={metricValue((data) => numberFormatter.format(data.wasteRecordCount))}
           description={t("reports.wasteRecordsDescription")}
-          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.historicalWeight")}
           value={metricValue((data) => formatWeight(data.totalRegisteredWeightKg))}
           description={t("reports.historicalWeightDescription")}
-          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.availableWeight")}
           value={metricValue((data) => formatWeight(data.availableWeightKg))}
           description={t("reports.availableWeightDescription")}
-          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.soldWeight")}
           value={metricValue((data) => formatWeight(data.soldWeightKg))}
           description={t("reports.soldWeightDescription")}
-          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.salesCount")}
           value={metricValue((data) => numberFormatter.format(data.salesCount))}
           description={t("reports.salesCountDescription")}
-          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.grossSales")}
           value={metricValue((data) => currencyFormatter.format(data.grossSalesValue))}
           description={t("reports.grossSalesDescription")}
-          badge={metricBadge}
         />
         <MetricCard
           title={t("reports.highestRevenueDay")}
@@ -464,7 +482,6 @@ function UserReportsPage({ userId }: { userId: string }) {
                   date: formatInputDate(highestRevenueDay.date),
                   count: highestRevenueDay.salesCount,
                 })}
-          badge={metricBadge}
         />
       </div>
 
@@ -483,9 +500,9 @@ function UserReportsPage({ userId }: { userId: string }) {
                 {statistics.topBuyers.map((buyer, index) => (
                   <li key={buyer.buyerId} className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_repeat(3,auto)] sm:items-center">
                     <div className="min-w-0"><span className="mr-2 text-xs font-semibold text-ecoplaza-primary">#{index + 1}</span><span className="font-medium text-ecoplaza-text">{buyer.buyerName}</span></div>
-                    <span className="text-sm text-ecoplaza-text-muted">{t("reports.buyerPurchases", { count: buyer.purchaseCount })}</span>
-                    <span className="text-sm text-ecoplaza-text">{formatWeight(buyer.purchasedWeightKg)}</span>
-                    <span className="text-sm font-semibold text-ecoplaza-primary">{currencyFormatter.format(buyer.totalPurchasedValue)}</span>
+                    <span className="text-sm text-ecoplaza-text-muted tabular-nums">{t("reports.buyerPurchases", { count: buyer.purchaseCount })}</span>
+                    <span className="text-sm text-ecoplaza-text tabular-nums">{formatWeight(buyer.purchasedWeightKg)}</span>
+                    <span className="text-sm font-semibold text-ecoplaza-primary tabular-nums">{currencyFormatter.format(buyer.totalPurchasedValue)}</span>
                   </li>
                 ))}
               </ol>

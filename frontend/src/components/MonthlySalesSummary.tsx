@@ -26,6 +26,7 @@ export interface MonthlySalesSummaryProps {
   role?: string;
   ariaLabel?: string;
   testId?: string;
+  showBadge?: boolean;
 }
 
 function MonthlySalesSummary({
@@ -43,6 +44,7 @@ function MonthlySalesSummary({
   role,
   ariaLabel,
   testId = "monthly-sales-summary",
+  showBadge = false,
 }: MonthlySalesSummaryProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
@@ -141,9 +143,11 @@ function MonthlySalesSummary({
             {t("reports.monthlySalesDescription")}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-          {t(isFiltered ? "reports.filteredData" : "reports.realData")}
-        </span>
+        {showBadge && (
+          <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
+            {t(isFiltered ? "reports.filteredData" : "reports.realData")}
+          </span>
+        )}
       </div>
 
       {/* Estado de carga */}

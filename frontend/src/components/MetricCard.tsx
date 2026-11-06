@@ -180,7 +180,7 @@ function MetricCard({
           </div>
         ) : (
           <p
-            className="mt-4 min-w-0 cursor-default text-xl font-bold tracking-tight text-slate-800 sm:text-2xl dark:text-white"
+            className="mt-4 min-w-0 cursor-default text-xl font-bold tracking-tight text-slate-800 sm:text-2xl dark:text-white tabular-nums"
             title={valueTitle ?? String(value)}
           >
             {value}

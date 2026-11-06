@@ -19,6 +19,7 @@ export interface WasteDistributionChartProps {
   title?: string;
   description?: string;
   className?: string;
+  showBadge?: boolean;
 }
 
 function WasteDistributionChart({
@@ -31,6 +32,7 @@ function WasteDistributionChart({
   title,
   description,
   className = "",
+  showBadge = false,
 }: WasteDistributionChartProps) {
   const { t, i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage || i18n.language || "es";
@@ -147,12 +149,14 @@ function WasteDistributionChart({
             {cardDescription}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-          {t(
-            isFiltered ? "reports.filteredData" : "reports.realData",
-            isFiltered ? "Período filtrado" : "Datos reales",
-          )}
-        </span>
+        {showBadge && (
+          <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
+            {t(
+              isFiltered ? "reports.filteredData" : "reports.realData",
+              isFiltered ? "Período filtrado" : "Datos reales",
+            )}
+          </span>
+        )}
       </div>
 
       {/* Leyenda cromática de categorías */}

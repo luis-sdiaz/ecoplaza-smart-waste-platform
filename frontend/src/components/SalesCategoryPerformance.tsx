@@ -27,6 +27,7 @@ export interface SalesCategoryPerformanceProps {
   role?: string;
   ariaLabel?: string;
   testId?: string;
+  showBadge?: boolean;
 }
 
 function SalesCategoryPerformance({
@@ -39,6 +40,7 @@ function SalesCategoryPerformance({
   role,
   ariaLabel,
   testId = "sales-category-performance",
+  showBadge = false,
 }: SalesCategoryPerformanceProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
@@ -148,9 +150,11 @@ function SalesCategoryPerformance({
             <p className="mt-1 text-sm text-ecoplaza-text-muted">{displaySubtitle}</p>
           )}
         </div>
-        <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
-          {t(isFiltered ? "reports.filteredData" : "reports.realData")}
-        </span>
+        {showBadge && (
+          <span className="shrink-0 rounded-full bg-ecoplaza-background px-2.5 py-1 text-[11px] font-semibold text-ecoplaza-text-muted">
+            {t(isFiltered ? "reports.filteredData" : "reports.realData")}
+          </span>
+        )}
       </div>
 
       {/* Estado de carga */}
