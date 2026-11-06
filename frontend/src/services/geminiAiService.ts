@@ -1,17 +1,34 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export const DEFAULT_GEMINI_MODEL = "gemini-1.5-flash-latest";
+export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
+export const GEMINI_REQUEST_TIMEOUT_MS = 3500;
 
 /**
  * Cadena ordenada de modelos candidatos compatibles con el endpoint v1beta de Google Generative AI.
- * Si el modelo configurado (o el primero de la lista) falla con 404 (Not Found) o 503 (High Demand),
- * se itera automáticamente al siguiente candidato antes de propagar la falla.
+ * Prioriza "gemini-3.8-flash" y el alias dinámico "gemini-flash-latest", erradicando modelos descontinuados o con error 404.
  */
 export const CANDIDATE_MODELS: readonly string[] = [
-  "gemini-1.5-flash-latest",
+  "gemini-3.8-flash",
   "gemini-flash-latest",
-  "gemini-pro",
 ];
+
+/**
+ * Sanitiza y normaliza identificadores de modelos de Gemini para el endpoint v1beta.
+ * Preserva "gemini-3.8-flash" y "gemini-flash-latest", y mapea alias obsoletos o descontinuados ("gemini-2.5-flash", "gemini-1.5-flash", "gemini-pro") a DEFAULT_GEMINI_MODEL.
+ */
+export function normalizeGeminiModelName(modelName?: string): string {
+  if (!modelName || typeof modelName !== "string") {
+    return DEFAULT_GEMINI_MODEL;
+  }
+  const trimmed = modelName.trim().replace(/^["']|["']$/g, "").trim();
+  if (!trimmed) {
+    return DEFAULT_GEMINI_MODEL;
+  }
+  if (trimmed === "gemini-3.8-flash" || trimmed === "gemini-flash-latest") {
+    return trimmed;
+  }
+  return DEFAULT_GEMINI_MODEL;
+}
 
 export interface GeminiConfig {
   apiKey?: string;
@@ -24,6 +41,7 @@ export interface GeminiGenerateOptions {
   maxOutputTokens?: number;
   retryDelayMs?: number;
   maxRetries?: number;
+  timeoutMs?: number;
 }
 
 /**
@@ -57,10 +75,6 @@ function isModelNotFoundError(message: string): boolean {
   );
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * Enmascara credenciales y tokens sensibles presentes en cadenas de error
  * para prevenir fugas de información confidencial en logs o interfaces.
@@ -84,9 +98,10 @@ export class GeminiAiService {
   constructor(config?: GeminiConfig) {
     this.apiKey = config?.apiKey;
     const envModel = import.meta.env?.VITE_GEMINI_MODEL as string | undefined;
-    this.modelName =
+    const rawModel =
       config?.modelName ||
       (envModel && envModel.trim() !== "" ? envModel.trim() : DEFAULT_GEMINI_MODEL);
+    this.modelName = normalizeGeminiModelName(rawModel);
   }
 
   /**
@@ -97,7 +112,7 @@ export class GeminiAiService {
       this.apiKey = config.apiKey;
     }
     if (config?.modelName !== undefined) {
-      this.modelName = config.modelName;
+      this.modelName = normalizeGeminiModelName(config.modelName);
     }
   }
 
@@ -138,13 +153,13 @@ export class GeminiAiService {
   /**
    * Genera texto mediante el modelo de Gemini oficial configurado.
    *
-   * Implementa una **cascada de modelos** (Model Cascade):
-   * 1. Intenta con el modelo configurado (`this.modelName`).
-   * 2. Si falla con 404 (Not Found) o 503 (High Demand), itera automáticamente
-   *    al siguiente modelo candidato de `CANDIDATE_MODELS`.
-   * 3. Para cada modelo, aplica un reintento defensivo (1 reintento con retardo
-   *    de 800ms) ante errores transitorios 503/429.
-   * 4. Si todos los modelos de la cascada fallan, propaga el último error.
+   * Arquitectura tolerante a fallos:
+   * 1. Cascada restringida a modelos Flash ("gemini-3.8-flash" y "gemini-flash-latest")
+   *    para evitar errores de cuota (HTTP 429) en Free Tier.
+   * 2. Timeout estricto de 3500ms con AbortController para garantizar respuesta inmediata.
+   * 3. Ante HTTP 429 (Quota Exceeded), 503 (Saturación) o Timeout, aborta de inmediato
+   *    la cascada externa sin reintentos bloqueantes para conmutar al motor local heurístico.
+   * 4. Ante HTTP 404 (modelo no encontrado), escala al siguiente candidato Flash.
    */
   public async generateText(
     prompt: string,
@@ -155,23 +170,11 @@ export class GeminiAiService {
     }
 
     const effectiveKey = this.getEffectiveApiKey();
-    const globalProcess = (
-      globalThis as unknown as {
-        process?: { env?: Record<string, string | undefined> };
-      }
-    ).process;
-    const isTestEnv =
-      import.meta.env?.MODE === "test" ||
-      globalProcess?.env?.NODE_ENV === "test";
-    const defaultDelay = isTestEnv ? 0 : 800;
-    const retryDelay = options?.retryDelayMs ?? defaultDelay;
-    const maxRetries = options?.maxRetries ?? 1;
-    const maxAttempts = maxRetries + 1;
-
+    const timeoutMs = options?.timeoutMs ?? GEMINI_REQUEST_TIMEOUT_MS;
     const client = new GoogleGenerativeAI(effectiveKey);
 
-    // Construir la cadena de modelos a intentar: primero el configurado,
-    // luego los candidatos restantes que no sean el ya configurado.
+    // Construir la cadena de modelos Flash a intentar: primero el configurado,
+    // luego los candidatos restantes de CANDIDATE_MODELS.
     const modelsToTry: string[] = [this.modelName];
     for (const candidate of CANDIDATE_MODELS) {
       if (!modelsToTry.includes(candidate)) {
@@ -210,70 +213,75 @@ export class GeminiAiService {
       const modelParams = { model: currentModel, ...baseModelParams };
       const model = client.getGenerativeModel(modelParams);
 
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
+      const abortController = new AbortController();
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          abortController.abort();
+          reject(
+            new Error(
+              `Tiempo de espera agotado al consultar Gemini (${timeoutMs}ms)`,
+            ),
+          );
+        }, timeoutMs);
+      });
+
+      try {
+        const generatePromise = (async () => {
           const result = await model.generateContent(prompt);
-          const response = await result.response;
-          const text = typeof response?.text === "function" ? response.text() : "";
-          // Éxito: actualizar el modelo efectivo para las próximas llamadas en esta sesión
-          if (currentModel !== this.modelName) {
-            if (import.meta.env?.DEV) {
-              console.info(
-                `[Gemini AI Cascade]: Modelo resuelto exitosamente con "${currentModel}" (original: "${this.modelName}").`,
-              );
-            }
-            this.modelName = currentModel;
-          }
-          return text;
-        } catch (error: unknown) {
-          lastError = error;
-          const rawMessage = error instanceof Error ? error.message : String(error);
-          const sanitized = sanitizeErrorMessage(rawMessage, effectiveKey);
+          return await result.response;
+        })();
 
-          // Si el modelo no existe (404), escalar al siguiente candidato de la cascada
-          if (isModelNotFoundError(sanitized)) {
-            if (import.meta.env?.DEV) {
-              console.warn(
-                `[Gemini AI Cascade]: Modelo "${currentModel}" no disponible (404). Intentando siguiente candidato...`,
-              );
-            }
-            break; // Salir del bucle de reintentos, pasar al siguiente modelo
-          }
+        const response = await Promise.race([generatePromise, timeoutPromise]);
+        const text = typeof response?.text === "function" ? response.text() : "";
 
-          // Si es un error transitorio (503/429), reintentar con el mismo modelo
-          if (isTransientGeminiError(sanitized) && attempt < maxAttempts) {
-            if (import.meta.env?.DEV) {
-              console.warn(
-                `[Gemini AI Retry]: Error transitorio en intento ${attempt}/${maxAttempts} con "${currentModel}" (${sanitized.slice(0, 100)}). Reintentando en ${retryDelay}ms...`,
-              );
-            }
-            if (retryDelay > 0) {
-              await sleep(retryDelay);
-            }
-            continue;
+        // Éxito: actualizar el modelo efectivo para las próximas llamadas en esta sesión
+        if (currentModel !== this.modelName) {
+          if (import.meta.env?.DEV) {
+            console.info(
+              `[Gemini AI Cascade]: Modelo resuelto exitosamente con "${currentModel}" (original: "${this.modelName}").`,
+            );
           }
+          this.modelName = currentModel;
+        }
+        return text;
+      } catch (error: unknown) {
+        lastError = error;
+        const rawMessage = error instanceof Error ? error.message : String(error);
+        const sanitized = sanitizeErrorMessage(rawMessage, effectiveKey);
 
-          // Si es transitorio y agotamos los reintentos, escalar al siguiente modelo
-          if (isTransientGeminiError(sanitized)) {
-            if (import.meta.env?.DEV) {
-              console.warn(
-                `[Gemini AI Cascade]: Modelo "${currentModel}" agotó reintentos por error transitorio. Intentando siguiente candidato...`,
-              );
-            }
-            break;
+        // 1. Ante HTTP 429 (cuota), HTTP 503 (saturación) o Timeout:
+        // Abortar de inmediato sin reintentos para conmutación instantánea al motor local
+        if (
+          isTransientGeminiError(sanitized) ||
+          sanitized.includes("429") ||
+          sanitized.includes("503") ||
+          /tiempo de espera agotado|timeout/i.test(sanitized)
+        ) {
+          if (import.meta.env?.DEV) {
+            console.warn(
+              `[Gemini AI Abort]: Error transitorio, cuota o timeout (${sanitized.slice(0, 100)}). Abortando cascada externa para conmutación local inmediata.`,
+            );
           }
-
-          // Error no recuperable (400, 401, 403): propagar directamente sin cascada
           break;
         }
-      }
 
-      // Si el último error NO fue 404 ni transitorio, no tiene sentido probar otro modelo
-      if (lastError) {
-        const rawMsg = lastError instanceof Error ? lastError.message : String(lastError);
-        const san = sanitizeErrorMessage(rawMsg, effectiveKey);
-        if (!isModelNotFoundError(san) && !isTransientGeminiError(san)) {
-          break;
+        // 2. Si el modelo no existe (404), escalar al siguiente candidato Flash de la cascada
+        if (isModelNotFoundError(sanitized)) {
+          if (import.meta.env?.DEV) {
+            console.warn(
+              `[Gemini AI Cascade]: Modelo "${currentModel}" no disponible (404). Intentando siguiente candidato Flash...`,
+            );
+          }
+          continue;
+        }
+
+        // 3. Error no recuperable (400, 401, 403): abortar directamente
+        break;
+      } finally {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
         }
       }
     }
@@ -283,6 +291,12 @@ export class GeminiAiService {
       lastError instanceof Error ? lastError.message : String(lastError);
     const sanitized = sanitizeErrorMessage(rawMessage, effectiveKey);
 
+    if (/tiempo de espera agotado|timeout/i.test(sanitized)) {
+      throw new Error(
+        `Tiempo de espera agotado al consultar Gemini (${timeoutMs}ms)`,
+        { cause: lastError },
+      );
+    }
     if (
       sanitized.includes("503") ||
       /high demand|service unavailable|overloaded/i.test(sanitized)

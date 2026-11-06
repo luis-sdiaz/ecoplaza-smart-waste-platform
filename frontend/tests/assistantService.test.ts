@@ -707,8 +707,8 @@ test("generateAssistantResponseWithProvider: fallback a formatIoTFleetResponse a
   }
 });
 
-test("generateAssistantResponseWithProvider: utiliza el modelo estable gemini-1.5-flash-latest con cascada de modelos por defecto", async () => {
-  assert.strictEqual(geminiAiService.getModelName(), "gemini-1.5-flash-latest");
+test("generateAssistantResponseWithProvider: utiliza el modelo estable gemini-3.8-flash con cascada de modelos por defecto", async () => {
+  assert.strictEqual(geminiAiService.getModelName(), "gemini-3.8-flash");
 
   geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
   const originalGenerate = geminiAiService.generateText;
@@ -790,6 +790,39 @@ test("generateAssistantResponseWithProvider: fallback a modo local ante error 40
     assert.strictEqual(result.provider, "local_fallback");
     assert.strictEqual(result.engine, "local_fallback");
     assert.match(result.content, /inventario|stock|disponible/i);
+    assert.strictEqual(getLastAssistantProvider(), "local_fallback");
+  } finally {
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ apiKey: "" });
+  }
+});
+
+test("generateAssistantResponseWithProvider: fallback a modo local ante timeout de conexión (>3500ms)", async () => {
+  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  const originalGenerate = geminiAiService.generateText;
+
+  geminiAiService.generateText = async () => {
+    throw new Error(
+      "Tiempo de espera agotado al consultar Gemini (3500ms)",
+    );
+  };
+
+  const context = buildAssistantAnalyticsContext(
+    mockWasteRecords,
+    mockSales,
+    mockContainers,
+    fixedNow,
+  );
+
+  try {
+    const result = await generateAssistantResponseWithProvider(
+      "Estado de ventas y facturación",
+      context,
+    );
+
+    assert.strictEqual(result.provider, "local_fallback");
+    assert.strictEqual(result.engine, "local_fallback");
+    assert.match(result.content, /rendimiento|ventas/i);
     assert.strictEqual(getLastAssistantProvider(), "local_fallback");
   } finally {
     geminiAiService.generateText = originalGenerate;
