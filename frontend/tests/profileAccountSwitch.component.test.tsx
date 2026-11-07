@@ -73,6 +73,7 @@ vi.mock("../src/auth/profileImage", () => {
 
   return {
     prepareProfileImage: imageMocks.prepareProfileImage,
+    prepareCoverImage: vi.fn().mockResolvedValue("data:image/webp;base64,mockCoverData"),
     ProfileImageError: MockProfileImageError,
   };
 });
@@ -102,7 +103,7 @@ describe("Profile account isolation", () => {
     authState.current = createAuthState(userB);
     view.rerender(<ProfilePage />);
 
-    expect(screen.getByText("User B")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "User B" })).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "profile.name" })).toBeNull();
     expect(screen.queryByText("profile.nameValidation")).toBeNull();
     expect(screen.queryByText("profile.loadErrorTitle")).toBeNull();
@@ -127,7 +128,7 @@ describe("Profile account isolation", () => {
 
     const editButton = screen.getByRole("button", { name: "profile.editName" });
     expect((editButton as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.getByText("User B")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "User B" })).toBeTruthy();
 
     await act(async () => {
       pendingName.resolve(true);
@@ -135,7 +136,7 @@ describe("Profile account isolation", () => {
     });
 
     expect(screen.queryByText("profile.nameUpdatedToastTitle")).toBeNull();
-    expect(screen.getByText("User B")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "User B" })).toBeTruthy();
   });
 
   test("does not send a prepared user A avatar after switching to B", async () => {
@@ -163,16 +164,74 @@ describe("Profile account isolation", () => {
 
     expect(authA.updateUserAvatar).not.toHaveBeenCalled();
     expect(authB.updateUserAvatar).not.toHaveBeenCalled();
-    expect(screen.getByText("User B")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "User B" })).toBeTruthy();
   });
 
   test("renders no private profile after the authenticated session disappears", () => {
     const view = render(<ProfilePage />);
-    expect(screen.getByText("User A")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "User A" })).toBeTruthy();
 
     authState.current = createAuthState(null);
     view.rerender(<ProfilePage />);
 
     expect(view.container.childElementCount).toBe(0);
+  });
+
+  test("renders default institutional cover initially and switches to color palette", () => {
+    window.localStorage.clear();
+    const view = render(<ProfilePage />);
+
+    // Default mode is the institutional cover
+    const heroCover = view.container.querySelector(".profile-hero-cover");
+    expect(heroCover?.classList.contains("profile-cover--default")).toBe(true);
+
+    const defaultSwatch = screen.getByRole("radio", {
+      name: "profile.coverDefault",
+    });
+    expect(defaultSwatch.getAttribute("aria-checked")).toBe("true");
+
+    const ecoEmeraldSwatch = screen.getByRole("radio", {
+      name: "profile.paletteEcoEmerald",
+    });
+    expect(ecoEmeraldSwatch.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(ecoEmeraldSwatch);
+
+    expect(window.localStorage.getItem("ecoplaza_cover_palette")).toBe("eco-emerald");
+    expect(window.localStorage.getItem("ecoplaza_cover_mode")).toBe("palette");
+    expect(heroCover?.classList.contains("profile-cover--eco-emerald")).toBe(true);
+    expect(ecoEmeraldSwatch.getAttribute("aria-checked")).toBe("true");
+    expect(defaultSwatch.getAttribute("aria-checked")).toBe("false");
+  });
+
+  test("restores previously saved cover gradient palette from localStorage", () => {
+    window.localStorage.setItem("ecoplaza_cover_palette", "cyber-ocean");
+    window.localStorage.setItem("ecoplaza_cover_mode", "palette");
+    const view = render(<ProfilePage />);
+
+    const heroCover = view.container.querySelector(".profile-hero-cover");
+    expect(heroCover?.classList.contains("profile-cover--cyber-ocean")).toBe(true);
+
+    const cyberOceanSwatch = screen.getByRole("radio", {
+      name: "profile.paletteCyberOcean",
+    });
+    expect(cyberOceanSwatch.getAttribute("aria-checked")).toBe("true");
+  });
+
+  test("restores previously saved custom cover image from localStorage", () => {
+    window.localStorage.setItem("ecoplaza_cover_mode", "custom");
+    window.localStorage.setItem(
+      "ecoplaza_custom_cover",
+      "data:image/webp;base64,mockCustomCoverImage",
+    );
+    const view = render(<ProfilePage />);
+
+    const heroCover = view.container.querySelector(".profile-hero-cover");
+    expect(heroCover?.classList.contains("profile-cover--custom")).toBe(true);
+
+    const customSwatch = screen.getByRole("radio", {
+      name: "profile.customCover",
+    });
+    expect(customSwatch.getAttribute("aria-checked")).toBe("true");
   });
 });

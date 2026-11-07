@@ -146,3 +146,68 @@ export async function prepareProfileImage(file: File): Promise<Blob> {
     decodedImage.release();
   }
 }
+
+export const COVER_IMAGE_MAX_WIDTH = 1280;
+export const COVER_IMAGE_MAX_HEIGHT = 480;
+const COVER_IMAGE_QUALITY = 0.82;
+
+export async function prepareCoverImage(file: File): Promise<string> {
+  if (file.size > PROFILE_IMAGE_MAX_FILE_SIZE) {
+    throw new ProfileImageError("too-large");
+  }
+
+  let signature: Uint8Array;
+
+  try {
+    signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  } catch {
+    throw new ProfileImageError("processing");
+  }
+
+  if (!hasSupportedImageSignature(signature)) {
+    throw new ProfileImageError("unsupported");
+  }
+
+  let decodedImage: DecodedImage;
+
+  try {
+    decodedImage = await decodeImage(file);
+  } catch {
+    throw new ProfileImageError("unsupported");
+  }
+
+  if (decodedImage.width <= 0 || decodedImage.height <= 0) {
+    decodedImage.release();
+    throw new ProfileImageError("unsupported");
+  }
+
+  try {
+    const scale = Math.min(
+      1,
+      COVER_IMAGE_MAX_WIDTH / decodedImage.width,
+      COVER_IMAGE_MAX_HEIGHT / decodedImage.height,
+    );
+    const width = Math.max(1, Math.round(decodedImage.width * scale));
+    const height = Math.max(1, Math.round(decodedImage.height * scale));
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    if (context === null) throw new ProfileImageError("processing");
+
+    canvas.width = width;
+    canvas.height = height;
+    context.drawImage(decodedImage.source, 0, 0, width, height);
+
+    let dataUrl = canvas.toDataURL("image/webp", COVER_IMAGE_QUALITY);
+    if (!dataUrl.startsWith("data:image/webp")) {
+      dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    }
+
+    return dataUrl;
+  } catch (error) {
+    if (error instanceof ProfileImageError) throw error;
+    throw new ProfileImageError("processing");
+  } finally {
+    decodedImage.release();
+  }
+}

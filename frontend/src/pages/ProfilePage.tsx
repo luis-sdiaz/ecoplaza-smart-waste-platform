@@ -3,24 +3,81 @@ import type { ChangeEvent, FormEvent } from "react";
 import {
   Camera,
   Check,
-  CircleCheck,
   Copy,
   IdCard,
+  ImagePlus,
   Info,
   Leaf,
-  Mail,
+  Palette,
   Pencil,
+  RotateCcw,
   ShieldCheck,
   Trash2,
   UserRound,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
-import { isValidProfileName, normalizeProfileName } from "../auth/profileStorage";
-import { prepareProfileImage, ProfileImageError } from "../auth/profileImage";
-import PageHeader from "../components/PageHeader";
+import {
+  isValidProfileName,
+  normalizeProfileName,
+} from "../auth/profileStorage";
+import {
+  prepareCoverImage,
+  prepareProfileImage,
+  ProfileImageError,
+} from "../auth/profileImage";
+import defaultCoverUrl from "../assets/profile/default-cover-ecoplaza.png";
 import SuccessToast from "../components/SuccessToast";
 import "./ProfilePage.css";
+
+type CoverPaletteId =
+  "pasto-sunset" | "eco-emerald" | "cyber-ocean" | "obsidian-tech";
+
+type CoverMode = "default" | "palette" | "custom";
+
+interface CoverPalette {
+  id: CoverPaletteId;
+  nameKey: string;
+  defaultName: string;
+  previewColor: string;
+  gradientClass: string;
+}
+
+const COVER_PALETTES: readonly CoverPalette[] = [
+  {
+    id: "pasto-sunset",
+    nameKey: "profile.palettePastoSunset",
+    defaultName: "Pasto Sunset",
+    previewColor: "linear-gradient(135deg, #3730a3, #1e40af, #065f46)",
+    gradientClass: "profile-cover--pasto-sunset",
+  },
+  {
+    id: "eco-emerald",
+    nameKey: "profile.paletteEcoEmerald",
+    defaultName: "Eco Emerald",
+    previewColor: "linear-gradient(135deg, #064e3b, #047857, #0f766e)",
+    gradientClass: "profile-cover--eco-emerald",
+  },
+  {
+    id: "cyber-ocean",
+    nameKey: "profile.paletteCyberOcean",
+    defaultName: "Cyber Ocean",
+    previewColor: "linear-gradient(135deg, #083344, #0369a1, #1e3a8a)",
+    gradientClass: "profile-cover--cyber-ocean",
+  },
+  {
+    id: "obsidian-tech",
+    nameKey: "profile.paletteObsidianTech",
+    defaultName: "Obsidian Tech",
+    previewColor: "linear-gradient(135deg, #090d16, #1e293b, #064e3b)",
+    gradientClass: "profile-cover--obsidian-tech",
+  },
+];
+
+const DEFAULT_COVER_PALETTE: CoverPaletteId = "pasto-sunset";
+const COVER_MODE_STORAGE_KEY = "ecoplaza_cover_mode";
+const COVER_PALETTE_STORAGE_KEY = "ecoplaza_cover_palette";
+const CUSTOM_COVER_STORAGE_KEY = "ecoplaza_custom_cover";
 
 type AvatarFeedback = {
   tone: "error" | "success";
@@ -36,9 +93,14 @@ type ProfileNotificationOperation =
   | "nameUpdated"
   | "avatarUpdated"
   | "avatarRemoved"
+  | "customCoverUpdated"
+  | "customCoverRemoved"
   | "nameSaveError"
   | "avatarSaveError"
-  | "avatarRemoveError";
+  | "avatarRemoveError"
+  | "coverSaveError"
+  | "coverTooLargeError"
+  | "coverUnsupportedError";
 
 type ProfileNotification = {
   id: number;
@@ -61,6 +123,16 @@ const profileNotificationCopy = {
     description: "profile.avatarRemovedToastDescription",
     variant: "success",
   },
+  customCoverUpdated: {
+    title: "profile.customCoverUpdatedToastTitle",
+    description: "profile.customCoverUpdatedToastDescription",
+    variant: "success",
+  },
+  customCoverRemoved: {
+    title: "profile.customCoverRemovedToastTitle",
+    description: "profile.customCoverRemovedToastDescription",
+    variant: "success",
+  },
   nameSaveError: {
     title: "profile.nameSaveErrorToastTitle",
     description: "profile.nameSaveError",
@@ -74,6 +146,21 @@ const profileNotificationCopy = {
   avatarRemoveError: {
     title: "profile.avatarRemoveErrorToastTitle",
     description: "profile.avatarRemoveError",
+    variant: "error",
+  },
+  coverSaveError: {
+    title: "profile.avatarSaveErrorToastTitle",
+    description: "profile.avatarProcessingError",
+    variant: "error",
+  },
+  coverTooLargeError: {
+    title: "profile.avatarSaveErrorToastTitle",
+    description: "profile.avatarTooLarge",
+    variant: "error",
+  },
+  coverUnsupportedError: {
+    title: "profile.avatarSaveErrorToastTitle",
+    description: "profile.avatarUnsupportedFormat",
     variant: "error",
   },
   profileLoadError: {
@@ -93,13 +180,183 @@ function ProfilePageContent() {
     removeUserAvatar,
   } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [nameError, setNameError] = useState(false);
   const [isNameBusy, setIsNameBusy] = useState(false);
   const [isAvatarBusy, setIsAvatarBusy] = useState(false);
-  const [avatarFeedback, setAvatarFeedback] = useState<AvatarFeedback | null>(null);
-  const [notification, setNotification] = useState<ProfileNotification | null>(null);
+  const [isCoverBusy, setIsCoverBusy] = useState(false);
+
+  const [coverMode, setCoverMode] = useState<CoverMode>(() => {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return "default";
+    }
+    try {
+      const savedMode = window.localStorage.getItem(COVER_MODE_STORAGE_KEY);
+      if (
+        savedMode === "custom" &&
+        window.localStorage.getItem(CUSTOM_COVER_STORAGE_KEY)
+      ) {
+        return "custom";
+      }
+      if (savedMode === "palette") {
+        return "palette";
+      }
+      if (savedMode === "default") {
+        return "default";
+      }
+      const legacyPalette = window.localStorage.getItem(COVER_PALETTE_STORAGE_KEY);
+      if (
+        legacyPalette === "pasto-sunset" ||
+        legacyPalette === "eco-emerald" ||
+        legacyPalette === "cyber-ocean" ||
+        legacyPalette === "obsidian-tech"
+      ) {
+        return "palette";
+      }
+    } catch {
+      // Fallback ante fallo de almacenamiento
+    }
+    return "default";
+  });
+
+  const [customCoverUrl, setCustomCoverUrl] = useState<string | null>(() => {
+    if (typeof window === "undefined" || !window.localStorage) return null;
+    try {
+      return window.localStorage.getItem(CUSTOM_COVER_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  const [coverPalette, setCoverPalette] = useState<CoverPaletteId>(() => {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return DEFAULT_COVER_PALETTE;
+    }
+    try {
+      const saved = window.localStorage.getItem(COVER_PALETTE_STORAGE_KEY);
+      if (
+        saved === "pasto-sunset" ||
+        saved === "eco-emerald" ||
+        saved === "cyber-ocean" ||
+        saved === "obsidian-tech"
+      ) {
+        return saved;
+      }
+    } catch {
+      // Fallback ante fallo de almacenamiento
+    }
+    return DEFAULT_COVER_PALETTE;
+  });
+
+  const handleSelectDefaultCover = (): void => {
+    setCoverMode("default");
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem(COVER_MODE_STORAGE_KEY, "default");
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleSelectCoverPalette = (paletteId: CoverPaletteId): void => {
+    setCoverPalette(paletteId);
+    setCoverMode("palette");
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem(COVER_MODE_STORAGE_KEY, "palette");
+        window.localStorage.setItem(COVER_PALETTE_STORAGE_KEY, paletteId);
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleSelectCustomCover = (): void => {
+    if (!customCoverUrl) return;
+    setCoverMode("custom");
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem(COVER_MODE_STORAGE_KEY, "custom");
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleCoverSelection = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    setNotification(null);
+    setIsCoverBusy(true);
+
+    try {
+      const preparedCover = await prepareCoverImage(file);
+
+      if (!isMountedRef.current) return;
+
+      setCustomCoverUrl(preparedCover);
+      setCoverMode("custom");
+
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          window.localStorage.setItem(COVER_MODE_STORAGE_KEY, "custom");
+          window.localStorage.setItem(CUSTOM_COVER_STORAGE_KEY, preparedCover);
+        }
+      } catch {
+        // Fallback
+      }
+
+      showNotification("customCoverUpdated");
+    } catch (error) {
+      if (error instanceof ProfileImageError) {
+        const op: ProfileNotificationOperation =
+          error.code === "too-large"
+            ? "coverTooLargeError"
+            : error.code === "processing"
+              ? "coverSaveError"
+              : "coverUnsupportedError";
+        showNotification(op);
+      } else {
+        showNotification("coverSaveError");
+      }
+    } finally {
+      setIsCoverBusy(false);
+    }
+  };
+
+  const handleRemoveCustomCover = (): void => {
+    setNotification(null);
+    setCustomCoverUrl(null);
+    setCoverMode("default");
+
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.removeItem(CUSTOM_COVER_STORAGE_KEY);
+        window.localStorage.setItem(COVER_MODE_STORAGE_KEY, "default");
+      }
+    } catch {
+      // Fallback
+    }
+
+    showNotification("customCoverRemoved");
+  };
+
+  const activePalette =
+    COVER_PALETTES.find((p) => p.id === coverPalette) ?? COVER_PALETTES[0];
+  const [avatarFeedback, setAvatarFeedback] = useState<AvatarFeedback | null>(
+    null,
+  );
+  const [notification, setNotification] = useState<ProfileNotification | null>(
+    null,
+  );
   const [isProfileErrorDismissed, setIsProfileErrorDismissed] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -124,7 +381,7 @@ function ProfilePageContent() {
 
   const closeNotification = useCallback((): void => {
     setNotification(null);
-  }, []);
+  }, [setNotification]);
 
   const startNameEditing = (): void => {
     if (!user) return;
@@ -140,7 +397,9 @@ function ProfilePageContent() {
     setIsEditingName(false);
   };
 
-  const handleNameSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleNameSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     event.preventDefault();
     if (isNameBusy) return;
 
@@ -177,7 +436,9 @@ function ProfilePageContent() {
     }
   };
 
-  const handleAvatarSelection = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+  const handleAvatarSelection = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -205,11 +466,12 @@ function ProfilePageContent() {
         return;
       }
 
-      const key = error.code === "too-large"
-        ? "profile.avatarTooLarge"
-        : error.code === "processing"
-          ? "profile.avatarProcessingError"
-          : "profile.avatarUnsupportedFormat";
+      const key =
+        error.code === "too-large"
+          ? "profile.avatarTooLarge"
+          : error.code === "processing"
+            ? "profile.avatarProcessingError"
+            : "profile.avatarUnsupportedFormat";
 
       setAvatarFeedback({ tone: "error", key });
     } finally {
@@ -263,60 +525,120 @@ function ProfilePageContent() {
       : null;
 
   return (
-    <section className="profile-page p-8 max-w-7xl mx-auto w-full min-h-0" aria-label={t("profile.title")}>
-      <PageHeader
-        eyebrow={t("profile.eyebrow", { defaultValue: "Cuenta & Seguridad" })}
-        title={t("profile.title")}
-        description={t("profile.description", {
-          defaultValue: "Administra tu información de acceso, identidad y seguridad en EcoPlaza.",
-        })}
-      />
+    <section
+      className="profile-page px-6 py-5 max-w-7xl mx-auto w-full min-h-0"
+      aria-label={t("profile.title")}
+    >
+      <h1 className="profile-sr-only">{t("profile.title")}</h1>
 
       {user ? (
-        <div className="profile-panel mt-6">
-          <div className="profile-panel-grid">
-            <article className="profile-hero" aria-labelledby="profile-user-name">
-              <div className="profile-hero-cover">
-                <span className="profile-brand">
-                  <Leaf size={16} strokeWidth={2} aria-hidden="true" />
-                  EcoPlaza
-                </span>
+        <div className="profile-panel">
+          <article className="profile-hero" aria-labelledby="profile-user-name">
+            <div
+              className={`profile-hero-cover ${
+                coverMode === "default"
+                  ? "profile-cover--default"
+                  : coverMode === "custom"
+                    ? "profile-cover--custom"
+                    : activePalette.gradientClass
+              }`}
+              style={
+                coverMode === "default"
+                  ? { backgroundImage: `url(${defaultCoverUrl})` }
+                  : coverMode === "custom" && customCoverUrl
+                    ? { backgroundImage: `url(${customCoverUrl})` }
+                    : undefined
+              }
+            >
+              <span className="profile-brand">
+                <Leaf size={14} strokeWidth={2.2} aria-hidden="true" />
+                <span>EcoPlaza</span>
+              </span>
+            </div>
+
+            <div className="profile-identity">
+              <div className="profile-avatar-shell">
+                <div className="profile-avatar">
+                  {user.avatarUrl ? (
+                    <img
+                      className="profile-avatar-image"
+                      src={user.avatarUrl}
+                      alt=""
+                    />
+                  ) : (
+                    <UserRound strokeWidth={1.5} aria-hidden="true" />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="profile-avatar-quick-camera"
+                  aria-label={t("profile.changePhoto")}
+                  title={t("profile.changePhoto")}
+                  disabled={isAvatarBusy}
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  <Camera size={15} strokeWidth={2} aria-hidden="true" />
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  className="profile-avatar-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                  aria-label={t("profile.changePhoto")}
+                  onChange={handleAvatarSelection}
+                />
               </div>
 
-              <div className="profile-hero-content">
-                <div className="profile-identity-bar">
-                  <div className="profile-avatar-group">
-                    <div className="profile-avatar-shell">
-                      <div className="profile-avatar">
-                        {user.avatarUrl ? (
-                          <img className="profile-avatar-image" src={user.avatarUrl} alt="" />
-                        ) : (
-                          <UserRound strokeWidth={1.5} aria-hidden="true" />
-                        )}
-                      </div>
-                      <input
-                        ref={avatarInputRef}
-                        className="profile-avatar-input"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                        aria-label={t("profile.changePhoto")}
-                        onChange={handleAvatarSelection}
-                      />
-                    </div>
-                  </div>
-
+              <div className="profile-identity-copy">
+                <div className="profile-identity-header">
+                  <h2 id="profile-user-name" title={user.name}>
+                    {user.name}
+                  </h2>
                   <span className="profile-active-badge">
-                    <span aria-hidden="true" />
+                    <ShieldCheck size={13} strokeWidth={2} aria-hidden="true" />
                     {t("profile.accountActive")}
                   </span>
                 </div>
+              </div>
 
-                <div className="profile-identity-text">
-                  {isEditingName ? (
-                    <>
-                      <h2 id="profile-user-name" className="profile-sr-only">{user.name}</h2>
-                      <form className="profile-name-form" onSubmit={handleNameSubmit} noValidate>
-                        <label className="profile-sr-only" htmlFor="profile-name-input">
+              <button
+                type="button"
+                className="profile-edit-action"
+                onClick={startNameEditing}
+                aria-controls="profile-name-input"
+                disabled={isEditingName || isNameBusy}
+              >
+                <Pencil size={15} strokeWidth={2} aria-hidden="true" />
+                {t("profile.editName")}
+              </button>
+            </div>
+          </article>
+
+          <div className="profile-content-grid">
+            <section
+              className="profile-section profile-personal-section"
+              aria-labelledby="profile-personal-heading"
+            >
+              <header className="profile-section-heading">
+                <h3 id="profile-personal-heading">
+                  {t("profile.personalInformation")}
+                </h3>
+              </header>
+
+              <dl className="profile-details-list">
+                <div className="profile-detail-row">
+                  <dt>{t("profile.name")}</dt>
+                  <dd>
+                    {isEditingName ? (
+                      <form
+                        className="profile-name-form"
+                        onSubmit={handleNameSubmit}
+                        noValidate
+                      >
+                        <label
+                          className="profile-sr-only"
+                          htmlFor="profile-name-input"
+                        >
                           {t("profile.name")}
                         </label>
                         <div className="profile-name-editor">
@@ -332,13 +654,19 @@ function ProfilePageContent() {
                               if (event.key === "Escape") cancelNameEditing();
                             }}
                             aria-invalid={nameError}
-                            aria-describedby={nameError ? "profile-name-error" : undefined}
+                            aria-describedby={
+                              nameError ? "profile-name-error" : undefined
+                            }
                             autoComplete="name"
                             autoFocus
                             disabled={isNameBusy}
                           />
                           <div className="profile-name-actions">
-                            <button type="submit" className="profile-name-save" disabled={isNameBusy}>
+                            <button
+                              type="submit"
+                              className="profile-name-save"
+                              disabled={isNameBusy}
+                            >
                               {t("profile.save")}
                             </button>
                             <button
@@ -352,160 +680,288 @@ function ProfilePageContent() {
                           </div>
                         </div>
                         {nameError && (
-                          <p id="profile-name-error" className="profile-name-error" role="alert">
+                          <p
+                            id="profile-name-error"
+                            className="profile-name-error"
+                            role="alert"
+                          >
                             {t("profile.nameValidation")}
                           </p>
                         )}
                       </form>
-                    </>
-                  ) : (
-                    <div className="profile-name-row">
-                      <h2 id="profile-user-name" title={user.name}>{user.name}</h2>
-                      <button
-                        type="button"
-                        className="profile-name-edit"
-                        onClick={startNameEditing}
-                      >
-                        <Pencil size={14} strokeWidth={1.8} aria-hidden="true" />
-                        {t("profile.editName")}
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="profile-meta-row">
-                    <span className="profile-role-badge">{t("profile.userAccount")}</span>
-                    <p className="profile-email" title={user.email}>
-                      <Mail size={15} strokeWidth={1.8} aria-hidden="true" />
-                      <span>{user.email}</span>
-                    </p>
-                  </div>
-
-                  <div className="profile-photo-management">
-                    <div className="profile-photo-copy">
-                      <span className="profile-photo-title">{t("profile.profilePhoto")}</span>
-                      <p
-                        id="profile-avatar-feedback"
-                        className="profile-avatar-feedback"
-                        data-tone={avatarFeedback?.tone ?? "help"}
-                        role={avatarFeedback ? (avatarFeedback.tone === "error" ? "alert" : "status") : undefined}
-                      >
-                        {avatarFeedback ? t(avatarFeedback.key) : t("profile.avatarRequirements")}
-                      </p>
-                    </div>
-                    <div className="profile-photo-action-buttons">
-                      <button
-                        type="button"
-                        className="profile-avatar-change"
-                        aria-label={t("profile.changePhoto")}
-                        aria-busy={isAvatarBusy}
-                        aria-describedby="profile-avatar-feedback"
-                        disabled={isAvatarBusy}
-                        onClick={() => avatarInputRef.current?.click()}
-                      >
-                        <Camera size={14} strokeWidth={1.9} aria-hidden="true" />
-                        {t("profile.changePhoto")}
-                      </button>
-                      <button
-                        type="button"
-                        className="profile-avatar-remove"
-                        aria-label={t("profile.removePhoto")}
-                        aria-busy={isAvatarBusy}
-                        aria-describedby="profile-avatar-feedback"
-                        disabled={isAvatarBusy || !user.avatarUrl}
-                        onClick={handleAvatarRemoval}
-                      >
-                        <Trash2 size={14} strokeWidth={1.8} aria-hidden="true" />
-                        {t("profile.removePhoto")}
-                      </button>
-                    </div>
-                  </div>
+                    ) : (
+                      <span title={user.name}>{user.name}</span>
+                    )}
+                  </dd>
                 </div>
+                <div className="profile-detail-row">
+                  <dt>{t("profile.email")}</dt>
+                  <dd title={user.email}>{user.email}</dd>
+                </div>
+              </dl>
 
-                <p className="profile-demo-note">{t("profile.userDescription")}</p>
+              <div className="profile-photo-management">
+                <div className="profile-photo-copy">
+                  <span className="profile-photo-title">
+                    {t("profile.profilePhoto")}
+                  </span>
+                  <p
+                    id="profile-avatar-feedback"
+                    className="profile-avatar-feedback"
+                    data-tone={avatarFeedback?.tone ?? "help"}
+                    role={
+                      avatarFeedback
+                        ? avatarFeedback.tone === "error"
+                          ? "alert"
+                          : "status"
+                        : undefined
+                    }
+                  >
+                    {avatarFeedback
+                      ? t(avatarFeedback.key)
+                      : t("profile.avatarRequirements")}
+                  </p>
+                </div>
+                <div className="profile-photo-action-buttons">
+                  <button
+                    type="button"
+                    className="profile-avatar-change"
+                    aria-label={t("profile.changePhoto")}
+                    aria-busy={isAvatarBusy}
+                    aria-describedby="profile-avatar-feedback"
+                    disabled={isAvatarBusy}
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    <Camera size={15} strokeWidth={2} aria-hidden="true" />
+                    {t("profile.changePhoto")}
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-avatar-remove"
+                    aria-label={t("profile.removePhoto")}
+                    aria-busy={isAvatarBusy}
+                    aria-describedby="profile-avatar-feedback"
+                    disabled={isAvatarBusy || !user.avatarUrl}
+                    onClick={handleAvatarRemoval}
+                  >
+                    <Trash2 size={15} strokeWidth={2} aria-hidden="true" />
+                    {t("profile.removePhoto")}
+                  </button>
+                </div>
               </div>
-            </article>
+            </section>
 
-            <aside className="profile-side-stack" aria-label={t("profile.profileSummary")}>
-              <section className="profile-status-card" aria-labelledby="profile-status-heading">
-                <header className="profile-card-heading">
-                  <span className="profile-card-icon">
-                    <ShieldCheck size={20} strokeWidth={1.8} aria-hidden="true" />
-                  </span>
-                  <h2 id="profile-status-heading">{t("profile.accountInformation")}</h2>
-                </header>
+            <section
+              className="profile-section profile-identification-section"
+              aria-labelledby="profile-identification-heading"
+            >
+              <header className="profile-section-heading profile-section-heading--icon">
+                <span className="profile-section-icon" aria-hidden="true">
+                  <IdCard size={18} strokeWidth={1.8} />
+                </span>
+                <div>
+                  <h3 id="profile-identification-heading">
+                    {t("profile.userIdentification")}
+                  </h3>
+                </div>
+              </header>
 
-                <dl className="profile-account-grid">
-                  <div className="profile-account-item">
-                    <dt>{t("profile.accountType")}</dt>
-                    <dd>{t("profile.user")}</dd>
-                  </div>
-                  <div className="profile-account-item">
-                    <dt>{t("profile.status")}</dt>
-                    <dd className="profile-status-active">
-                      <span className="profile-status-dot" aria-hidden="true" />
-                      {t("profile.active")}
-                    </dd>
-                  </div>
-                  <div className="profile-account-item">
-                    <dt>{t("profile.currentAccess")}</dt>
-                    <dd>
-                      <CircleCheck size={15} strokeWidth={2} aria-hidden="true" />
-                      {t("profile.authenticated")}
-                    </dd>
-                  </div>
-                  <div className="profile-account-item">
-                    <dt>{t("profile.platform")}</dt>
-                    <dd>EcoPlaza</dd>
-                  </div>
-                </dl>
-              </section>
-
-              <section className="profile-id-card" aria-labelledby="profile-id-heading">
-                <header className="profile-card-heading">
-                  <span className="profile-card-icon">
-                    <IdCard size={20} strokeWidth={1.8} aria-hidden="true" />
-                  </span>
-                  <h2 id="profile-id-heading">{t("profile.userIdentification")}</h2>
-                </header>
-
-                <dl className="profile-identifier-list">
-                  <div className="profile-identifier-item">
-                    <dt>{t("profile.id")}</dt>
-                    <dd className="profile-id-row">
-                      <span className="profile-id-value" title={user.id}>
-                        {user.id}
-                      </span>
-                      <button
-                        type="button"
-                        className="profile-id-copy-btn"
-                        onClick={handleCopyId}
-                        title={
-                          isCopied
-                            ? t("profile.idCopied", { defaultValue: "Copiado" })
-                            : t("profile.copyId", { defaultValue: "Copiar ID" })
-                        }
-                        aria-label={
-                          isCopied
-                            ? t("profile.idCopied", { defaultValue: "Copiado" })
-                            : t("profile.copyId", { defaultValue: "Copiar ID" })
-                        }
-                      >
-                        {isCopied ? (
-                          <Check size={14} className="profile-check-icon" strokeWidth={2.2} aria-hidden="true" />
-                        ) : (
-                          <Copy size={14} strokeWidth={1.8} aria-hidden="true" />
-                        )}
-                      </button>
-                    </dd>
-                  </div>
-                  <div className="profile-identifier-item">
-                    <dt>{t("profile.associatedEmail")}</dt>
-                    <dd title={user.email}>{user.email}</dd>
-                  </div>
-                </dl>
-              </section>
-            </aside>
+              <dl className="profile-details-list profile-session-list">
+                <div className="profile-detail-row profile-detail-row--stacked">
+                  <dt>{t("profile.id")}</dt>
+                  <dd className="profile-id-row">
+                    <span className="profile-id-value" title={user.id}>
+                      {user.id}
+                    </span>
+                    <button
+                      type="button"
+                      className="profile-id-copy-btn"
+                      onClick={handleCopyId}
+                      title={
+                        isCopied
+                          ? t("profile.idCopied", { defaultValue: "Copiado" })
+                          : t("profile.copyId", { defaultValue: "Copiar ID" })
+                      }
+                      aria-label={
+                        isCopied
+                          ? t("profile.idCopied", { defaultValue: "Copiado" })
+                          : t("profile.copyId", { defaultValue: "Copiar ID" })
+                      }
+                    >
+                      {isCopied ? (
+                        <Check
+                          size={15}
+                          className="profile-check-icon"
+                          strokeWidth={2.2}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Copy size={15} strokeWidth={1.8} aria-hidden="true" />
+                      )}
+                    </button>
+                  </dd>
+                </div>
+                <div className="profile-detail-row">
+                  <dt>{t("profile.accountType")}</dt>
+                  <dd>{t("profile.user")}</dd>
+                </div>
+                <div className="profile-detail-row">
+                  <dt>{t("profile.accessEnvironment")}</dt>
+                  <dd>{t("profile.desktopApplication")}</dd>
+                </div>
+              </dl>
+            </section>
           </div>
+
+          <section
+            className="profile-personalization"
+            aria-labelledby="profile-personalization-heading"
+          >
+            <header className="profile-section-heading profile-section-heading--icon profile-personalization-header">
+              <div className="profile-personalization-title-group">
+                <span className="profile-section-icon" aria-hidden="true">
+                  <Palette size={17} strokeWidth={1.8} />
+                </span>
+                <div>
+                  <h3 id="profile-personalization-heading">
+                    {t("profile.personalization")}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="profile-cover-action-buttons">
+                <button
+                  type="button"
+                  className="profile-cover-upload-btn"
+                  disabled={isCoverBusy}
+                  onClick={() => coverInputRef.current?.click()}
+                  title={t("profile.uploadCoverTitle", {
+                    defaultValue: "Subir imagen de portada",
+                  })}
+                  aria-label={t("profile.uploadCoverTitle", {
+                    defaultValue: "Subir imagen de portada",
+                  })}
+                >
+                  <ImagePlus size={14} strokeWidth={2} aria-hidden="true" />
+                  <span>{t("profile.uploadCover", { defaultValue: "Subir imagen" })}</span>
+                </button>
+                {customCoverUrl ? (
+                  <button
+                    type="button"
+                    className="profile-cover-remove-btn"
+                    onClick={handleRemoveCustomCover}
+                    disabled={isCoverBusy}
+                    title={t("profile.restoreDefaultCover", {
+                      defaultValue: "Restaurar portada predeterminada",
+                    })}
+                    aria-label={t("profile.restoreDefaultCover", {
+                      defaultValue: "Restaurar portada predeterminada",
+                    })}
+                  >
+                    <RotateCcw size={13} strokeWidth={2} aria-hidden="true" />
+                    <span>{t("profile.restoreDefaultCover", { defaultValue: "Restaurar" })}</span>
+                  </button>
+                ) : null}
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  className="profile-sr-only"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                  aria-label={t("profile.uploadCoverTitle", {
+                    defaultValue: "Subir imagen de portada",
+                  })}
+                  onChange={handleCoverSelection}
+                  disabled={isCoverBusy}
+                />
+              </div>
+            </header>
+
+            <div
+              className="profile-palette-options"
+              role="radiogroup"
+              aria-label={t("profile.coverPalette")}
+            >
+              {/* Opción 1: Portada predeterminada del sistema (EcoPlaza) */}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={coverMode === "default"}
+                aria-label={t("profile.coverDefault", {
+                  defaultValue: "EcoPlaza Institucional",
+                })}
+                className={`profile-palette-swatch ${coverMode === "default" ? "is-active" : ""}`}
+                onClick={handleSelectDefaultCover}
+              >
+                <span
+                  className="profile-palette-preview profile-palette-preview--image"
+                  style={{ backgroundImage: `url(${defaultCoverUrl})` }}
+                  aria-hidden="true"
+                />
+                <span className="profile-palette-name">
+                  {t("profile.coverDefault", { defaultValue: "EcoPlaza" })}
+                </span>
+                <span className="profile-palette-selection" aria-hidden="true">
+                  {coverMode === "default" && <Check size={14} strokeWidth={2.5} />}
+                </span>
+              </button>
+
+              {/* Opciones 2-5: Portadas por paleta de color */}
+              {COVER_PALETTES.map((palette) => {
+                const isSelected = coverMode === "palette" && coverPalette === palette.id;
+                const paletteName = t(palette.nameKey, {
+                  defaultValue: palette.defaultName,
+                });
+
+                return (
+                  <button
+                    key={palette.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={paletteName}
+                    className={`profile-palette-swatch ${isSelected ? "is-active" : ""}`}
+                    onClick={() => handleSelectCoverPalette(palette.id)}
+                  >
+                    <span
+                      className="profile-palette-preview"
+                      style={{ background: palette.previewColor }}
+                      aria-hidden="true"
+                    />
+                    <span className="profile-palette-name">{paletteName}</span>
+                    <span className="profile-palette-selection" aria-hidden="true">
+                      {isSelected && <Check size={14} strokeWidth={2.5} />}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Opción 6: Imagen personalizada subida por el usuario (si existe) */}
+              {customCoverUrl ? (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={coverMode === "custom"}
+                  aria-label={t("profile.customCover", {
+                    defaultValue: "Personalizada",
+                  })}
+                  className={`profile-palette-swatch ${coverMode === "custom" ? "is-active" : ""}`}
+                  onClick={handleSelectCustomCover}
+                >
+                  <span
+                    className="profile-palette-preview profile-palette-preview--image"
+                    style={{ backgroundImage: `url(${customCoverUrl})` }}
+                    aria-hidden="true"
+                  />
+                  <span className="profile-palette-name">
+                    {t("profile.customCover", { defaultValue: "Personalizada" })}
+                  </span>
+                  <span className="profile-palette-selection" aria-hidden="true">
+                    {coverMode === "custom" && <Check size={14} strokeWidth={2.5} />}
+                  </span>
+                </button>
+              ) : null}
+            </div>
+          </section>
         </div>
       ) : (
         <div className="profile-empty-state mt-6">
@@ -520,9 +976,11 @@ function ProfilePageContent() {
           title={t(notificationCopy.title)}
           description={t(notificationCopy.description)}
           closeLabel={t("profile.dismissNotification")}
-          onClose={notification
-            ? closeNotification
-            : () => setIsProfileErrorDismissed(true)}
+          onClose={
+            notification
+              ? closeNotification
+              : () => setIsProfileErrorDismissed(true)
+          }
           duration={notificationCopy.variant === "error" ? 7000 : undefined}
           variant={notificationCopy.variant}
         />
