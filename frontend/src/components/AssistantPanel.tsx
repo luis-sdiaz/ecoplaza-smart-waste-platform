@@ -129,6 +129,12 @@ function FormattedMessageContent({ content }: { content: string }) {
 }
 
 export type ActiveInsightType = "valuation" | "risks" | "buyers" | null;
+type AssistantConnectionState =
+  | { kind: "idle" }
+  | { kind: "connecting" }
+  | { kind: "online"; detail?: string }
+  | { kind: "local"; detail?: string }
+  | { kind: "unavailable"; detail?: string };
 
 const QUICK_PROMPTS = [
   "📊 Analizar tendencias de ventas de este mes",
@@ -231,7 +237,6 @@ function AssistantPanel({
       t("assistant.greeting") ||
       "¡Hola! Soy el asistente inteligente de EcoPlaza. ¿En qué puedo ayudarte hoy?",
     isIoT: false,
-    provider: "local_fallback",
   };
 
   const [internalMessages, setInternalMessages] = useState<AssistantMessage[]>(() =>
@@ -270,6 +275,8 @@ function AssistantPanel({
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [connectionState, setConnectionState] =
+    useState<AssistantConnectionState>({ kind: "idle" });
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
@@ -374,6 +381,7 @@ function AssistantPanel({
 
   const triggerAssistantResponse = async (promptText: string) => {
     setIsTyping(true);
+    setConnectionState({ kind: "connecting" });
     try {
       const snapshots = await fetchLiveTelemetrySnapshots(physicalTelemetry);
       const lang = (i18n.resolvedLanguage === "en" ? "en" : "es") as
@@ -385,6 +393,20 @@ function AssistantPanel({
       );
 
       if (!isMountedRef.current) return;
+
+      if (result.provider === "gemini") {
+        setConnectionState({
+          kind: "online",
+          detail: result.model
+            ? `${result.model}${result.latencyMs ? ` · ${result.latencyMs} ms` : ""}`
+            : undefined,
+        });
+      } else {
+        setConnectionState({
+          kind: "local",
+          detail: result.fallbackReason?.message,
+        });
+      }
 
       const isIoT = isIoTFleetResponse(result.content);
       setMessages((prev) => [
@@ -400,6 +422,10 @@ function AssistantPanel({
       ]);
     } catch {
       if (!isMountedRef.current) return;
+      setConnectionState({
+        kind: "unavailable",
+        detail: t("assistant.errorResponse") || "No fue posible procesar la consulta.",
+      });
       setMessages((prev) => [
         ...prev,
         {
@@ -497,6 +523,38 @@ function AssistantPanel({
       ? matchBuyersForAvailableStock(inventory, buyers, sales)
       : null;
 
+  const usesEnglish = i18n.resolvedLanguage === "en";
+
+  const statusPresentation = {
+    idle: {
+      label: usesEnglish ? "AI status pending" : "Estado de IA pendiente",
+      classes: "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+      dot: "bg-slate-400",
+    },
+    connecting: {
+      label: usesEnglish ? "Connecting to Gemini" : "Conectando con Gemini",
+      classes: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      dot: "bg-amber-500 animate-pulse",
+    },
+    online: {
+      label: usesEnglish ? "AI online — Gemini" : "IA en línea — Gemini",
+      classes: "border-purple-500/20 bg-purple-500/10 text-purple-700 dark:text-purple-400",
+      dot: "bg-purple-500",
+    },
+    local: {
+      label: usesEnglish ? "Local mode — backup" : "Modo local — respaldo",
+      classes: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+      dot: "bg-emerald-500",
+    },
+    unavailable: {
+      label: usesEnglish ? "Service unavailable" : "Servicio no disponible",
+      classes: "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400",
+      dot: "bg-red-500",
+    },
+  }[connectionState.kind];
+  const connectionDetail =
+    "detail" in connectionState ? connectionState.detail : undefined;
+
   return (
     <article
       className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface shadow-xs ${className}`}
@@ -537,13 +595,23 @@ function AssistantPanel({
             </span>
           </button>
 
-          <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <div className="flex flex-col items-end gap-0.5" role="status" aria-live="polite">
             <span
-              className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"
-              aria-hidden="true"
-            />
-            {t("assistant.onlineLabel")}
-          </span>
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${statusPresentation.classes}`}
+              title={connectionDetail}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${statusPresentation.dot}`}
+                aria-hidden="true"
+              />
+              {statusPresentation.label}
+            </span>
+            {connectionDetail && (
+              <span className="hidden max-w-64 truncate text-[10px] text-ecoplaza-text-muted sm:block">
+                {connectionDetail}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

@@ -93,7 +93,8 @@ describe("assistantContextService - Inyección de Contexto Operativo y Comercial
     expect(instruction).toContain("Orgánicos");
 
     // Verificación de telemetría IoT
-    expect(instruction).toContain("2 de 2 dispositivos en línea");
+    expect(instruction).toContain("Total de contenedores registrados: 2");
+    expect(instruction).toContain("Conectividad actual y cantidad de sensores físicos: no verificadas");
     expect(instruction).toContain("ESP32");
     expect(instruction).toContain("HC-SR04");
   });
@@ -176,8 +177,30 @@ describe("assistantContextService - Inyección de Contexto Operativo y Comercial
     expect(instruction).not.toContain("NaN");
     expect(instruction).not.toContain("undefined");
     expect(instruction).toContain("Actualmente no se registra inventario disponible en bodega (0 kg / $ 0 COP)");
-    expect(instruction).toContain("Todos los contenedores operan bajo niveles normales de capacidad (< 80%)");
+    expect(instruction).toContain("Esto no confirma el estado actual de contenedores sin telemetría o con registros antiguos");
     expect(instruction).toContain("PROHIBIDO INVENTAR O ALUCINAR DATOS");
+  });
+
+  it("no convierte una lectura histórica en conectividad actual ni en hardware físico verificado", () => {
+    const context: EcoPlazaLiveContext = {
+      inventorySummary: { totalWeightKg: 0, totalEstimatedValueCop: 0, breakdownByCategory: [] },
+      containersSummary: { totalContainers: 2, criticalContainers: [] },
+      iotTelemetrySummary: { onlineSensors: 1, totalSensors: 2, lastUpdateIso: "2026-11-05T05:01:24Z" },
+      physicalTelemetry: {
+        containerId: "CTR-BOG-001", fillPercentage: 78.8, distanceCm: 25.14,
+        status: "warning", recordedAt: "2026-11-05T05:01:24Z",
+      },
+    };
+
+    const instruction = buildSystemInstruction(context);
+    expect(instruction).toContain("78.8%");
+    expect(instruction).toContain("25.14 cm");
+    expect(instruction).toContain("Última telemetría registrada (hora colombiana, UTC-05:00): 05/11/2026");
+    expect(instruction).not.toContain("1 de 2 dispositivos en línea");
+    expect(instruction).not.toContain("Hardware real");
+    expect(instruction).toContain("origen físico no verificado");
+    expect(instruction).toContain("no presentes registros antiguos como mediciones actuales");
+    expect(instruction).toContain("presencia o ausencia de registros");
   });
 
   it("4. Debe manejar rechazos o errores de red en las consultas de datos sin colapsar, entregando un contexto resiliente de contingencia", async () => {

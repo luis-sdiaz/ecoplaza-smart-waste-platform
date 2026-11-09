@@ -1,303 +1,234 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-  CANDIDATE_MODELS,
   DEFAULT_GEMINI_MODEL,
+  GEMINI_FUNCTION_NAME,
+  GEMINI_REQUEST_TIMEOUT_MS,
   GeminiAiService,
+  GeminiServiceError,
   geminiAiService,
-  normalizeGeminiModelName,
-  type GeminiGenerateOptions,
 } from "../src/services/geminiAiService.ts";
 
-const mockGenerateContent = vi.fn();
-const mockGetGenerativeModel = vi.fn();
-const mockGoogleGenerativeAI = vi.fn();
+const accessToken = async () => "user-session-jwt";
 
-vi.mock("@google/generative-ai", () => {
-  class GoogleGenerativeAI {
-    constructor(apiKey: string) {
-      mockGoogleGenerativeAI(apiKey);
-    }
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
-    getGenerativeModel(params: unknown) {
-      mockGetGenerativeModel(params);
-      return {
-        generateContent: mockGenerateContent,
-      };
-    }
-  }
+function successfulFetch(model = "gemini-3.5-flash-lite") {
+  return vi.fn(
+    async (...args: Parameters<typeof fetch>) => {
+      void args;
+      return jsonResponse({
+        ok: true,
+        provider: "gemini",
+        text: "Respuesta real del proxy",
+        model,
+        latencyMs: 1234,
+      });
+    },
+  );
+}
 
-  return { GoogleGenerativeAI };
-});
-
-describe("GeminiAiService - Infraestructura y Servicio Oficial de IA Generativa", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGenerateContent.mockReset();
-    mockGetGenerativeModel.mockReset();
-    mockGoogleGenerativeAI.mockReset();
-
-    // Comportamiento exitoso por defecto
-    mockGenerateContent.mockResolvedValue({
-      response: {
-        text: () => "Mocked AI Response",
-      },
+describe("GeminiAiService - proxy seguro de Supabase Edge Functions", () => {
+  it("invoca fetch con un receptor válido de navegador y WebView2", async () => {
+    // WebIDL rejects a native Window.fetch call whose receiver is the service.
+    // Node's fetch and arrow-function mocks do not enforce that browser rule.
+    vi.stubGlobal("fetch", async function (this: unknown) {
+      if (this !== undefined && this !== globalThis) {
+        throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+      }
+      return jsonResponse({
+        ok: true,
+        provider: "gemini",
+        text: "Respuesta del proxy autenticado",
+        model: "gemini-3.5-flash-lite",
+        latencyMs: 20,
+      });
     });
-  });
-
-  it("1. Debe reportar isConfigured() === false si la API key está ausente o vacía", () => {
-    const serviceDefault = new GeminiAiService();
-    expect(serviceDefault.isConfigured()).toBe(false);
-
-    const serviceEmpty = new GeminiAiService({ apiKey: "" });
-    expect(serviceEmpty.isConfigured()).toBe(false);
-
-    const serviceWhitespace = new GeminiAiService({ apiKey: "    " });
-    expect(serviceWhitespace.isConfigured()).toBe(false);
-  });
-
-  it("2. Debe reportar isConfigured() === true cuando se inicializa con una API key válida", () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSyTestValidKey_12345" });
-    expect(service.isConfigured()).toBe(true);
-    expect(service.getEffectiveApiKey()).toBe("AIzaSyTestValidKey_12345");
-  });
-
-  it("3. Debe rechazar con error descriptivo si se intenta generateText sin clave configurada", async () => {
-    const service = new GeminiAiService({ apiKey: "" });
-
-    await expect(service.generateText("Hola")).rejects.toThrow(
-      "Gemini API key no configurada en VITE_GEMINI_API_KEY",
-    );
-    expect(mockGoogleGenerativeAI).not.toHaveBeenCalled();
-    expect(mockGenerateContent).not.toHaveBeenCalled();
-  });
-
-  it("4. Debe inicializar el cliente Gemini y retornar el texto esperado en una llamada exitosa", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSyTestKey-Valid-987" });
-    const prompt = "¿Cuáles son las mejores prácticas para reciclar plástico PET?";
-
-    const response = await service.generateText(prompt);
-
-    expect(mockGoogleGenerativeAI).toHaveBeenCalledTimes(1);
-    expect(mockGoogleGenerativeAI).toHaveBeenCalledWith("AIzaSyTestKey-Valid-987");
-
-    expect(mockGetGenerativeModel).toHaveBeenCalledTimes(1);
-    expect(mockGetGenerativeModel).toHaveBeenCalledWith({
-      model: DEFAULT_GEMINI_MODEL,
-    });
-
-    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-    expect(mockGenerateContent).toHaveBeenCalledWith(prompt);
-
-    expect(response).toBe("Mocked AI Response");
-  });
-
-  it("5. Debe pasar correctamente las instrucciones de sistema (systemInstruction) al modelo cuando se suministran en las opciones", async () => {
-    const service = new GeminiAiService({ apiKey: "test-api-key" });
-    const options: GeminiGenerateOptions = {
-      systemInstruction:
-        "Actúa como asistente ambiental experto para la plataforma EcoPlaza en Pasto, Nariño.",
-      temperature: 0.2,
-      maxOutputTokens: 1024,
-    };
-
-    await service.generateText("Resumen de residuos", options);
-
-    expect(mockGetGenerativeModel).toHaveBeenCalledWith({
-      model: DEFAULT_GEMINI_MODEL,
-      systemInstruction:
-        "Actúa como asistente ambiental experto para la plataforma EcoPlaza en Pasto, Nariño.",
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 1024,
-      },
-    });
-  });
-
-  it("6. Debe capturar y propagar de forma segura un fallo del SDK/API sin exponer tokens", async () => {
-    const secretKey = "AIzaSySuperSecretKeyLeakAttempt99";
-    const service = new GeminiAiService({ apiKey: secretKey });
-
-    mockGenerateContent.mockRejectedValue(
-      new Error(
-        `Failed to fetch from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${secretKey}: Network connection failed`,
-      ),
-    );
 
     try {
-      await service.generateText("Consulta con fallo");
-      expect.fail("Debería haber lanzado un error");
-    } catch (err: unknown) {
-      const error = err as Error;
-      // Verificación de sanitización: el token jamás debe aparecer en el mensaje del error
-      expect(error.message).not.toContain(secretKey);
-      expect(error.message).toContain("[REDACTED_API_KEY]");
-      expect(error.message).toContain("Error al generar texto con Gemini");
+      const service = new GeminiAiService({ getAccessToken: accessToken });
+      await expect(service.generateText("Consulta desde Tauri")).resolves.toBe(
+        "Respuesta del proxy autenticado",
+      );
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 
-  it("7. Maneja específicamente errores de cuota agotada (429 ResourceExhausted)", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSyQuotaKey" });
+  it("usa el proxy autenticado y conserva metadatos verificables del proveedor", async () => {
+    const fetchImpl = successfulFetch();
+    const service = new GeminiAiService({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getAccessToken: accessToken,
+    });
 
-    mockGenerateContent.mockRejectedValue(
-      new Error("[GoogleGenerativeAI Error]: [429 Too Many Requests] Resource has been exhausted"),
-    );
+    const result = await service.generateText("Estado de EcoPlaza", {
+      systemInstruction: "Contexto operacional mínimo",
+      temperature: 0.2,
+      maxOutputTokens: 512,
+    });
 
-    await expect(service.generateText("Consulta")).rejects.toThrow(
-      /Cuota de Gemini excedida \(429\)/i,
-    );
+    expect(result).toBe("Respuesta real del proxy");
+    expect(service.getLastMetadata()).toEqual({
+      model: "gemini-3.5-flash-lite",
+      latencyMs: 1234,
+    });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(String(url)).toContain(`/functions/v1/${GEMINI_FUNCTION_NAME}`);
+    expect(String(url)).not.toContain("generativelanguage.googleapis.com");
+    expect((init as RequestInit).headers).toMatchObject({
+      Authorization: "Bearer user-session-jwt",
+    });
   });
 
-  it("8. Maneja específicamente errores de solicitud inválida (400 InvalidArgument)", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSyInvalidKey" });
+  it("no intenta la red sin una sesión autenticada", async () => {
+    const fetchImpl = successfulFetch();
+    const service = new GeminiAiService({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getAccessToken: async () => null,
+    });
 
-    mockGenerateContent.mockRejectedValue(
-      new Error("[GoogleGenerativeAI Error]: [400 Bad Request] Invalid argument"),
-    );
-
-    await expect(service.generateText("Consulta")).rejects.toThrow(
-      /Solicitud inválida a la API de Gemini \(400\)/i,
-    );
+    await expect(service.generateText("Hola")).rejects.toMatchObject({
+      code: "auth_required",
+      status: 401,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("9. Permite reconfigurar dinámicamente el modelo y la clave mediante configure() e init()", () => {
-    const service = new GeminiAiService();
-    expect(service.isConfigured()).toBe(false);
-    expect(service.getModelName()).toBe("gemini-3.8-flash");
-
-    service.configure({ apiKey: "new-key-123", modelName: "gemini-flash-latest" });
-    expect(service.isConfigured()).toBe(true);
-    expect(service.getEffectiveApiKey()).toBe("new-key-123");
-    expect(service.getModelName()).toBe("gemini-flash-latest");
-  });
-
-  it("10. La instancia singleton exportada geminiAiService existe y está disponible", () => {
-    expect(geminiAiService).toBeInstanceOf(GeminiAiService);
-    expect(geminiAiService.getModelName()).toBe("gemini-3.8-flash");
-  });
-
-  it("11. Aborta de inmediato ante error 503 (alta demanda / saturación) sin reintentos bloqueantes para permitir fallback local instantáneo", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSy503TestKey" });
-
-    mockGenerateContent.mockRejectedValueOnce(
-      new Error(
-        "[GoogleGenerativeAI Error]: [503] This model is currently experiencing high demand.",
-      ),
-    );
-
-    await expect(
-      service.generateText("Consulta tras 503", { retryDelayMs: 10 }),
-    ).rejects.toThrow(/Servicio de Gemini saturado o no disponible \(503\)/i);
-
-    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-  });
-
-  it("12. Aborta de inmediato ante error 429 (Resource exhausted) sin reintentos bloqueantes para permitir fallback local instantáneo", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSy429TestKey" });
-
-    mockGenerateContent.mockRejectedValueOnce(
-      new Error(
-        "[GoogleGenerativeAI Error]: [429 Too Many Requests] Resource has been exhausted",
-      ),
-    );
-
-    await expect(
-      service.generateText("Consulta tras 429", { retryDelayMs: 10 }),
-    ).rejects.toThrow(/Cuota de Gemini excedida \(429\)/i);
-
-    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-  });
-
-  it("13. Cancela la solicitud con error descriptivo cuando se excede el timeout estricto (3500ms)", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSyTimeoutKey" });
-
-    mockGenerateContent.mockImplementation(
-      () => new Promise((resolve) => setTimeout(resolve, 200)),
-    );
-
-    await expect(
-      service.generateText("Consulta lenta", { timeoutMs: 25 }),
-    ).rejects.toThrow(/Tiempo de espera agotado al consultar Gemini/i);
-
-    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-  });
-
-  it("14. No realiza reintento ni cascada ante errores no transitorios como 400 Bad Request", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSyNonTransientKey" });
-
-    mockGenerateContent.mockRejectedValue(
-      new Error("[GoogleGenerativeAI Error]: [400 Bad Request] Invalid argument"),
-    );
-
-    await expect(
-      service.generateText("Consulta inválida", { retryDelayMs: 10 }),
-    ).rejects.toThrow(/Solicitud inválida a la API de Gemini \(400\)/i);
-
-    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-  });
-
-  it("15. CANDIDATE_MODELS contiene exclusivamente los candidatos Flash en orden de prioridad", () => {
-    expect(CANDIDATE_MODELS).toEqual([
-      "gemini-3.8-flash",
-      "gemini-flash-latest",
-    ]);
-    expect(DEFAULT_GEMINI_MODEL).toBe("gemini-3.8-flash");
-  });
-
-  it("16. Cascada de modelos: resuelve con segundo candidato Flash tras 404 en el primero", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSyCascadeTest" });
-
-    // El primer modelo falla con 404
-    mockGenerateContent.mockRejectedValueOnce(
-      new Error(
-        "[404] models/gemini-3.8-flash is not found for API version v1beta, or is not supported for generateContent.",
-      ),
-    );
-    // El segundo modelo resuelve exitosamente
-    mockGenerateContent.mockResolvedValueOnce({
-      response: {
-        text: () => "Respuesta exitosa desde modelo alternativo Flash",
+  it("clasifica un fallo al leer la sesión como auth_required sin filtrar detalles", async () => {
+    const fetchImpl = successfulFetch();
+    const service = new GeminiAiService({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getAccessToken: async () => {
+        throw new Error("secure storage details");
       },
     });
 
-    const result = await service.generateText("Consulta con cascada", {
-      retryDelayMs: 10,
+    await expect(service.generateText("Hola")).rejects.toMatchObject({
+      code: "auth_required",
+      status: 401,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("diferencia configuración ausente sin conservar una clave cliente", async () => {
+    const service = new GeminiAiService({ enabled: false });
+    await expect(service.generateText("Hola")).rejects.toMatchObject({
+      code: "not_configured",
+    });
+  });
+
+  it.each([
+    [503, "quota_exceeded"],
+    [503, "model_unavailable"],
+    [502, "invalid_credentials"],
+    [429, "rate_limited"],
+  ] as const)("propaga el error estructurado %s/%s", async (status, code) => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ ok: false, error: { code, retryable: true } }, status),
+    );
+    const service = new GeminiAiService({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getAccessToken: accessToken,
     });
 
-    expect(result).toBe("Respuesta exitosa desde modelo alternativo Flash");
-    // Se crearon 2 modelos generativos: uno por cada candidato intentado
-    expect(mockGetGenerativeModel).toHaveBeenCalledTimes(2);
-    // El servicio actualiza internamente al modelo que funcionó
-    expect(service.getModelName()).toBe(CANDIDATE_MODELS[1]);
+    await expect(service.generateText("Consulta")).rejects.toMatchObject({
+      code,
+      status,
+    });
   });
 
-  it("17. Cascada de modelos: falla con error 404 descriptivo cuando ningún modelo Flash está disponible", async () => {
-    const service = new GeminiAiService({ apiKey: "AIzaSyAllFailKey" });
-
-    mockGenerateContent.mockRejectedValue(
-      new Error("[404] models/gemini is not found for API version v1beta."),
+  it("cancela realmente la petición al alcanzar el timeout", async () => {
+    const fetchImpl = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) =>
+        await new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          );
+        }),
     );
+    const service = new GeminiAiService({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getAccessToken: accessToken,
+      timeoutMs: 10,
+    });
 
-    await expect(
-      service.generateText("Consulta sin modelo", { retryDelayMs: 10 }),
-    ).rejects.toThrow(/Ningún modelo de la cascada Gemini está disponible \(404\)/i);
-
-    expect(mockGenerateContent).toHaveBeenCalledTimes(CANDIDATE_MODELS.length);
+    await expect(service.generateText("Consulta lenta")).rejects.toMatchObject({
+      code: "timeout",
+    });
+    expect((fetchImpl.mock.calls[0][1] as RequestInit).signal?.aborted).toBe(true);
   });
 
-  it("18. getEffectiveApiKey normaliza y remueve comillas envolventes accidentales", () => {
-    const serviceWithQuotes = new GeminiAiService({ apiKey: '"AIzaValidKeyWithQuotes"' });
-    expect(serviceWithQuotes.getEffectiveApiKey()).toBe("AIzaValidKeyWithQuotes");
+  it("diferencia una cancelación voluntaria de un timeout", async () => {
+    const controller = new AbortController();
+    const fetchImpl = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) =>
+        await new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          );
+        }),
+    );
+    const service = new GeminiAiService({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getAccessToken: accessToken,
+    });
+    const request = service.generateText("Consulta", { signal: controller.signal });
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ code: "cancelled" });
   });
 
-  it("19. normalizeGeminiModelName sanitiza y preserva identificadores válidos como gemini-flash-latest", () => {
-    expect(normalizeGeminiModelName("gemini-3.8-flash")).toBe("gemini-3.8-flash");
-    expect(normalizeGeminiModelName("gemini-flash-latest")).toBe("gemini-flash-latest");
-    expect(normalizeGeminiModelName("gemini-2.5-flash")).toBe("gemini-3.8-flash");
-    expect(normalizeGeminiModelName("gemini-pro-latest")).toBe("gemini-3.8-flash");
-    expect(normalizeGeminiModelName("gemini-flash")).toBe("gemini-3.8-flash");
-    expect(normalizeGeminiModelName("gemini-pro")).toBe("gemini-3.8-flash");
-    expect(normalizeGeminiModelName("gemini-1.5-flash")).toBe("gemini-3.8-flash");
-    expect(normalizeGeminiModelName(undefined)).toBe("gemini-3.8-flash");
-    expect(normalizeGeminiModelName("")).toBe("gemini-3.8-flash");
+  it("rechaza respuestas exitosas vacías o malformadas", async () => {
+    const service = new GeminiAiService({
+      fetchImpl: (async () =>
+        jsonResponse({ ok: true, provider: "gemini", text: "", model: "x", latencyMs: 1 })) as typeof fetch,
+      getAccessToken: accessToken,
+    });
+
+    await expect(service.generateText("Consulta")).rejects.toMatchObject({
+      code: "malformed_response",
+    });
+  });
+
+  it("clasifica fallos de red sin filtrar detalles internos", async () => {
+    const service = new GeminiAiService({
+      fetchImpl: (async () => {
+        throw new Error("socket failed with internal details");
+      }) as typeof fetch,
+      getAccessToken: accessToken,
+    });
+
+    try {
+      await service.generateText("Consulta");
+      expect.fail("La solicitud debía fallar");
+    } catch (error) {
+      expect(error).toBeInstanceOf(GeminiServiceError);
+      expect(error).toMatchObject({ code: "network_error" });
+      expect((error as Error).message).not.toContain("internal details");
+    }
+  });
+
+  it("nunca envía una credencial privada de Gemini desde el cliente", async () => {
+    const fetchImpl = successfulFetch(DEFAULT_GEMINI_MODEL);
+    const service = new GeminiAiService({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getAccessToken: accessToken,
+    });
+
+    await service.generateText("Consulta");
+    const serializedRequest = JSON.stringify(fetchImpl.mock.calls);
+    expect(serializedRequest).not.toContain("x-goog-api-key");
+    expect(serializedRequest).not.toContain("generativelanguage.googleapis.com");
+  });
+
+  it("expone un timeout razonable y mantiene disponible el singleton", () => {
+    expect(GEMINI_REQUEST_TIMEOUT_MS).toBeGreaterThanOrEqual(20_000);
+    expect(geminiAiService).toBeInstanceOf(GeminiAiService);
+    expect(new GeminiAiService().getModelName()).toBe(DEFAULT_GEMINI_MODEL);
   });
 });

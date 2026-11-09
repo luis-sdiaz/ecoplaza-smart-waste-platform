@@ -68,6 +68,7 @@ const mockActiveTelemetry: SensorTelemetry = {
 describe("Assistant IoT Live Telemetry Integration (CTR-BOG-001)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    geminiAiService.configure({ enabled: false });
     window.sessionStorage.clear();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     telemetryMocks.listContainers.mockResolvedValue({ ok: true, data: [] });
@@ -218,8 +219,7 @@ describe("Assistant IoT Live Telemetry Integration (CTR-BOG-001)", () => {
   });
 
   it("6. Prioriza el motor Gemini AI para telemetría de CTR-BOG-001 cuando la API está disponible", async () => {
-    vi.stubEnv("VITE_GEMINI_API_KEY", "AIzaSyMockKeyForTest");
-    geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+    geminiAiService.configure({ enabled: true });
     const originalGenerate = geminiAiService.generateText;
     geminiAiService.generateText = async () =>
       "📡 Análisis Gemini AI: El contenedor físico CTR-BOG-001 tiene un nivel de 75% y distancia ultrasónica de 24.5 cm.";
@@ -251,8 +251,7 @@ describe("Assistant IoT Live Telemetry Integration (CTR-BOG-001)", () => {
       ).toBeDefined();
     } finally {
       geminiAiService.generateText = originalGenerate;
-      geminiAiService.configure({ apiKey: "" });
-      vi.unstubAllEnvs();
+      geminiAiService.configure({ enabled: false });
     }
   });
 });

@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import AssistantPanel from "../src/components/AssistantPanel";
 import type { Container } from "../src/services/containerService";
 import type { TelemetryRecord } from "../src/services/sensorService";
+import { geminiAiService } from "../src/services/geminiAiService.ts";
 
 const mocks = vi.hoisted(() => ({
   listContainers: vi.fn(),
@@ -79,6 +80,7 @@ function LocationObserver() {
 describe("Integración Reactiva de Telemetría IoT en Panel del Asistente (Tarea 078)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    geminiAiService.configure({ enabled: false });
     window.sessionStorage.clear();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     mocks.listContainers.mockResolvedValue({

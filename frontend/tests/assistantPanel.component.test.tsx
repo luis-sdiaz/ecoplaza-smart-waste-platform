@@ -284,14 +284,15 @@ describe("AssistantPanel con Motor de Diagnósticos Estratégicos (Tarea 088)", 
     expect(handleNavigateBuyers).toHaveBeenCalled();
   });
 
-  test("e) muestra el distintivo 'Modo Local / Heurístico' en el mensaje inicial del asistente", () => {
+  test("e) no atribuye el saludo inicial a un proveedor y muestra estado pendiente", () => {
     render(
       <MemoryRouter>
         <AssistantPanel />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Modo Local / Heurístico")).toBeTruthy();
+    expect(screen.getByText("Estado de IA pendiente")).toBeTruthy();
+    expect(screen.queryByText("Modo Local / Heurístico")).toBeNull();
   });
 
   test("f) renderiza la respuesta con distintivo y formato estructurado al interactuar", async () => {

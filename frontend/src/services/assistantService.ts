@@ -1,6 +1,10 @@
 import { formatColombianDateTime } from "./colombianDate.ts";
 import type { Container } from "./containerService.ts";
-import { geminiAiService } from "./geminiAiService.ts";
+import {
+  GeminiServiceError,
+  geminiAiService,
+  type GeminiErrorCode,
+} from "./geminiAiService.ts";
 import { getEnrichedSystemPrompt } from "./assistantContextService.ts";
 import {
   calculateFleetHealth,
@@ -732,6 +736,12 @@ export interface AssistantResponseResult {
   content: string;
   provider: AssistantProvider;
   engine: AssistantProvider;
+  model?: string;
+  latencyMs?: number;
+  fallbackReason?: {
+    code: GeminiErrorCode;
+    message: string;
+  };
 }
 
 let lastAssistantProvider: AssistantProvider = "local_fallback";
@@ -742,6 +752,45 @@ export function getLastAssistantProvider(): AssistantProvider {
 
 export function setLastAssistantProvider(provider: AssistantProvider): void {
   lastAssistantProvider = provider;
+}
+
+const FALLBACK_MESSAGES: Record<GeminiErrorCode, string> = {
+  not_configured: "Gemini aún no está configurado en el servidor.",
+  auth_required: "La sesión no pudo autenticarse con el servicio de IA.",
+  invalid_credentials: "La credencial del proveedor requiere revisión.",
+  model_unavailable: "El modelo en línea no está disponible.",
+  quota_exceeded: "La cuota de Gemini está agotada temporalmente.",
+  provider_unavailable: "Gemini está temporalmente saturado.",
+  timeout: "Gemini tardó demasiado en responder.",
+  network_error: "No fue posible conectar con Gemini.",
+  cancelled: "La consulta en línea fue cancelada.",
+  rate_limited: "Se alcanzó el límite temporal de consultas.",
+  invalid_request: "La consulta no pudo enviarse al proveedor.",
+  malformed_response: "Gemini devolvió una respuesta incompleta.",
+  unknown: "Gemini no pudo responder en este intento.",
+};
+
+const MINIMAL_GEMINI_SYSTEM_INSTRUCTION = [
+  "Eres el asistente de EcoPlaza Smart Waste Platform en Colombia.",
+  "Responde de forma clara y profesional en el idioma de la pregunta.",
+  "No afirmes tener acceso a datos actuales de inventario, sensores o ventas cuando no se hayan incluido en esta solicitud.",
+  "Si el usuario pregunta por esos datos y no están disponibles, explica que no se pudo cargar el contexto operativo para esta respuesta.",
+].join("\n");
+
+function classifyGeminiFailure(error: unknown): GeminiErrorCode {
+  if (error instanceof GeminiServiceError) return error.code;
+  const message = error instanceof Error ? error.message : String(error);
+  if (/429|quota|exhausted/i.test(message)) return "quota_exceeded";
+  if (/404|not found|modelo.*disponible/i.test(message)) return "model_unavailable";
+  if (/401|403|auth|credencial|API_KEY_INVALID/i.test(message)) {
+    return "invalid_credentials";
+  }
+  if (/503|high demand|saturado|unavailable/i.test(message)) {
+    return "provider_unavailable";
+  }
+  if (/timeout|tiempo de espera/i.test(message)) return "timeout";
+  if (/network|fetch|conexi[oó]n/i.test(message)) return "network_error";
+  return "unknown";
 }
 
 export async function generateLocalAssistantResponse(
@@ -816,24 +865,41 @@ export async function generateAssistantResponseWithProvider(
     typeof contextOrLang === "string" ? undefined : contextOrLang;
   const effectiveTelemetry =
     typeof contextOrLang === "string" ? telemetryOverride : telemetryOverride;
+  let fallbackCode: GeminiErrorCode;
 
-  // 1. Si la API key de Gemini está configurada, consultar el motor de IA prioritariamente
+  // 1. Consultar prioritariamente el proxy autenticado de Gemini.
   if (geminiAiService.isConfigured()) {
+    let systemInstruction = MINIMAL_GEMINI_SYSTEM_INSTRUCTION;
     try {
-      const systemInstruction = await getEnrichedSystemPrompt(effectiveTelemetry);
+      systemInstruction = await getEnrichedSystemPrompt(effectiveTelemetry);
+    } catch (error: unknown) {
+      if (import.meta.env?.DEV) {
+        const errorName = error instanceof Error ? error.name : "UnknownError";
+        console.warn(
+          `[Assistant context] No se pudo preparar el contexto enriquecido (${errorName}); se enviará contexto mínimo.`,
+        );
+      }
+    }
+
+    try {
       const generatedText = await geminiAiService.generateText(prompt, {
         systemInstruction,
       });
 
       if (typeof generatedText === "string" && generatedText.trim().length > 0) {
+        const metadata = geminiAiService.getLastMetadata();
         lastAssistantProvider = "gemini";
         return {
           content: generatedText.trim(),
           provider: "gemini",
           engine: "gemini",
+          model: metadata?.model,
+          latencyMs: metadata?.latencyMs,
         };
       }
+      fallbackCode = "malformed_response";
     } catch (error: unknown) {
+      fallbackCode = classifyGeminiFailure(error);
       if (import.meta.env?.DEV) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         console.warn(
@@ -842,8 +908,9 @@ export async function generateAssistantResponseWithProvider(
       }
     }
   } else {
+    fallbackCode = "not_configured";
     if (import.meta.env?.DEV) {
-      console.warn("[Assistant AI Fallback]: API Key no configurada");
+      console.warn("[Assistant AI Fallback]: Servicio de Gemini no configurado");
     }
   }
 
@@ -860,6 +927,9 @@ export async function generateAssistantResponseWithProvider(
     content: fallbackText,
     provider: "local_fallback",
     engine: "local_fallback",
+    fallbackReason: fallbackCode
+      ? { code: fallbackCode, message: FALLBACK_MESSAGES[fallbackCode] }
+      : undefined,
   };
 }
 

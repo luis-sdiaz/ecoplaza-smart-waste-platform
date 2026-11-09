@@ -16,7 +16,6 @@ export default defineConfig({
       VITE_SUPABASE_URL: "https://placeholder.supabase.co",
       VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_placeholder_key",
       VITE_SUPABASE_ANON_KEY: "placeholder-key",
-      VITE_GEMINI_API_KEY: "",
     },
   },
 });

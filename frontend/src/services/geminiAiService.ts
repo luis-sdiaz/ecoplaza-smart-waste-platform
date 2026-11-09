@@ -1,345 +1,267 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
 export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
-export const GEMINI_REQUEST_TIMEOUT_MS = 3500;
+export const GEMINI_REQUEST_TIMEOUT_MS = 28_000;
+export const GEMINI_FUNCTION_NAME = "gemini-assistant";
 
-/**
- * Cadena ordenada de modelos candidatos compatibles con el endpoint v1beta de Google Generative AI.
- * Prioriza "gemini-3.8-flash" y el alias dinámico "gemini-flash-latest", erradicando modelos descontinuados o con error 404.
- */
-export const CANDIDATE_MODELS: readonly string[] = [
-  "gemini-3.8-flash",
-  "gemini-flash-latest",
-];
-
-/**
- * Sanitiza y normaliza identificadores de modelos de Gemini para el endpoint v1beta.
- * Preserva "gemini-3.8-flash" y "gemini-flash-latest", y mapea alias obsoletos o descontinuados ("gemini-2.5-flash", "gemini-1.5-flash", "gemini-pro") a DEFAULT_GEMINI_MODEL.
- */
-export function normalizeGeminiModelName(modelName?: string): string {
-  if (!modelName || typeof modelName !== "string") {
-    return DEFAULT_GEMINI_MODEL;
-  }
-  const trimmed = modelName.trim().replace(/^["']|["']$/g, "").trim();
-  if (!trimmed) {
-    return DEFAULT_GEMINI_MODEL;
-  }
-  if (trimmed === "gemini-3.8-flash" || trimmed === "gemini-flash-latest") {
-    return trimmed;
-  }
-  return DEFAULT_GEMINI_MODEL;
-}
+export type GeminiErrorCode =
+  | "not_configured"
+  | "auth_required"
+  | "invalid_credentials"
+  | "model_unavailable"
+  | "quota_exceeded"
+  | "provider_unavailable"
+  | "timeout"
+  | "network_error"
+  | "cancelled"
+  | "rate_limited"
+  | "invalid_request"
+  | "malformed_response"
+  | "unknown";
 
 export interface GeminiConfig {
-  apiKey?: string;
-  modelName?: string;
+  enabled?: boolean;
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+  getAccessToken?: () => Promise<string | null>;
 }
 
 export interface GeminiGenerateOptions {
   systemInstruction?: string;
   temperature?: number;
   maxOutputTokens?: number;
-  retryDelayMs?: number;
-  maxRetries?: number;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
-/**
- * Determina si un error retornado por la API o el SDK de Gemini es de naturaleza transitoria
- * (HTTP 503 por saturación/alta demanda o HTTP 429 por límite temporal de tasa/cuota).
- */
-function isTransientGeminiError(message: string): boolean {
-  return (
-    message.includes("503") ||
-    message.includes("429") ||
-    /high demand/i.test(message) ||
-    /service unavailable/i.test(message) ||
-    /overloaded/i.test(message) ||
-    /quota|exhausted/i.test(message) ||
-    /too many requests/i.test(message) ||
-    /resource has been exhausted/i.test(message)
-  );
+export interface GeminiGenerationMetadata {
+  model: string;
+  latencyMs: number;
 }
 
-/**
- * Determina si el error corresponde a un modelo no encontrado o no disponible (HTTP 404),
- * lo que permite escalar al siguiente modelo candidato en la cascada.
- */
-function isModelNotFoundError(message: string): boolean {
-  return (
-    message.includes("404") ||
-    /not found/i.test(message) ||
-    /no longer available/i.test(message) ||
-    /is not found for API version/i.test(message) ||
-    /not supported for generateContent/i.test(message)
-  );
+interface EdgeSuccessResponse {
+  ok: true;
+  provider: "gemini";
+  text: string;
+  model: string;
+  latencyMs: number;
 }
 
-/**
- * Enmascara credenciales y tokens sensibles presentes en cadenas de error
- * para prevenir fugas de información confidencial en logs o interfaces.
- */
-function sanitizeErrorMessage(message: string, apiKey?: string): string {
-  let sanitized = message;
-  if (apiKey && apiKey.trim().length > 0) {
-    sanitized = sanitized.split(apiKey.trim()).join("[REDACTED_API_KEY]");
+interface EdgeErrorResponse {
+  ok?: false;
+  error?: {
+    code?: GeminiErrorCode;
+    retryable?: boolean;
+  };
+}
+
+const USER_MESSAGES: Record<GeminiErrorCode, string> = {
+  not_configured: "El servicio de Gemini no está configurado en el servidor.",
+  auth_required: "Debes iniciar sesión para utilizar Gemini.",
+  invalid_credentials: "La credencial de Gemini del servidor no es válida.",
+  model_unavailable: "El modelo de Gemini no está disponible.",
+  quota_exceeded: "La cuota de Gemini está agotada temporalmente.",
+  provider_unavailable: "Gemini no está disponible temporalmente.",
+  timeout: "Gemini tardó demasiado en responder.",
+  network_error: "No fue posible conectar con el servicio de IA.",
+  cancelled: "La solicitud a Gemini fue cancelada.",
+  rate_limited: "Se alcanzó el límite temporal de consultas al asistente.",
+  invalid_request: "La consulta no cumple los límites del asistente.",
+  malformed_response: "Gemini devolvió una respuesta incompleta.",
+  unknown: "Ocurrió un error inesperado al consultar Gemini.",
+};
+
+export class GeminiServiceError extends Error {
+  public readonly code: GeminiErrorCode;
+  public readonly status?: number;
+  public readonly retryable: boolean;
+
+  constructor(
+    code: GeminiErrorCode,
+    options?: { status?: number; retryable?: boolean; cause?: unknown },
+  ) {
+    super(USER_MESSAGES[code], { cause: options?.cause });
+    this.name = "GeminiServiceError";
+    this.code = code;
+    this.status = options?.status;
+    this.retryable = options?.retryable ?? false;
   }
-  // Enmascarar parámetros en URLs tipo ?key=... o key=...
-  sanitized = sanitized.replace(/key=[a-zA-Z0-9_-]+/gi, "key=[REDACTED_API_KEY]");
-  // Enmascarar patrones de clave de Google AI Studio (AIza...)
-  sanitized = sanitized.replace(/AIza[0-9A-Za-z_-]{35}/g, "[REDACTED_API_KEY]");
-  return sanitized;
+}
+
+function isEdgeSuccessResponse(value: unknown): value is EdgeSuccessResponse {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<EdgeSuccessResponse>;
+  return (
+    candidate.ok === true &&
+    candidate.provider === "gemini" &&
+    typeof candidate.text === "string" &&
+    candidate.text.trim().length > 0 &&
+    typeof candidate.model === "string" &&
+    candidate.model.trim().length > 0 &&
+    typeof candidate.latencyMs === "number"
+  );
+}
+
+function toErrorCode(status: number, body: EdgeErrorResponse): GeminiErrorCode {
+  const serverCode = body.error?.code;
+  if (serverCode && serverCode in USER_MESSAGES) return serverCode;
+  if (status === 400) return "invalid_request";
+  if (status === 401 || status === 403) return "auth_required";
+  if (status === 429) return "rate_limited";
+  if (status === 503) return "provider_unavailable";
+  return "unknown";
+}
+
+async function getCurrentAccessToken(): Promise<string | null> {
+  try {
+    const { supabase } = await import("../lib/supabase.ts");
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return null;
+    return data.session?.access_token ?? null;
+  } catch {
+    // Auth/storage failures should be reported as a missing session without
+    // leaking storage details or preventing safe provider diagnostics.
+    return null;
+  }
 }
 
 export class GeminiAiService {
-  private apiKey?: string;
-  private modelName: string;
+  private enabled: boolean;
+  private timeoutMs: number;
+  private fetchImpl: typeof fetch;
+  private getAccessToken: () => Promise<string | null>;
+  private lastMetadata: GeminiGenerationMetadata | null = null;
 
-  constructor(config?: GeminiConfig) {
-    this.apiKey = config?.apiKey;
-    const envModel = import.meta.env?.VITE_GEMINI_MODEL as string | undefined;
-    const rawModel =
-      config?.modelName ||
-      (envModel && envModel.trim() !== "" ? envModel.trim() : DEFAULT_GEMINI_MODEL);
-    this.modelName = normalizeGeminiModelName(rawModel);
-  }
-
-  /**
-   * Reconfigura dinámicamente la clave o el modelo del servicio.
-   */
-  public init(config?: GeminiConfig): void {
-    if (config?.apiKey !== undefined) {
-      this.apiKey = config.apiKey;
-    }
-    if (config?.modelName !== undefined) {
-      this.modelName = normalizeGeminiModelName(config.modelName);
-    }
+  constructor(config: GeminiConfig = {}) {
+    this.enabled = config.enabled ?? true;
+    this.timeoutMs = config.timeoutMs ?? GEMINI_REQUEST_TIMEOUT_MS;
+    this.fetchImpl = config.fetchImpl ?? fetch;
+    this.getAccessToken = config.getAccessToken ?? getCurrentAccessToken;
   }
 
   public configure(config: GeminiConfig): void {
-    this.init(config);
+    if (config.enabled !== undefined) this.enabled = config.enabled;
+    if (config.timeoutMs !== undefined) this.timeoutMs = config.timeoutMs;
+    if (config.fetchImpl !== undefined) this.fetchImpl = config.fetchImpl;
+    if (config.getAccessToken !== undefined) {
+      this.getAccessToken = config.getAccessToken;
+    }
   }
 
-  /**
-   * Obtiene la clave efectiva considerando la configuración local o la variable de entorno,
-   * normalizando y removiendo posibles comillas envolventes accidentales.
-   */
-  public getEffectiveApiKey(): string {
-    const candidate =
-      this.apiKey ??
-      (import.meta.env?.VITE_GEMINI_API_KEY as string | undefined) ??
-      "";
-    if (typeof candidate !== "string") return "";
-    return candidate.trim().replace(/^["']|["']$/g, "").trim();
+  public init(config: GeminiConfig = {}): void {
+    this.configure(config);
+  }
+
+  public isConfigured(): boolean {
+    return this.enabled;
   }
 
   public getModelName(): string {
-    return this.modelName;
+    return this.lastMetadata?.model ?? DEFAULT_GEMINI_MODEL;
   }
 
-  /**
-   * Verifica si existe una API key válida configurada y no vacía.
-   */
-  public isConfigured(): boolean {
-    const envKey = (import.meta.env?.VITE_GEMINI_API_KEY as string | undefined) ?? "";
-    const activeKey = this.apiKey !== undefined ? this.apiKey : envKey;
-    return Boolean(
-      activeKey &&
-        typeof activeKey === "string" &&
-        activeKey.trim().replace(/^["']|["']$/g, "").trim() !== "",
-    );
+  public getLastMetadata(): GeminiGenerationMetadata | null {
+    return this.lastMetadata;
   }
 
-  /**
-   * Genera texto mediante el modelo de Gemini oficial configurado.
-   *
-   * Arquitectura tolerante a fallos:
-   * 1. Cascada restringida a modelos Flash ("gemini-3.8-flash" y "gemini-flash-latest")
-   *    para evitar errores de cuota (HTTP 429) en Free Tier.
-   * 2. Timeout estricto de 3500ms con AbortController para garantizar respuesta inmediata.
-   * 3. Ante HTTP 429 (Quota Exceeded), 503 (Saturación) o Timeout, aborta de inmediato
-   *    la cascada externa sin reintentos bloqueantes para conmutar al motor local heurístico.
-   * 4. Ante HTTP 404 (modelo no encontrado), escala al siguiente candidato Flash.
-   */
   public async generateText(
     prompt: string,
-    options?: GeminiGenerateOptions,
+    options: GeminiGenerateOptions = {},
   ): Promise<string> {
-    if (!this.isConfigured()) {
-      throw new Error("Gemini API key no configurada en VITE_GEMINI_API_KEY");
-    }
+    this.lastMetadata = null;
+    if (!this.enabled) throw new GeminiServiceError("not_configured");
+    if (options.signal?.aborted) throw new GeminiServiceError("cancelled");
 
-    const effectiveKey = this.getEffectiveApiKey();
-    const timeoutMs = options?.timeoutMs ?? GEMINI_REQUEST_TIMEOUT_MS;
-    const client = new GoogleGenerativeAI(effectiveKey);
-
-    // Construir la cadena de modelos Flash a intentar: primero el configurado,
-    // luego los candidatos restantes de CANDIDATE_MODELS.
-    const modelsToTry: string[] = [this.modelName];
-    for (const candidate of CANDIDATE_MODELS) {
-      if (!modelsToTry.includes(candidate)) {
-        modelsToTry.push(candidate);
-      }
-    }
-
-    const baseModelParams: {
-      systemInstruction?: string;
-      generationConfig?: {
-        temperature?: number;
-        maxOutputTokens?: number;
-      };
-    } = {};
-
-    if (options?.systemInstruction) {
-      baseModelParams.systemInstruction = options.systemInstruction;
-    }
-
-    if (
-      options?.temperature !== undefined ||
-      options?.maxOutputTokens !== undefined
-    ) {
-      baseModelParams.generationConfig = {};
-      if (options.temperature !== undefined) {
-        baseModelParams.generationConfig.temperature = options.temperature;
-      }
-      if (options.maxOutputTokens !== undefined) {
-        baseModelParams.generationConfig.maxOutputTokens = options.maxOutputTokens;
-      }
-    }
-
-    let lastError: unknown;
-
-    for (const currentModel of modelsToTry) {
-      const modelParams = { model: currentModel, ...baseModelParams };
-      const model = client.getGenerativeModel(modelParams);
-
-      const abortController = new AbortController();
-      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutHandle = setTimeout(() => {
-          abortController.abort();
-          reject(
-            new Error(
-              `Tiempo de espera agotado al consultar Gemini (${timeoutMs}ms)`,
-            ),
-          );
-        }, timeoutMs);
+    let accessToken: string | null;
+    try {
+      accessToken = await this.getAccessToken();
+    } catch (error) {
+      throw new GeminiServiceError("auth_required", {
+        status: 401,
+        cause: error,
       });
+    }
+    if (!accessToken) {
+      throw new GeminiServiceError("auth_required", { status: 401 });
+    }
+    if (options.signal?.aborted) throw new GeminiServiceError("cancelled");
 
+    const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL?.trim() ?? "";
+    const supabasePublishableKey =
+      import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
+    if (!supabaseUrl || !supabasePublishableKey) {
+      throw new GeminiServiceError("not_configured");
+    }
+
+    const controller = new AbortController();
+    const onExternalAbort = () => controller.abort("cancelled");
+    options.signal?.addEventListener("abort", onExternalAbort, { once: true });
+    const timeoutMs = options.timeoutMs ?? this.timeoutMs;
+    const timeoutHandle = setTimeout(
+      () => controller.abort("timeout"),
+      timeoutMs,
+    );
+
+    try {
+      // Native Window.fetch rejects a GeminiAiService receiver in WebView2.
+      // Call the transport as a function so WebIDL uses the global receiver.
+      const fetchRequest = this.fetchImpl;
+      const response = await fetchRequest(
+        `${supabaseUrl}/functions/v1/${GEMINI_FUNCTION_NAME}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: supabasePublishableKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt,
+            systemInstruction: options.systemInstruction,
+            temperature: options.temperature,
+            maxOutputTokens: options.maxOutputTokens,
+          }),
+          signal: controller.signal,
+        },
+      );
+
+      let body: EdgeSuccessResponse | EdgeErrorResponse;
       try {
-        const generatePromise = (async () => {
-          const result = await model.generateContent(prompt);
-          return await result.response;
-        })();
-
-        const response = await Promise.race([generatePromise, timeoutPromise]);
-        const text = typeof response?.text === "function" ? response.text() : "";
-
-        // Éxito: actualizar el modelo efectivo para las próximas llamadas en esta sesión
-        if (currentModel !== this.modelName) {
-          if (import.meta.env?.DEV) {
-            console.info(
-              `[Gemini AI Cascade]: Modelo resuelto exitosamente con "${currentModel}" (original: "${this.modelName}").`,
-            );
-          }
-          this.modelName = currentModel;
-        }
-        return text;
-      } catch (error: unknown) {
-        lastError = error;
-        const rawMessage = error instanceof Error ? error.message : String(error);
-        const sanitized = sanitizeErrorMessage(rawMessage, effectiveKey);
-
-        // 1. Ante HTTP 429 (cuota), HTTP 503 (saturación) o Timeout:
-        // Abortar de inmediato sin reintentos para conmutación instantánea al motor local
-        if (
-          isTransientGeminiError(sanitized) ||
-          sanitized.includes("429") ||
-          sanitized.includes("503") ||
-          /tiempo de espera agotado|timeout/i.test(sanitized)
-        ) {
-          if (import.meta.env?.DEV) {
-            console.warn(
-              `[Gemini AI Abort]: Error transitorio, cuota o timeout (${sanitized.slice(0, 100)}). Abortando cascada externa para conmutación local inmediata.`,
-            );
-          }
-          break;
-        }
-
-        // 2. Si el modelo no existe (404), escalar al siguiente candidato Flash de la cascada
-        if (isModelNotFoundError(sanitized)) {
-          if (import.meta.env?.DEV) {
-            console.warn(
-              `[Gemini AI Cascade]: Modelo "${currentModel}" no disponible (404). Intentando siguiente candidato Flash...`,
-            );
-          }
-          continue;
-        }
-
-        // 3. Error no recuperable (400, 401, 403): abortar directamente
-        break;
-      } finally {
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle);
-        }
+        body = (await response.json()) as EdgeSuccessResponse | EdgeErrorResponse;
+      } catch (error) {
+        throw new GeminiServiceError("malformed_response", {
+          status: response.status,
+          cause: error,
+        });
       }
-    }
 
-    // Clasificar y propagar el último error con mensaje descriptivo
-    const rawMessage =
-      lastError instanceof Error ? lastError.message : String(lastError);
-    const sanitized = sanitizeErrorMessage(rawMessage, effectiveKey);
+      if (!response.ok) {
+        const code = toErrorCode(response.status, body as EdgeErrorResponse);
+        throw new GeminiServiceError(code, {
+          status: response.status,
+          retryable: (body as EdgeErrorResponse).error?.retryable,
+        });
+      }
+      if (!isEdgeSuccessResponse(body)) {
+        throw new GeminiServiceError("malformed_response", {
+          status: response.status,
+        });
+      }
 
-    if (/tiempo de espera agotado|timeout/i.test(sanitized)) {
-      throw new Error(
-        `Tiempo de espera agotado al consultar Gemini (${timeoutMs}ms)`,
-        { cause: lastError },
-      );
-    }
-    if (
-      sanitized.includes("503") ||
-      /high demand|service unavailable|overloaded/i.test(sanitized)
-    ) {
-      throw new Error(
-        `Servicio de Gemini saturado o no disponible (503): ${sanitized}`,
-        { cause: lastError },
-      );
-    }
-    if (sanitized.includes("429") || /quota|exhausted/i.test(sanitized)) {
-      throw new Error(`Cuota de Gemini excedida (429): ${sanitized}`, {
-        cause: lastError,
+      this.lastMetadata = { model: body.model, latencyMs: body.latencyMs };
+      return body.text.trim();
+    } catch (error) {
+      if (error instanceof GeminiServiceError) throw error;
+      if (controller.signal.aborted) {
+        const code = options.signal?.aborted ? "cancelled" : "timeout";
+        throw new GeminiServiceError(code, { cause: error });
+      }
+      throw new GeminiServiceError("network_error", {
+        retryable: true,
+        cause: error,
       });
+    } finally {
+      clearTimeout(timeoutHandle);
+      options.signal?.removeEventListener("abort", onExternalAbort);
     }
-    if (sanitized.includes("400") || /invalid/i.test(sanitized)) {
-      throw new Error(
-        `Solicitud inválida a la API de Gemini (400): ${sanitized}`,
-        { cause: lastError },
-      );
-    }
-    if (
-      sanitized.includes("401") ||
-      sanitized.includes("403") ||
-      /API_KEY_INVALID|unauthorized|forbidden/i.test(sanitized)
-    ) {
-      throw new Error(
-        `Error de autenticación con la API de Gemini: ${sanitized}`,
-        { cause: lastError },
-      );
-    }
-    if (
-      sanitized.includes("404") ||
-      /not found|no longer available/i.test(sanitized)
-    ) {
-      throw new Error(
-        `Ningún modelo de la cascada Gemini está disponible (404): ${sanitized}`,
-        { cause: lastError },
-      );
-    }
-
-    throw new Error(`Error al generar texto con Gemini: ${sanitized}`, {
-      cause: lastError,
-    });
   }
 }
 

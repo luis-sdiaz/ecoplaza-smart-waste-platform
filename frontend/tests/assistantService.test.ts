@@ -16,6 +16,7 @@ import {
   type AssistantAnalyticsContext,
 } from "../src/services/assistantService.ts";
 import { geminiAiService } from "../src/services/geminiAiService.ts";
+import { setEcoPlazaLiveContextProvider } from "../src/services/assistantContextService.ts";
 import type { ContainerTelemetrySnapshot } from "../src/services/iotAnalyticsService.ts";
 import type { Container } from "../src/services/containerService.ts";
 import type { SaleHistoryItem } from "../src/services/salesService.ts";
@@ -557,7 +558,7 @@ test("generateAssistantResponse: responde con análisis IoT cuando se consulta s
 });
 
 test("generateAssistantResponseWithProvider: consulta exitosa a Gemini cuando está configurado", async () => {
-  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  geminiAiService.configure({ enabled: true });
   const originalGenerate = geminiAiService.generateText;
   geminiAiService.generateText = async () =>
     "Respuesta generada por Gemini AI 1.5 Flash";
@@ -571,7 +572,31 @@ test("generateAssistantResponseWithProvider: consulta exitosa a Gemini cuando es
     assert.strictEqual(getLastAssistantProvider(), "gemini");
   } finally {
     geminiAiService.generateText = originalGenerate;
-    geminiAiService.configure({ apiKey: "" });
+    geminiAiService.configure({ enabled: false });
+  }
+});
+
+test("generateAssistantResponseWithProvider: continúa con Gemini usando contexto mínimo si falla la carga operativa", async () => {
+  geminiAiService.configure({ enabled: true });
+  const originalGenerate = geminiAiService.generateText;
+  let capturedOptions: { systemInstruction?: string } | undefined;
+  geminiAiService.generateText = async (_prompt, options) => {
+    capturedOptions = options;
+    return "Respuesta de Gemini sin contexto operativo";
+  };
+  setEcoPlazaLiveContextProvider(async () => {
+    throw new Error("context unavailable");
+  });
+
+  try {
+    const result = await generateAssistantResponseWithProvider("¿Qué beneficios tiene reciclar?");
+    assert.strictEqual(result.provider, "gemini");
+    assert.strictEqual(result.content, "Respuesta de Gemini sin contexto operativo");
+    assert.match(capturedOptions?.systemInstruction ?? "", /no se pudo cargar el contexto operativo/i);
+  } finally {
+    setEcoPlazaLiveContextProvider(null);
+    geminiAiService.generateText = originalGenerate;
+    geminiAiService.configure({ enabled: false });
   }
 });
 
@@ -582,7 +607,7 @@ test("generateAssistantResponseWithProvider: fallback local cuando Gemini arroja
     mockContainers,
     fixedNow,
   );
-  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  geminiAiService.configure({ enabled: true });
   const originalGenerate = geminiAiService.generateText;
   geminiAiService.generateText = async () => {
     throw new Error("Cuota de Gemini excedida (429): Resource exhausted");
@@ -598,7 +623,7 @@ test("generateAssistantResponseWithProvider: fallback local cuando Gemini arroja
     assert.strictEqual(getLastAssistantProvider(), "local_fallback");
   } finally {
     geminiAiService.generateText = originalGenerate;
-    geminiAiService.configure({ apiKey: "" });
+    geminiAiService.configure({ enabled: false });
   }
 });
 
@@ -609,7 +634,7 @@ test("generateAssistantResponseWithProvider: fallback local cuando isConfigured(
     mockContainers,
     fixedNow,
   );
-  geminiAiService.configure({ apiKey: "" });
+  geminiAiService.configure({ enabled: false });
   const result = await generateAssistantResponseWithProvider(
     "Proyectar ingresos",
     context,
@@ -620,7 +645,7 @@ test("generateAssistantResponseWithProvider: fallback local cuando isConfigured(
 });
 
 test("generateAssistantResponseWithProvider: prioriza Gemini AI para consultas de CTR-BOG-001 e inyecta telemetría en systemInstruction", async () => {
-  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  geminiAiService.configure({ enabled: true });
   const originalGenerate = geminiAiService.generateText;
   let capturedOptions: { systemInstruction?: string } | undefined;
 
@@ -663,12 +688,12 @@ test("generateAssistantResponseWithProvider: prioriza Gemini AI para consultas d
     assert.match(capturedOptions.systemInstruction, /24\.5 cm/);
   } finally {
     geminiAiService.generateText = originalGenerate;
-    geminiAiService.configure({ apiKey: "" });
+    geminiAiService.configure({ enabled: false });
   }
 });
 
 test("generateAssistantResponseWithProvider: fallback a formatIoTFleetResponse ante error de red o cuota (429) en CTR-BOG-001", async () => {
-  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  geminiAiService.configure({ enabled: true });
   const originalGenerate = geminiAiService.generateText;
 
   geminiAiService.generateText = async () => {
@@ -703,14 +728,14 @@ test("generateAssistantResponseWithProvider: fallback a formatIoTFleetResponse a
     assert.strictEqual(getLastAssistantProvider(), "local_fallback");
   } finally {
     geminiAiService.generateText = originalGenerate;
-    geminiAiService.configure({ apiKey: "" });
+    geminiAiService.configure({ enabled: false });
   }
 });
 
 test("generateAssistantResponseWithProvider: utiliza el modelo estable gemini-3.8-flash con cascada de modelos por defecto", async () => {
   assert.strictEqual(geminiAiService.getModelName(), "gemini-3.8-flash");
 
-  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  geminiAiService.configure({ enabled: true });
   const originalGenerate = geminiAiService.generateText;
 
   geminiAiService.generateText = async () => {
@@ -727,12 +752,12 @@ test("generateAssistantResponseWithProvider: utiliza el modelo estable gemini-3.
     assert.strictEqual(getLastAssistantProvider(), "gemini");
   } finally {
     geminiAiService.generateText = originalGenerate;
-    geminiAiService.configure({ apiKey: "" });
+    geminiAiService.configure({ enabled: false });
   }
 });
 
 test("generateAssistantResponseWithProvider: fallback a modo local heurístico ante error 503 (alta demanda / saturación) en Gemini", async () => {
-  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  geminiAiService.configure({ enabled: true });
   const originalGenerate = geminiAiService.generateText;
 
   geminiAiService.generateText = async () => {
@@ -760,12 +785,12 @@ test("generateAssistantResponseWithProvider: fallback a modo local heurístico a
     assert.strictEqual(getLastAssistantProvider(), "local_fallback");
   } finally {
     geminiAiService.generateText = originalGenerate;
-    geminiAiService.configure({ apiKey: "" });
+    geminiAiService.configure({ enabled: false });
   }
 });
 
 test("generateAssistantResponseWithProvider: fallback a modo local ante error 404 (modelo no encontrado) agotando toda la cascada", async () => {
-  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  geminiAiService.configure({ enabled: true });
   const originalGenerate = geminiAiService.generateText;
 
   geminiAiService.generateText = async () => {
@@ -793,12 +818,12 @@ test("generateAssistantResponseWithProvider: fallback a modo local ante error 40
     assert.strictEqual(getLastAssistantProvider(), "local_fallback");
   } finally {
     geminiAiService.generateText = originalGenerate;
-    geminiAiService.configure({ apiKey: "" });
+    geminiAiService.configure({ enabled: false });
   }
 });
 
 test("generateAssistantResponseWithProvider: fallback a modo local ante timeout de conexión (>3500ms)", async () => {
-  geminiAiService.configure({ apiKey: "AIzaSyMockKeyForTest" });
+  geminiAiService.configure({ enabled: true });
   const originalGenerate = geminiAiService.generateText;
 
   geminiAiService.generateText = async () => {
@@ -826,7 +851,7 @@ test("generateAssistantResponseWithProvider: fallback a modo local ante timeout 
     assert.strictEqual(getLastAssistantProvider(), "local_fallback");
   } finally {
     geminiAiService.generateText = originalGenerate;
-    geminiAiService.configure({ apiKey: "" });
+    geminiAiService.configure({ enabled: false });
   }
 });
 

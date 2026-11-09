@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   authSessionStorage,
   SUPABASE_AUTH_STORAGE_KEY,
-} from "../auth/authSessionStorage";
+} from "../auth/authSessionStorage.ts";
 
 const readRequiredEnvironmentVariable = (
   name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_PUBLISHABLE_KEY",

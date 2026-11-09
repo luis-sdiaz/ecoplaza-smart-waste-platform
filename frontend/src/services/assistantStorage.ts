@@ -17,7 +17,6 @@ export const DEFAULT_WELCOME_MESSAGE: AssistantMessage = {
   content:
     "¡Hola! Soy el asistente inteligente de EcoPlaza. ¿En qué puedo ayudarte hoy?",
   isIoT: false,
-  provider: "local_fallback",
 };
 
 function getSessionStorage(): Storage | null {
