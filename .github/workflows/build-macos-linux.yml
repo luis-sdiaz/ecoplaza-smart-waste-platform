@@ -1,0 +1,289 @@
+# ============================================================
+# EcoPlaza — Build macOS & Linux Installers
+# ============================================================
+# Trigger: manual (workflow_dispatch)
+# Produces: .dmg (macOS Intel + Apple Silicon), .deb + .AppImage (Linux x64)
+# Does NOT publish a GitHub Release nor modify existing installers.
+#
+# ⚠️  FIRMA AD HOC (macOS sin certificado Apple Developer)
+#     Los .dmg generados NO están firmados con una Developer ID Certificate ni
+#     notarizados por Apple. Al abrirlos en macOS, el sistema mostrará un aviso
+#     de seguridad. Para ejecutar la app el usuario deberá ir a:
+#     Ajustes del Sistema → Privacidad y seguridad → "Abrir de todas formas"
+#     Esto es normal en entornos de portafolio/demo sin suscripción Apple Developer.
+# ============================================================
+
+name: Build macOS & Linux Installers
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# ── Concurrency: cancela runs anteriores del mismo workflow si se dispara de nuevo ──
+concurrency:
+  group: build-macos-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+# ── Variables globales compartidas por todos los jobs ──
+# VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY se inyectan por job desde
+# Repository Variables (Settings → Variables → Actions) para evitar valores
+# ficticios que rompan la validación estricta de supabase.ts en tiempo de compilación.
+# Sus valores NUNCA se imprimen en logs (GitHub enmascara vars.* automáticamente).
+env:
+  NODE_VERSION: "24"
+  RUST_TOOLCHAIN: stable
+
+# ==============================================================
+# JOB 0 — Validación de variables obligatorias
+# Falla rápido (fail-fast) antes de consumir minutos de runner
+# si VITE_SUPABASE_URL o VITE_SUPABASE_PUBLISHABLE_KEY no están
+# configuradas en Settings → Variables → Actions del repositorio.
+# ==============================================================
+jobs:
+  validate-vars:
+    name: "Validate required repository variables"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
+        env:
+          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          MISSING=""
+          if [ -z "$SUPABASE_URL" ]; then
+            MISSING="$MISSING\n  - VITE_SUPABASE_URL"
+          fi
+          if [ -z "$SUPABASE_KEY" ]; then
+            MISSING="$MISSING\n  - VITE_SUPABASE_PUBLISHABLE_KEY"
+          fi
+          if [ -n "$MISSING" ]; then
+            echo "::error::Las siguientes Repository Variables no están configuradas en Settings → Variables → Actions:"
+            printf "%b\n" "$MISSING"
+            echo "::error::La compilación se detiene para evitar instaladores con credenciales vacías."
+            exit 1
+          fi
+          echo "Variables presentes. Continuando compilación."
+
+  # ==============================================================
+  # JOB 1 — macOS Intel (x86_64-apple-darwin)
+  # ==============================================================
+  build-macos-intel:
+    name: "macOS Intel (x86_64)"
+    needs: validate-vars
+    runs-on: macos-15-intel    # runner Intel de GitHub (macos-13 retirado dic 2025)
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      # 1. Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Node.js
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # 3. Rust (toolchain estable, target Intel macOS)
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      # 4. Cache Cargo (evita recompilar crates en cada run)
+      - name: Cache Cargo registry & build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            frontend/src-tauri/target
+          key: macos-intel-cargo-${{ hashFiles('frontend/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            macos-intel-cargo-
+
+      # 5. Dependencias npm
+      - name: Install npm dependencies
+        run: npm ci
+
+      # 6. Build Tauri — macOS Intel (.dmg) — sin firma de Apple Developer
+      - name: Build Tauri (macOS Intel — ad hoc)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          CI: "true"
+          # vars.* son Repository Variables (no secretos); GitHub las enmascara en logs.
+          # supabase.ts lanzaría un error en build-time si estuvieran vacías.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          # Sin APPLE_CERTIFICATE ni APPLE_SIGNING_IDENTITY → firma ad hoc automática
+        with:
+          projectPath: frontend
+          args: --target x86_64-apple-darwin
+
+      # 7. Publicar .dmg como artifact descargable
+      - name: Upload macOS Intel .dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecoplaza-macos-intel-dmg
+          # tauri-action deposita el bundle bajo src-tauri/target/<target>/release/bundle/
+          path: frontend/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 30
+
+  # ==============================================================
+  # JOB 2 — macOS Apple Silicon (aarch64-apple-darwin)
+  # ==============================================================
+  build-macos-arm:
+    name: "macOS Apple Silicon (aarch64)"
+    needs: validate-vars
+    runs-on: macos-15          # runner Apple Silicon de GitHub (M-series)
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Cargo registry & build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            frontend/src-tauri/target
+          key: macos-arm-cargo-${{ hashFiles('frontend/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            macos-arm-cargo-
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build Tauri (macOS Apple Silicon — ad hoc)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          CI: "true"
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        with:
+          projectPath: frontend
+          args: --target aarch64-apple-darwin
+
+      - name: Upload macOS Apple Silicon .dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecoplaza-macos-arm-dmg
+          path: frontend/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 30
+
+  # ==============================================================
+  # JOB 3 — Linux x64 (.deb + .AppImage)
+  # ==============================================================
+  build-linux:
+    name: "Linux x64 (.deb + .AppImage)"
+    needs: validate-vars
+    runs-on: ubuntu-22.04      # LTS; webkit2gtk-4.1 disponible en repos
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache Cargo registry & build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            frontend/src-tauri/target
+          key: linux-cargo-${{ hashFiles('frontend/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            linux-cargo-
+
+      # Dependencias del sistema requeridas por Tauri 2 en Linux
+      # (webkit2gtk-4.1 es el motor WebView de Tauri 2; paquetes declarados en tauri.conf.json)
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libxdo-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libgtk-3-dev \
+            libglib2.0-dev
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # Build genera automáticamente .deb y .AppImage (targets: "all" en tauri.conf.json)
+      - name: Build Tauri (Linux x64 — .deb + .AppImage)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          CI: "true"
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          # AppImage requiere esta variable para evitar sandbox de FUSE en CI
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        with:
+          projectPath: frontend
+          args: --target x86_64-unknown-linux-gnu
+
+      # Subir .deb
+      - name: Upload Linux .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecoplaza-linux-deb
+          path: frontend/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+          if-no-files-found: error
+          retention-days: 30
+
+      # Subir .AppImage
+      - name: Upload Linux .AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecoplaza-linux-appimage
+          path: frontend/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+          retention-days: 30
