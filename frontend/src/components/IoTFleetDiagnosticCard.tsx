@@ -20,6 +20,7 @@ import {
 } from "../services/iotAnalyticsService";
 import { listContainers } from "../services/containerService";
 import { getLatestTelemetry } from "../services/sensorService";
+import { isTelemetryFresh } from "../services/telemetryService";
 
 export interface IoTFleetDiagnosticCardProps {
   initialSnapshots?: ContainerTelemetrySnapshot[];
@@ -63,15 +64,16 @@ export default function IoTFleetDiagnosticCard({
           const telemetryPromises: Promise<ContainerTelemetrySnapshot | null>[] =
             containersResult.data.map(async (container) => {
               try {
-                const telemetry = await getLatestTelemetry(container.id);
-                if (!telemetry) return null;
+                const telemetry = await getLatestTelemetry(container.code);
+                if (!telemetry || !isTelemetryFresh(telemetry.recordedAt)) {
+                  return null;
+                }
                 const snapshot: ContainerTelemetrySnapshot = {
                   containerId: container.id,
                   containerName: container.code,
                   fillLevel: telemetry.fillLevelPercent,
-                  batteryLevel: telemetry.batteryLevelPercent,
-                  temperature: telemetry.temperatureCelsius,
                   updatedAt: telemetry.recordedAt,
+                  distanceCm: telemetry.distanceCm,
                 };
                 return snapshot;
               } catch {

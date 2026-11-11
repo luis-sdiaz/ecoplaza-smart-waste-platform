@@ -50,6 +50,7 @@ const mockContainer = {
 };
 
 const mockTelemetry: TelemetryRecord = {
+  distanceCm: 35,
   id: "tel-nav-1",
   containerId: "ctr-uuid-nav-77",
   fillLevelPercent: 60,

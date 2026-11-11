@@ -8,6 +8,7 @@ const translations: Record<string, string> = {
   "sensors.liveTelemetrySubtitle": "Monitoreo en tiempo real del sensor ultrasónico HC-SR04",
   "sensors.onlineStatus": "En línea",
   "sensors.waitingForSensor": "Esperando hardware",
+  "sensors.historicalStatus": "Lectura histórica",
   "sensors.fillLevel": "Nivel de llenado",
   "sensors.ultrasonicDistance": "Distancia ultrasónica",
   "sensors.lastReading": "Última lectura",
@@ -65,7 +66,7 @@ describe("LiveTelemetryCard Component (Tarea 3)", () => {
       containerId: "CTR-BOG-001",
       distanceCm: 18.5,
       fillPercentage: 81.5,
-      recordedAt: "2026-11-04T16:30:00.000Z",
+      recordedAt: new Date().toISOString(),
       status: "warning",
     };
 
@@ -102,7 +103,7 @@ describe("LiveTelemetryCard Component (Tarea 3)", () => {
       containerId: "CTR-BOG-001",
       distanceCm: 20,
       fillPercentage: 78.8,
-      recordedAt: "2026-11-05T12:00:00.000Z",
+      recordedAt: new Date().toISOString(),
       status: "warning",
     };
     mockFetchLatestTelemetryByContainer.mockResolvedValueOnce(mockTelemetry);
@@ -130,13 +131,32 @@ describe("LiveTelemetryCard Component (Tarea 3)", () => {
     expect(screen.getByText(/Esperando hardware \(Contenedor Norte\)/)).toBeTruthy();
   });
 
+  test("muestra una fila histórica sin declararla en línea", async () => {
+    const onTelemetryChange = vi.fn();
+    mockFetchLatestTelemetryByContainer.mockResolvedValueOnce({
+      id: "old-reading",
+      containerId: "CTR-BOG-001",
+      distanceCm: 30,
+      fillPercentage: 70,
+      recordedAt: "2026-11-01T12:00:00.000Z",
+      status: "warning",
+    } satisfies SensorTelemetry);
+
+    render(<LiveTelemetryCard onTelemetryChange={onTelemetryChange} />);
+
+    expect(await screen.findByText("Lectura histórica")).toBeTruthy();
+    expect(screen.queryByText("En línea")).toBeNull();
+    expect(screen.getByText("70%")).toBeTruthy();
+    expect(onTelemetryChange).toHaveBeenCalledWith(null);
+  });
+
   test("4. Dispara recarga manual al hacer clic en el botón de actualización", async () => {
     const mockTelemetry: SensorTelemetry = {
       id: "telem-uuid-002",
       containerId: "CTR-BOG-001",
       distanceCm: 45.0,
       fillPercentage: 55.0,
-      recordedAt: "2026-11-04T16:35:00.000Z",
+      recordedAt: new Date().toISOString(),
       status: "normal",
     };
 

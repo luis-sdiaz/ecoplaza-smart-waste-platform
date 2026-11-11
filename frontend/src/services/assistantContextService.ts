@@ -186,7 +186,7 @@ export async function fetchEcoPlazaLiveContext(): Promise<EcoPlazaLiveContext> {
     const telemetryResults = await Promise.allSettled(
       containers.map(async (c) => {
         try {
-          const tel = await sensorModule.getLatestTelemetry(c.id);
+          const tel = await sensorModule.getLatestTelemetry(c.code);
           return { container: c, telemetry: tel };
         } catch {
           return { container: c, telemetry: null };
@@ -197,21 +197,24 @@ export async function fetchEcoPlazaLiveContext(): Promise<EcoPlazaLiveContext> {
     for (const result of telemetryResults) {
       if (result.status === "fulfilled") {
         const { container, telemetry } = result.value;
+        const isCurrent =
+          telemetry !== null &&
+          telemetryModule.isTelemetryFresh(telemetry.recordedAt);
+        if (!isCurrent || telemetry === null) continue;
+
         const fillPercentage =
-          typeof telemetry?.fillLevelPercent === "number" &&
+          typeof telemetry.fillLevelPercent === "number" &&
           !Number.isNaN(telemetry.fillLevelPercent)
             ? telemetry.fillLevelPercent
             : 0;
 
-        if (telemetry) {
-          onlineSensors++;
-          if (telemetry.recordedAt) {
-            if (
-              !latestTimestamp ||
-              new Date(telemetry.recordedAt) > new Date(latestTimestamp)
-            ) {
-              latestTimestamp = telemetry.recordedAt;
-            }
+        onlineSensors++;
+        if (telemetry.recordedAt) {
+          if (
+            !latestTimestamp ||
+            new Date(telemetry.recordedAt) > new Date(latestTimestamp)
+          ) {
+            latestTimestamp = telemetry.recordedAt;
           }
         }
 
@@ -236,7 +239,8 @@ export async function fetchEcoPlazaLiveContext(): Promise<EcoPlazaLiveContext> {
     if (
       physicalTelRes.status === "fulfilled" &&
       physicalTelRes.value !== null &&
-      physicalTelRes.value !== undefined
+      physicalTelRes.value !== undefined &&
+      telemetryModule.isTelemetryFresh(physicalTelRes.value.recordedAt)
     ) {
       const pt = physicalTelRes.value;
       physicalTelemetry = {

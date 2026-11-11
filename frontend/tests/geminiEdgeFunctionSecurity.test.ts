@@ -22,6 +22,9 @@ test("Gemini se ejecuta en una Edge Function autenticada, no en el cliente", () 
   assert.match(config, /verify_jwt\s*=\s*true/);
   assert.match(source, /auth\.getUser\(token\)/);
   assert.match(source, /consumeRateLimit\(user\.id\)/);
+  assert.match(source, /provider_failure status=/);
+  assert.match(source, /providerStatus/);
+  assert.match(source, /model: lastModel/);
   assert.doesNotMatch(source, /SERVICE_ROLE|supabaseAdmin/i);
 });
 

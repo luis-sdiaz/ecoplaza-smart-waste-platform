@@ -52,6 +52,7 @@ type BuyerNotification = {
 function getBuyerErrorKey(code: BuyerErrorCode): string {
   if (code === "unauthorized") return "buyers.unauthorized";
   if (code === "invalid_name") return "buyers.invalidName";
+  if (code === "missing_contact") return "buyers.contactRequired";
   if (code === "invalid_email") return "buyers.invalidEmail";
   if (code === "invalid_phone") return "buyers.invalidPhone";
   if (code === "not_found") return "buyers.notFound";

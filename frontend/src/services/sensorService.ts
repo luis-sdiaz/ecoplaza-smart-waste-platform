@@ -1,26 +1,27 @@
 export interface TelemetryRecord {
   id: string;
   containerId: string;
+  distanceCm: number;
   fillLevelPercent: number;
-  batteryLevelPercent: number;
-  temperatureCelsius: number | null;
   recordedAt: string;
+  /** Not provided by the current HC-SR04 telemetry schema. */
+  batteryLevelPercent?: number | null;
+  /** Not provided by the current HC-SR04 telemetry schema. */
+  temperatureCelsius?: number | null;
 }
 
 export interface CreateTelemetryInput {
   containerId: string;
-  fillLevel: number;
-  batteryLevel: number;
-  temperature?: number | null;
+  distanceCm: number;
+  fillPercentage: number;
   recordedAt?: string;
 }
 
 export type TelemetryRow = {
   id: string;
   container_id: string;
-  fill_level_percent: number | string;
-  battery_level_percent: number | string;
-  temperature_celsius?: number | string | null;
+  distance_cm: number | string;
+  fill_percentage: number | string;
   recorded_at: string;
 };
 
@@ -32,10 +33,7 @@ export type TelemetryQueryResult = {
 export type SensorServiceClient = {
   from: (table: string) => {
     select: (columns: string) => {
-      eq: (
-        column: string,
-        value: string,
-      ) => {
+      eq: (column: string, value: string) => {
         order: (
           column: string,
           options: { ascending: boolean },
@@ -56,105 +54,90 @@ export type SensorServiceClient = {
   };
 };
 
+const TELEMETRY_COLUMNS =
+  "id, container_id, distance_cm, fill_percentage, recorded_at";
+
 let clientOverride: SensorServiceClient | null = null;
 
-export function setSensorServiceClient(
-  client: SensorServiceClient | null,
-): void {
+export function setSensorServiceClient(client: SensorServiceClient | null): void {
   clientOverride = client;
 }
 
 async function getSupabaseClient(): Promise<SensorServiceClient> {
-  if (clientOverride) {
-    return clientOverride;
-  }
+  if (clientOverride) return clientOverride;
   const { supabase } = await import("../lib/supabase");
   return supabase as unknown as SensorServiceClient;
+}
+
+function toFiniteNumber(value: number | string, field: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Invalid ${field} value returned by sensor_telemetry`);
+  }
+  return parsed;
 }
 
 export function mapTelemetryRowToRecord(row: TelemetryRow): TelemetryRecord {
   return {
     id: row.id,
     containerId: row.container_id,
-    fillLevelPercent: Number(row.fill_level_percent),
-    batteryLevelPercent: Number(row.battery_level_percent),
-    temperatureCelsius:
-      row.temperature_celsius !== null && row.temperature_celsius !== undefined
-        ? Number(row.temperature_celsius)
-        : null,
+    distanceCm: toFiniteNumber(row.distance_cm, "distance_cm"),
+    fillLevelPercent: toFiniteNumber(row.fill_percentage, "fill_percentage"),
     recordedAt: row.recorded_at,
   };
+}
+
+async function queryTelemetry(
+  containerId: string,
+  limitCount?: number,
+): Promise<TelemetryQueryResult> {
+  const client = await getSupabaseClient();
+  const query = client
+    .from("sensor_telemetry")
+    .select(TELEMETRY_COLUMNS)
+    .eq("container_id", containerId)
+    .order("recorded_at", { ascending: false });
+
+  return limitCount !== undefined && query.limit
+    ? query.limit(limitCount)
+    : query;
 }
 
 export async function getContainerTelemetry(
   containerId: string,
 ): Promise<TelemetryRecord[]> {
   const normalizedId = containerId?.trim();
-  if (!normalizedId) {
-    return [];
-  }
+  if (!normalizedId) return [];
 
-  const client = await getSupabaseClient();
-  const result = await client
-    .from("sensor_telemetry")
-    .select(
-      "id, container_id, fill_level_percent, battery_level_percent, temperature_celsius, recorded_at",
-    )
-    .eq("container_id", normalizedId)
-    .order("recorded_at", { ascending: false });
-
+  const result = await queryTelemetry(normalizedId);
   if (result.error) {
     throw new Error(
       result.error.message ||
-        `Failed to fetch telemetry for container ${containerId}`,
+        `Failed to fetch telemetry for container ${normalizedId}`,
     );
   }
 
-  const data = result.data;
-  if (!Array.isArray(data)) {
-    return [];
-  }
-
-  return data.map(mapTelemetryRowToRecord);
+  return Array.isArray(result.data)
+    ? result.data.map(mapTelemetryRowToRecord)
+    : [];
 }
 
 export async function getLatestTelemetry(
   containerId: string,
 ): Promise<TelemetryRecord | null> {
   const normalizedId = containerId?.trim();
-  if (!normalizedId) {
-    return null;
-  }
+  if (!normalizedId) return null;
 
-  const client = await getSupabaseClient();
-  const query = client
-    .from("sensor_telemetry")
-    .select(
-      "id, container_id, fill_level_percent, battery_level_percent, temperature_celsius, recorded_at",
-    )
-    .eq("container_id", normalizedId)
-    .order("recorded_at", { ascending: false });
-
-  const result = query.limit ? await query.limit(1) : await query;
-
+  const result = await queryTelemetry(normalizedId, 1);
   if (result.error) {
     throw new Error(
       result.error.message ||
-        `Failed to fetch latest telemetry for container ${containerId}`,
+        `Failed to fetch latest telemetry for container ${normalizedId}`,
     );
   }
 
-  const data = result.data;
-  if (!data) {
-    return null;
-  }
-
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) {
-    return null;
-  }
-
-  return mapTelemetryRowToRecord(row);
+  const row = Array.isArray(result.data) ? result.data[0] : result.data;
+  return row ? mapTelemetryRowToRecord(row) : null;
 }
 
 export async function getTelemetryHistory(
@@ -162,34 +145,22 @@ export async function getTelemetryHistory(
   limitCount = 50,
 ): Promise<TelemetryRecord[]> {
   const normalizedId = containerId?.trim();
-  if (!normalizedId) {
-    return [];
-  }
+  if (!normalizedId) return [];
 
-  const client = await getSupabaseClient();
-  const query = client
-    .from("sensor_telemetry")
-    .select(
-      "id, container_id, fill_level_percent, battery_level_percent, temperature_celsius, recorded_at",
-    )
-    .eq("container_id", normalizedId)
-    .order("recorded_at", { ascending: false });
-
-  const result = query.limit ? await query.limit(limitCount) : await query;
-
+  const safeLimit = Number.isInteger(limitCount)
+    ? Math.min(Math.max(limitCount, 1), 500)
+    : 50;
+  const result = await queryTelemetry(normalizedId, safeLimit);
   if (result.error) {
     throw new Error(
       result.error.message ||
-        `Failed to fetch telemetry history for container ${containerId}`,
+        `Failed to fetch telemetry history for container ${normalizedId}`,
     );
   }
 
-  const data = result.data;
-  if (!Array.isArray(data)) {
-    return [];
-  }
-
-  return data.map(mapTelemetryRowToRecord);
+  return Array.isArray(result.data)
+    ? result.data.map(mapTelemetryRowToRecord)
+    : [];
 }
 
 export async function recordTelemetry(
@@ -202,34 +173,21 @@ export async function recordTelemetry(
   }
 
   if (
-    typeof input.fillLevel !== "number" ||
-    !Number.isFinite(input.fillLevel) ||
-    input.fillLevel < 0 ||
-    input.fillLevel > 100
+    typeof input.distanceCm !== "number" ||
+    !Number.isFinite(input.distanceCm) ||
+    input.distanceCm < 0 ||
+    input.distanceCm > 9999.99
   ) {
-    throw new Error("fillLevel must be a finite number between 0 and 100");
+    throw new Error("distanceCm must be a finite number between 0 and 9999.99");
   }
 
   if (
-    typeof input.batteryLevel !== "number" ||
-    !Number.isFinite(input.batteryLevel) ||
-    input.batteryLevel < 0 ||
-    input.batteryLevel > 100
+    typeof input.fillPercentage !== "number" ||
+    !Number.isFinite(input.fillPercentage) ||
+    input.fillPercentage < 0 ||
+    input.fillPercentage > 100
   ) {
-    throw new Error("batteryLevel must be a finite number between 0 and 100");
-  }
-
-  if (input.temperature !== undefined && input.temperature !== null) {
-    if (
-      typeof input.temperature !== "number" ||
-      !Number.isFinite(input.temperature) ||
-      input.temperature < -50 ||
-      input.temperature > 100
-    ) {
-      throw new Error(
-        "temperature must be a finite number between -50 and 100 °C",
-      );
-    }
+    throw new Error("fillPercentage must be a finite number between 0 and 100");
   }
 
   const recordedAt =
@@ -246,14 +204,11 @@ export async function recordTelemetry(
   const result = await table
     .insert({
       container_id: normalizedContainerId,
-      fill_level_percent: input.fillLevel,
-      battery_level_percent: input.batteryLevel,
-      temperature_celsius: input.temperature ?? null,
+      distance_cm: input.distanceCm,
+      fill_percentage: input.fillPercentage,
       recorded_at: recordedAt,
     })
-    .select(
-      "id, container_id, fill_level_percent, battery_level_percent, temperature_celsius, recorded_at",
-    )
+    .select(TELEMETRY_COLUMNS)
     .single();
 
   if (result.error) {
@@ -263,16 +218,7 @@ export async function recordTelemetry(
     );
   }
 
-  if (!result.data) {
-    throw new Error("No data returned after recording telemetry");
-  }
-
   const row = Array.isArray(result.data) ? result.data[0] : result.data;
-  if (!row) {
-    throw new Error("Empty row returned after recording telemetry");
-  }
-
-  return mapTelemetryRowToRecord(row as TelemetryRow);
+  if (!row) throw new Error("No data returned after recording telemetry");
+  return mapTelemetryRowToRecord(row);
 }
-
-

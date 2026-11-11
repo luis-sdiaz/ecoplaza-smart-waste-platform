@@ -50,6 +50,8 @@ interface EdgeErrorResponse {
   error?: {
     code?: GeminiErrorCode;
     retryable?: boolean;
+    providerStatus?: number;
+    model?: string;
   };
 }
 
@@ -73,16 +75,26 @@ export class GeminiServiceError extends Error {
   public readonly code: GeminiErrorCode;
   public readonly status?: number;
   public readonly retryable: boolean;
+  public readonly providerStatus?: number;
+  public readonly model?: string;
 
   constructor(
     code: GeminiErrorCode,
-    options?: { status?: number; retryable?: boolean; cause?: unknown },
+    options?: {
+      status?: number;
+      retryable?: boolean;
+      providerStatus?: number;
+      model?: string;
+      cause?: unknown;
+    },
   ) {
     super(USER_MESSAGES[code], { cause: options?.cause });
     this.name = "GeminiServiceError";
     this.code = code;
     this.status = options?.status;
     this.retryable = options?.retryable ?? false;
+    this.providerStatus = options?.providerStatus;
+    this.model = options?.model;
   }
 }
 
@@ -106,7 +118,11 @@ function toErrorCode(status: number, body: EdgeErrorResponse): GeminiErrorCode {
   if (status === 400) return "invalid_request";
   if (status === 401 || status === 403) return "auth_required";
   if (status === 429) return "rate_limited";
-  if (status === 503) return "provider_unavailable";
+  if (status === 404) return "model_unavailable";
+  if (status === 504) return "timeout";
+  if (status === 500 || status === 502 || status === 503) {
+    return "provider_unavailable";
+  }
   return "unknown";
 }
 
@@ -238,6 +254,8 @@ export class GeminiAiService {
         throw new GeminiServiceError(code, {
           status: response.status,
           retryable: (body as EdgeErrorResponse).error?.retryable,
+          providerStatus: (body as EdgeErrorResponse).error?.providerStatus,
+          model: (body as EdgeErrorResponse).error?.model,
         });
       }
       if (!isEdgeSuccessResponse(body)) {

@@ -33,6 +33,7 @@ vi.mock("../src/services/salesService.ts", () => ({
 
 vi.mock("../src/services/telemetryService.ts", () => ({
   fetchLatestTelemetryByContainer: vi.fn().mockResolvedValue(null),
+  isTelemetryFresh: () => true,
 }));
 
 describe("assistantContextService - Inyección de Contexto Operativo y Comercial para Gemini", () => {
@@ -306,26 +307,25 @@ describe("assistantContextService - Inyección de Contexto Operativo y Comercial
       ],
     });
 
+    const currentTelemetryTimestamp = new Date().toISOString();
     vi.mocked(sensorService.getLatestTelemetry).mockImplementation(
       async (containerId: string) => {
-        if (containerId === "ctr-1") {
+        if (containerId === "CTR-PLASTIC-01") {
           return {
             id: "tel-1",
-            containerId: "ctr-1",
+            containerId: "CTR-PLASTIC-01",
+            distanceCm: 12,
             fillLevelPercent: 88,
-            batteryLevelPercent: 95,
-            temperatureCelsius: 18.5,
-            recordedAt: "2026-10-27T18:00:00.000Z",
+            recordedAt: currentTelemetryTimestamp,
           };
         }
-        if (containerId === "ctr-2") {
+        if (containerId === "CTR-ORGANIC-02") {
           return {
             id: "tel-2",
-            containerId: "ctr-2",
+            containerId: "CTR-ORGANIC-02",
+            distanceCm: 65,
             fillLevelPercent: 35,
-            batteryLevelPercent: 80,
-            temperatureCelsius: 19.0,
-            recordedAt: "2026-10-27T18:05:00.000Z",
+            recordedAt: currentTelemetryTimestamp,
           };
         }
         return null;
@@ -338,7 +338,7 @@ describe("assistantContextService - Inyección de Contexto Operativo y Comercial
     expect(context.inventorySummary.totalEstimatedValueCop).toBe(300000); // 200 kg * 1500 COP/kg
     expect(context.containersSummary.totalContainers).toBe(2);
     expect(context.iotTelemetrySummary.onlineSensors).toBe(2);
-    expect(context.iotTelemetrySummary.lastUpdateIso).toBe("2026-10-27T18:05:00.000Z");
+    expect(context.iotTelemetrySummary.lastUpdateIso).toBe(currentTelemetryTimestamp);
 
     const criticalContainer = context.containersSummary.criticalContainers.find(
       (c) => c.containerId === "CTR-PLASTIC-01",

@@ -41,28 +41,22 @@ const mockBuyers = [
   {
     id: "buy-001",
     name: "Recuperadora Bolívar S.A.S.",
-    documentNumber: "901234567-8",
     phone: "3101234567",
     email: "contacto@bolivar.com",
-    address: "Zona Industrial Lote 4",
     status: "active",
   },
   {
     id: "buy-002",
     name: "EcoMetales del Norte",
-    documentNumber: "800555666-1",
     phone: "3009876543",
     email: "compras@ecometales.com",
-    address: "Bodega 12 Parque Logístico",
     status: "active",
   },
   {
     id: "buy-003",
     name: "BioAbonos de Colombia",
-    documentNumber: "900111222-3",
     phone: "3154443322",
     email: "planta@bioabonos.co",
-    address: "Vereda El Salado Km 2",
     status: "inactive",
   },
 ];
@@ -106,16 +100,17 @@ describe("BuyerTable Component - Directorio Tabular de Compradores y Accesibilid
     ).toBeInTheDocument();
   });
 
-  it("3. Muestra correctamente la información de nombres, NIT/documentos y datos de contacto", () => {
+  it("3. Muestra nombres y contactos sin presentar columnas no persistidas", () => {
     renderTable();
 
     expect(screen.getByText(/Recuperadora Bolívar S\.A\.S\./i)).toBeInTheDocument();
-    expect(screen.getByText(/901234567-8/i)).toBeInTheDocument();
     expect(screen.getByText(/contacto@bolivar\.com/i)).toBeInTheDocument();
     expect(screen.getByText(/3101234567/i)).toBeInTheDocument();
 
     expect(screen.getByText(/EcoMetales del Norte/i)).toBeInTheDocument();
     expect(screen.getByText(/BioAbonos de Colombia/i)).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /documento|nit/i })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: /dirección|address/i })).toBeNull();
   });
 
   it("4. Renderiza los badges o indicadores de estado para compradores activos e inactivos", () => {
@@ -156,6 +151,40 @@ describe("BuyerTable Component - Directorio Tabular de Compradores y Accesibilid
     expect(historyCallback).toHaveBeenCalledWith(
       expect.objectContaining({ id: "buy-001" }),
     );
+  });
+
+  it("7. Apila Historial y Editar con separación y dimensiones idénticas", () => {
+    renderTable();
+
+    const historyButton = screen.getAllByRole("button", { name: /historial/i })[0];
+    const editButton = screen.getAllByRole("button", { name: /editar/i })[0];
+    const actions = historyButton.parentElement;
+
+    expect(actions?.className).toContain("flex-col");
+    expect(actions?.className).toContain("gap-2");
+    for (const button of [historyButton, editButton]) {
+      expect(button.className).toContain("h-9");
+      expect(button.className).toContain("w-24");
+      expect(button.className).toContain("justify-center");
+    }
+  });
+
+  it("8. Mantiene visibles compradores históricos sin información de contacto", () => {
+    renderTable({
+      buyers: [
+        {
+          id: "legacy-buyer",
+          name: "Comprador histórico",
+          email: null,
+          phone: null,
+          createdAt: "2025-01-01T00:00:00.000Z",
+          updatedAt: "2025-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Comprador histórico")).toBeInTheDocument();
+    expect(screen.getAllByText("—")).toHaveLength(2);
   });
 });
 

@@ -66,6 +66,7 @@ vi.mock("../src/services/containerExcelService", () => ({
 
 vi.mock("../src/services/telemetryService", () => ({
   fetchLatestTelemetryByContainer: mocks.fetchLatestTelemetryByContainer,
+  isTelemetryFresh: () => true,
   calculateFillStatus: (fill: number) =>
     fill >= 90 ? "critical" : fill >= 70 ? "warning" : "normal",
 }));
@@ -82,7 +83,7 @@ const mockTelemetry: SensorTelemetry = {
   containerId: "CTR-BOG-001",
   distanceCm: 24.5,
   fillPercentage: 75,
-  recordedAt: "2026-11-04T20:00:00.000Z",
+  recordedAt: new Date().toISOString(),
   status: "warning",
 };
 

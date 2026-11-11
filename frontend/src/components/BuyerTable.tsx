@@ -46,7 +46,7 @@ function BuyerTable({
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface">
-      <table className="w-full min-w-[900px]">
+      <table className="w-full min-w-[800px]">
         <caption className="sr-only">
           {t("buyers.recordsDescription", "Directorio y gestión de compradores")}
         </caption>
@@ -57,9 +57,6 @@ function BuyerTable({
             </th>
             <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
               {t("buyers.buyer", "Comprador")}
-            </th>
-            <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
-              {t("buyers.documentNumber", "Documento / NIT")}
             </th>
             <th scope="col" className="px-5 py-4 text-left text-xs font-semibold text-ecoplaza-text-muted">
               {t("buyers.email", "Correo")}
@@ -82,7 +79,7 @@ function BuyerTable({
         <tbody>
           {isLoading ? (
             <tr>
-              <td colSpan={8} className="px-5 py-12 text-center text-sm text-ecoplaza-text-muted">
+              <td colSpan={7} className="px-5 py-12 text-center text-sm text-ecoplaza-text-muted">
                 <div className="flex items-center justify-center gap-2" role="status">
                   <LoaderCircle className="h-5 w-5 animate-spin text-ecoplaza-primary" aria-hidden="true" />
                   <span>{t("buyers.loading", "Cargando tus compradores...")}</span>
@@ -92,7 +89,7 @@ function BuyerTable({
           ) : buyers.length === 0 ? (
             <tr>
               <td
-                colSpan={8}
+                colSpan={7}
                 className="px-5 py-12 text-center text-sm text-ecoplaza-text-muted"
               >
                 {t("buyers.noBuyers", "No hay compradores registrados")}
@@ -100,15 +97,12 @@ function BuyerTable({
             </tr>
           ) : (
             buyers.map((buyer) => (
-              <tr key={buyer.id} className="border-t border-ecoplaza-border" title={buyer.address}>
+              <tr key={buyer.id} className="border-t border-ecoplaza-border">
                 <td className="px-5 py-4 font-mono text-xs font-medium text-ecoplaza-text" title={buyer.id}>
                   {`BUY-${buyer.id.slice(0, 8).toUpperCase()}`}
                 </td>
                 <td className="px-5 py-4 text-sm font-medium text-ecoplaza-text">
                   {buyer.name}
-                </td>
-                <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
-                  {buyer.documentNumber?.trim() ? buyer.documentNumber : "—"}
                 </td>
                 <td className="px-5 py-4 text-sm text-ecoplaza-text-muted">
                   {buyer.email?.trim() ? buyer.email : "—"}
@@ -133,24 +127,26 @@ function BuyerTable({
                   {formatDate(buyer.updatedAt)}
                 </td>
                 <td className="px-5 py-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => handleViewHistory(buyer)}
-                    aria-label={t("buyers.viewPurchaseHistoryLabel", `Ver historial de compras de ${buyer.name}`)}
-                    className="mr-2 inline-flex items-center gap-2 rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
-                  >
-                    <History size={14} strokeWidth={1.8} aria-hidden="true" />
-                    <span>{t("buyers.history", "Historial")}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onEdit?.(buyer)}
-                    aria-label={t("buyers.editBuyerLabel", `Editar a ${buyer.name}`)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-ecoplaza-border px-3 py-2 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
-                  >
-                    <Pencil size={14} strokeWidth={1.8} aria-hidden="true" />
-                    <span>{t("buyers.edit", "Editar")}</span>
-                  </button>
+                  <div className="flex flex-col items-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleViewHistory(buyer)}
+                      aria-label={t("buyers.viewPurchaseHistoryLabel", `Ver historial de compras de ${buyer.name}`)}
+                      className="inline-flex h-9 w-24 items-center justify-center gap-2 rounded-lg border border-ecoplaza-border px-3 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                    >
+                      <History size={14} strokeWidth={1.8} aria-hidden="true" />
+                      <span>{t("buyers.history", "Historial")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onEdit?.(buyer)}
+                      aria-label={t("buyers.editBuyerLabel", `Editar a ${buyer.name}`)}
+                      className="inline-flex h-9 w-24 items-center justify-center gap-2 rounded-lg border border-ecoplaza-border px-3 text-xs font-medium text-ecoplaza-text transition-colors hover:border-ecoplaza-primary hover:text-ecoplaza-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
+                    >
+                      <Pencil size={14} strokeWidth={1.8} aria-hidden="true" />
+                      <span>{t("buyers.edit", "Editar")}</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))

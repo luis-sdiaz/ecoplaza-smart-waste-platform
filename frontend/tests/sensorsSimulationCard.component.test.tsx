@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import SensorDeviceCard from "../src/components/SensorDeviceCard";
 import SensorsPage from "../src/pages/SensorsPage";
@@ -51,6 +51,7 @@ const mockContainer = {
 };
 
 const mockTelemetry: TelemetryRecord = {
+  distanceCm: 42,
   id: "tel-sim-1",
   containerId: "ctr-uuid-sim-77",
   fillLevelPercent: 60,
@@ -75,7 +76,7 @@ beforeEach(() => {
   mocks.getLatestTelemetry.mockResolvedValue(mockTelemetry);
 });
 
-describe("Header-only telemetry simulation", () => {
+describe("Hidden telemetry simulation controls", () => {
   test("SensorDeviceCard never renders an individual simulation button", () => {
     render(
       <SensorDeviceCard
@@ -93,7 +94,7 @@ describe("Header-only telemetry simulation", () => {
     ).toBeNull();
   });
 
-  test("opens SimulateTelemetryModal exclusively from the page header", async () => {
+  test("does not expose simulation from the page header", async () => {
     render(<SensorsPage />);
 
     expect(await screen.findByText("CTR-PLAZA-CENTRAL")).toBeTruthy();
@@ -101,13 +102,10 @@ describe("Header-only telemetry simulation", () => {
     expect(screen.queryByRole("button", {
       name: "sensors.simulateCardAriaLabel:CTR-PLAZA-CENTRAL",
     })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "sensors.simulateReading" }));
-
-    // Modal should be opened
-    const dialog = await screen.findByRole("dialog");
-    expect(dialog).toBeTruthy();
-    expect(screen.getByText("sensors.simulateModalTitle")).toBeTruthy();
-
+    expect(screen.queryByRole("button", {
+      name: "sensors.simulateReading",
+    })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 

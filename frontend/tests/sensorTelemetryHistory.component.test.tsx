@@ -47,25 +47,22 @@ const mockHistoryData: TelemetryRecord[] = [
   {
     id: "rec-1",
     containerId: "ctr-abc",
+    distanceCm: 28.4,
     fillLevelPercent: 72,
-    batteryLevelPercent: 88,
-    temperatureCelsius: 22.4,
     recordedAt: "2026-10-20T14:30:00.000Z",
   },
   {
     id: "rec-2",
     containerId: "ctr-abc",
+    distanceCm: 12.1,
     fillLevelPercent: 86,
-    batteryLevelPercent: 89,
-    temperatureCelsius: 23.1,
     recordedAt: "2026-10-20T13:30:00.000Z",
   },
   {
     id: "rec-3",
     containerId: "ctr-abc",
+    distanceCm: 47,
     fillLevelPercent: 40,
-    batteryLevelPercent: 92,
-    temperatureCelsius: null,
     recordedAt: "2026-10-20T12:30:00.000Z",
   },
 ];
@@ -81,7 +78,7 @@ beforeEach(() => {
 });
 
 describe("SensorTelemetryHistoryModal and history integration", () => {
-  test("renders telemetry history table with fill, battery, temperature and timestamps", async () => {
+  test("renders telemetry history table with fill, distance and timestamps", async () => {
     mocks.getTelemetryHistory.mockResolvedValue(mockHistoryData);
     const onClose = vi.fn();
 
@@ -102,23 +99,16 @@ describe("SensorTelemetryHistoryModal and history integration", () => {
     // Columnas de la tabla
     expect(screen.getByText("sensors.historyColDate")).toBeTruthy();
     expect(screen.getByText("sensors.historyColFill")).toBeTruthy();
-    expect(screen.getByText("sensors.historyColBattery")).toBeTruthy();
-    expect(screen.getByText("sensors.historyColTemperature")).toBeTruthy();
+    expect(screen.getByText("sensors.historyColDistance")).toBeTruthy();
 
     // Lecturas renderizadas
     expect(screen.getByText("72%")).toBeTruthy();
     expect(screen.getByText("86%")).toBeTruthy();
     expect(screen.getByText("40%")).toBeTruthy();
 
-    // Batería
-    expect(screen.getByText("88%")).toBeTruthy();
-    expect(screen.getByText("89%")).toBeTruthy();
-    expect(screen.getByText("92%")).toBeTruthy();
-
-    // Temperatura
-    expect(screen.getByText("22.4 °C")).toBeTruthy();
-    expect(screen.getByText("23.1 °C")).toBeTruthy();
-    expect(screen.getByText("—")).toBeTruthy(); // para registro con null
+    expect(screen.getByText("28.4 cm")).toBeTruthy();
+    expect(screen.getByText("12.1 cm")).toBeTruthy();
+    expect(screen.getByText("47 cm")).toBeTruthy();
   });
 
   test("highlights critical fill level (> 80%) with alert badge", async () => {

@@ -2,7 +2,7 @@ export interface ContainerTelemetrySnapshot {
   containerId: string;
   containerName: string;
   fillLevel: number;
-  batteryLevel: number;
+  batteryLevel?: number | null;
   temperature?: number | null;
   updatedAt: string;
   distanceCm?: number;

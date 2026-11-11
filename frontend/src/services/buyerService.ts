@@ -7,8 +7,6 @@ export type Buyer = {
   phone: string | null;
   createdAt: string;
   updatedAt: string;
-  documentNumber?: string;
-  address?: string;
   status?: string;
   purchaseCount?: number;
 };
@@ -17,8 +15,6 @@ export type BuyerInput = {
   name: string;
   email: string;
   phone: string;
-  documentNumber?: string;
-  address?: string;
   status?: string;
 };
 
@@ -26,6 +22,7 @@ export type BuyerErrorCode =
   | "unauthorized"
   | "invalid_id"
   | "invalid_name"
+  | "missing_contact"
   | "invalid_email"
   | "invalid_phone"
   | "not_found"
@@ -150,7 +147,7 @@ async function getAuthenticatedUserId(): Promise<BuyerServiceResult<string>> {
   }
 }
 
-function validateInput(input: BuyerInput): BuyerServiceResult<{
+export function validateBuyerInput(input: BuyerInput): BuyerServiceResult<{
   name: string;
   email: string | null;
   phone: string | null;
@@ -161,6 +158,9 @@ function validateInput(input: BuyerInput): BuyerServiceResult<{
 
   if (!isValidBuyerName(name)) {
     return { ok: false, error: { code: "invalid_name", retryable: false } };
+  }
+  if (email === "" && phone === "") {
+    return { ok: false, error: { code: "missing_contact", retryable: false } };
   }
   if (!isValidBuyerEmail(email)) {
     return { ok: false, error: { code: "invalid_email", retryable: false } };
@@ -250,7 +250,7 @@ export async function listBuyers(): Promise<BuyerServiceResult<Buyer[]>> {
 }
 
 export async function createBuyer(input: BuyerInput): Promise<BuyerServiceResult<Buyer>> {
-  const inputResult = validateInput(input);
+  const inputResult = validateBuyerInput(input);
   if (!inputResult.ok) return inputResult;
 
   const userResult = await getAuthenticatedUserId();
@@ -278,7 +278,7 @@ export async function updateBuyer(
     return { ok: false, error: { code: "invalid_id", retryable: false } };
   }
 
-  const inputResult = validateInput(input);
+  const inputResult = validateBuyerInput(input);
   if (!inputResult.ok) return inputResult;
 
   const userResult = await getAuthenticatedUserId();

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   calculateFillStatus,
   fetchLatestTelemetryByContainer,
+  isTelemetryFresh,
   type SensorTelemetry,
 } from "../services/telemetryService";
 
@@ -49,7 +50,9 @@ export default function LiveTelemetryCard({
         const data = await fetchLatestTelemetryByContainer(containerId);
         if (revision !== revisionRef.current) return;
         setTelemetry(data);
-        onTelemetryChange?.(data);
+        onTelemetryChange?.(
+          data && isTelemetryFresh(data.recordedAt) ? data : null,
+        );
         setError(null);
         setLoading(false);
       } catch (err: unknown) {
@@ -88,6 +91,7 @@ export default function LiveTelemetryCard({
 
   const fillPercentage = telemetry ? telemetry.fillPercentage : 0;
   const status = calculateFillStatus(fillPercentage);
+  const isCurrent = telemetry !== null && isTelemetryFresh(telemetry.recordedAt);
 
   const progressColorClass =
     status === "critical"
@@ -135,7 +139,7 @@ export default function LiveTelemetryCard({
 
         <div className="flex items-center gap-2.5">
           {/* Badge de estado en línea / esperando */}
-          {telemetry ? (
+          {isCurrent ? (
             <span
               data-testid="live-telemetry-status-badge"
               className="flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
@@ -152,7 +156,9 @@ export default function LiveTelemetryCard({
               className="flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400"
             >
               <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
-              {t("sensors.waitingForSensor")}
+              {telemetry
+                ? t("sensors.historicalStatus")
+                : t("sensors.waitingForSensor")}
             </span>
           )}
 

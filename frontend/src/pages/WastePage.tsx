@@ -637,7 +637,11 @@ function UserWastePage() {
             <dl className="mt-4 grid gap-3 border-t border-ecoplaza-primary/15 pt-4 sm:grid-cols-3">
               {(["available", "sold", "registered"] as const).map((status) => (
                 <div key={status} className="rounded-xl bg-ecoplaza-surface/70 px-3 py-2">
-                  <dt className="text-xs font-medium text-ecoplaza-text-muted">{t(`common.${status}`)}</dt>
+                  <dt className="text-xs font-medium text-ecoplaza-text-muted">
+                    {status === "registered"
+                      ? t("waste.registeredStateLabel")
+                      : t(`common.${status}`)}
+                  </dt>
                   <dd className="mt-1 flex items-baseline justify-between gap-3">
                     <span className="text-base font-semibold text-ecoplaza-text">
                       {t("waste.filteredStatusRecords", { count: filteredSummary.byStatus[status].recordCount })}
@@ -646,6 +650,11 @@ function UserWastePage() {
                       {formatWeight(filteredSummary.byStatus[status].totalWeightKg)}
                     </span>
                   </dd>
+                  {status === "registered" && (
+                    <dd className="mt-1 text-[11px] leading-4 text-ecoplaza-text-muted">
+                      {t("waste.registeredStateDescription")}
+                    </dd>
+                  )}
                 </div>
               ))}
             </dl>

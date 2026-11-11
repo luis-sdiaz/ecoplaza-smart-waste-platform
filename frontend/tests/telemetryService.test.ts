@@ -3,12 +3,48 @@ import test from "node:test";
 import {
   calculateFillStatus,
   fetchLatestTelemetryByContainer,
+  isTelemetryFresh,
   mapTelemetryRowToSensorTelemetry,
   setTelemetryServiceClient,
   type SensorTelemetryRow,
   type TelemetryQueryResult,
   type TelemetryServiceClient,
 } from "../src/services/telemetryService.ts";
+
+test("isTelemetryFresh distingue señal actual de registros históricos", () => {
+  const now = Date.parse("2026-11-10T12:00:30.000Z");
+  assert.equal(
+    isTelemetryFresh("2026-11-10T12:00:05.000Z", now),
+    true,
+  );
+  assert.equal(
+    isTelemetryFresh("2026-11-10T11:59:59.000Z", now),
+    false,
+  );
+  assert.equal(isTelemetryFresh("invalid", now), false);
+  assert.equal(
+    isTelemetryFresh("2026-11-10T12:01:00.000Z", now),
+    false,
+  );
+});
+
+test("mapTelemetryRowToSensorTelemetry rechaza mediciones remotas inválidas", () => {
+  const base: SensorTelemetryRow = {
+    id: "bad-reading",
+    container_id: "CTR-BOG-001",
+    distance_cm: 20,
+    fill_percentage: 50,
+    recorded_at: "2026-11-10T12:00:00.000Z",
+  };
+  assert.throws(
+    () => mapTelemetryRowToSensorTelemetry({ ...base, distance_cm: "NaN" }),
+    /Invalid distance_cm/,
+  );
+  assert.throws(
+    () => mapTelemetryRowToSensorTelemetry({ ...base, fill_percentage: 101 }),
+    /Invalid fill_percentage/,
+  );
+});
 
 function createMockSupabaseClient(
   data: SensorTelemetryRow[] | SensorTelemetryRow | null,

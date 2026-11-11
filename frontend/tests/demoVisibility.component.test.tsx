@@ -57,11 +57,19 @@ vi.mock("../src/i18n/config", () => ({
 import {
   DEMO_VISIBILITY_STORAGE_KEY,
   DemoVisibilityContext,
+  useDemoVisibility,
 } from "../src/context/DemoVisibilityContext";
 import { DemoVisibilityProvider } from "../src/context/DemoVisibilityProvider";
-import { ThemeProvider } from "../src/theme/ThemeProvider";
 import SensorsPage from "../src/pages/SensorsPage";
-import SettingsPanel from "../src/components/SettingsPanel";
+
+function DemoVisibilityHarness() {
+  const { showDemoData, setShowDemoData } = useDemoVisibility();
+  return (
+    <button type="button" onClick={() => setShowDemoData(!showDemoData)}>
+      {String(showDemoData)}
+    </button>
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -76,7 +84,7 @@ describe("Demonstration data visibility control", () => {
       </DemoVisibilityContext.Provider>
     );
 
-    expect(screen.queryByText("sensors.demoTitle")).toBeNull();
+    expect(screen.getByText("sensors.demoTitle")).toBeTruthy();
     expect(screen.queryByText("sensors.realTelemetryTitle")).toBeNull();
     expect(screen.getByText("sensors.activeMonitoringTitle")).toBeTruthy();
     expect(await screen.findByText("waste.container 01")).toBeTruthy();
@@ -102,24 +110,21 @@ describe("Demonstration data visibility control", () => {
     expect(screen.getByText("sensors.activeMonitoringTitle")).toBeTruthy();
   });
 
-  test("SettingsPanel toggles demonstration visibility and persists in storage", () => {
+  test("the hidden demonstration preference remains functional and persists in storage", () => {
     render(
-      <ThemeProvider>
-        <DemoVisibilityProvider>
-          <SettingsPanel />
-        </DemoVisibilityProvider>
-      </ThemeProvider>
+      <DemoVisibilityProvider>
+        <DemoVisibilityHarness />
+      </DemoVisibilityProvider>
     );
 
-    const checkbox = screen.getByRole("checkbox", { name: /settings.showDemoData/i }) as HTMLInputElement;
-    expect(checkbox.checked).toBe(true);
+    const toggle = screen.getByRole("button", { name: "true" });
 
-    fireEvent.click(checkbox);
-    expect(checkbox.checked).toBe(false);
+    fireEvent.click(toggle);
+    expect(toggle.textContent).toBe("false");
     expect(localStorage.getItem(DEMO_VISIBILITY_STORAGE_KEY)).toBe("false");
 
-    fireEvent.click(checkbox);
-    expect(checkbox.checked).toBe(true);
+    fireEvent.click(toggle);
+    expect(toggle.textContent).toBe("true");
     expect(localStorage.getItem(DEMO_VISIBILITY_STORAGE_KEY)).toBe("true");
   });
 });

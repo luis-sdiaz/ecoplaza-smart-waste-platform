@@ -27,6 +27,7 @@ import {
 } from "./salesMetrics.ts";
 import type { SaleHistoryItem } from "./salesService.ts";
 import type { RemoteWasteRecord, WasteCategory } from "./wasteService.ts";
+import { isTelemetryFresh } from "./telemetryService.ts";
 
 export interface AssistantAnalyticsContext {
   totalWasteRecords: number;
@@ -335,42 +336,12 @@ export function formatAssistantProjectionResponse(
 export function formatAssistantGeneralResponse(
   context: AssistantAnalyticsContext,
 ): string {
-  const {
-    totalContainersCount,
-    totalWasteRecords,
-    totalRegisteredWeightKg,
-    availableWeightKg,
-    totalSalesCount,
-    grossRevenueCop,
-  } = context;
-
-  const containersLabel =
-    totalContainersCount === 1
-      ? "1 contenedor registrado"
-      : `${totalContainersCount} contenedores registrados`;
-
-  const recordsLabel =
-    totalWasteRecords === 1 ? "1 entrada" : `${totalWasteRecords} entradas`;
-
-  const salesLabel =
-    totalSalesCount === 1 ? "1 venta" : `${totalSalesCount} ventas`;
-
+  void context;
   return [
-    "🌱 Resumen Operativo General de EcoPlaza:",
+    "No puedo responder con precisión a esa pregunta en modo local.",
     "",
-    `• Infraestructura: ${containersLabel} en la cuenta activa.`,
-    "• Volumen de residuos gestionados:",
-    `  - Total de registros: ${recordsLabel}.`,
-    `  - Peso total acumulado: ${formatWeightKg(totalRegisteredWeightKg)}.`,
-    `  - Stock disponible en inventario: ${formatWeightKg(availableWeightKg)}.`,
-    "• Estado comercial:",
-    `  - Transacciones de venta: ${salesLabel}.`,
-    `  - Ingresos brutos acumulados: ${formatCurrencyCop(grossRevenueCop)} COP.`,
-    "",
-    "¿En qué área específica deseas profundizar? Puedes preguntarme sobre:",
-    '• "Analizar tendencias de ventas de este mes"',
-    '• "Identificar residuos estancados en inventario"',
-    '• "Proyectar ingresos basados en stock actual"',
+    "Gemini no está disponible y el respaldo local solo responde consultas específicas de ventas, inventario, proyecciones o telemetría.",
+    "Prueba una de esas consultas o inténtalo de nuevo cuando Gemini esté en línea.",
   ].join("\n");
 }
 
@@ -658,15 +629,14 @@ export async function fetchIoTTelemetrySnapshots(): Promise<ContainerTelemetrySn
       const telemetryPromises: Promise<ContainerTelemetrySnapshot | null>[] =
         containersResult.data.map(async (c) => {
           try {
-            const tel = await getLatestTelemetry(c.id);
-            if (!tel) return null;
+          const tel = await getLatestTelemetry(c.code);
+            if (!tel || !isTelemetryFresh(tel.recordedAt)) return null;
             const snapshot: ContainerTelemetrySnapshot = {
               containerId: c.id,
               containerName: c.code,
               fillLevel: tel.fillLevelPercent,
-              batteryLevel: tel.batteryLevelPercent,
-              temperature: tel.temperatureCelsius,
               updatedAt: tel.recordedAt,
+              distanceCm: tel.distanceCm,
             };
             return snapshot;
           } catch {
@@ -693,8 +663,6 @@ export async function fetchIoTTelemetrySnapshots(): Promise<ContainerTelemetrySn
             : "iot-ctr-bog-001",
         containerName: "CTR-BOG-001",
         fillLevel: physicalTelemetry.fillPercentage,
-        batteryLevel: 100,
-        temperature: 22,
         updatedAt: physicalTelemetry.recordedAt,
         distanceCm: physicalTelemetry.distanceCm,
         status: physicalTelemetry.status,
@@ -741,6 +709,8 @@ export interface AssistantResponseResult {
   fallbackReason?: {
     code: GeminiErrorCode;
     message: string;
+    providerStatus?: number;
+    model?: string;
   };
 }
 
@@ -760,7 +730,7 @@ const FALLBACK_MESSAGES: Record<GeminiErrorCode, string> = {
   invalid_credentials: "La credencial del proveedor requiere revisión.",
   model_unavailable: "El modelo en línea no está disponible.",
   quota_exceeded: "La cuota de Gemini está agotada temporalmente.",
-  provider_unavailable: "Gemini está temporalmente saturado.",
+  provider_unavailable: "Gemini no está disponible temporalmente; la respuesta local no sustituye al proveedor.",
   timeout: "Gemini tardó demasiado en responder.",
   network_error: "No fue posible conectar con Gemini.",
   cancelled: "La consulta en línea fue cancelada.",
@@ -866,6 +836,10 @@ export async function generateAssistantResponseWithProvider(
   const effectiveTelemetry =
     typeof contextOrLang === "string" ? telemetryOverride : telemetryOverride;
   let fallbackCode: GeminiErrorCode;
+  let fallbackDiagnostics: {
+    providerStatus?: number;
+    model?: string;
+  } = {};
 
   // 1. Consultar prioritariamente el proxy autenticado de Gemini.
   if (geminiAiService.isConfigured()) {
@@ -900,6 +874,12 @@ export async function generateAssistantResponseWithProvider(
       fallbackCode = "malformed_response";
     } catch (error: unknown) {
       fallbackCode = classifyGeminiFailure(error);
+      if (error instanceof GeminiServiceError) {
+        fallbackDiagnostics = {
+          providerStatus: error.providerStatus,
+          model: error.model,
+        };
+      }
       if (import.meta.env?.DEV) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         console.warn(
@@ -928,7 +908,11 @@ export async function generateAssistantResponseWithProvider(
     provider: "local_fallback",
     engine: "local_fallback",
     fallbackReason: fallbackCode
-      ? { code: fallbackCode, message: FALLBACK_MESSAGES[fallbackCode] }
+      ? {
+          code: fallbackCode,
+          message: FALLBACK_MESSAGES[fallbackCode],
+          ...fallbackDiagnostics,
+        }
       : undefined,
   };
 }
@@ -965,4 +949,3 @@ export async function generateAssistantResponse(
         );
   return result.content;
 }
-

@@ -12,6 +12,7 @@ import {
 } from "../services/assistantStorage";
 import {
   fetchLatestTelemetryByContainer,
+  isTelemetryFresh,
   type SensorTelemetry,
 } from "../services/telemetryService";
 
@@ -40,7 +41,11 @@ export function AssistantPage({
   useEffect(() => {
     if (initialTelemetry !== undefined) return;
     void fetchLatestTelemetryByContainer("CTR-BOG-001")
-      .then((data) => setPhysicalTelemetry(data))
+      .then((data) =>
+        setPhysicalTelemetry(
+          data && isTelemetryFresh(data.recordedAt) ? data : null,
+        ),
+      )
       .catch(() => setPhysicalTelemetry(null));
   }, [initialTelemetry]);
 

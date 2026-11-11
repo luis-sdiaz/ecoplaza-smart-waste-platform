@@ -252,5 +252,28 @@ describe("WastePage Date Range Popover integration", () => {
       expect(screen.getByRole("button", { name: "01/10/2026 - 10/10/2026" })).toBeDefined();
     });
   });
+
+  test("clarifies the registered technical state without changing its totals", async () => {
+    wasteMocks.listWaste.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          id: "rec-registered",
+          recordNumber: "3",
+          containerId: "cont-1",
+          category: "organic",
+          weightKg: 25,
+          registeredAt: "2026-10-21T10:00:00.000Z",
+          status: "registered",
+        },
+      ],
+    });
+
+    render(<WastePage />);
+
+    expect(await screen.findByText("waste.registeredStateLabel")).toBeDefined();
+    expect(screen.getByText("waste.registeredStateDescription")).toBeDefined();
+    expect(screen.getByText("25 kg")).toBeDefined();
+  });
 });
 

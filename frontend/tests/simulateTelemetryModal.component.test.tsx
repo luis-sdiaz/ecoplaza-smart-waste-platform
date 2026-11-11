@@ -28,10 +28,9 @@ const mockMultiContainers = [
 
 const mockSavedRecord: TelemetryRecord = {
   id: "telem-sim-rec-1",
-  containerId: "ctr-uuid-sim-99",
+  containerId: "CTR-CENTRAL-SIM",
+  distanceCm: 24.5,
   fillLevelPercent: 78,
-  batteryLevelPercent: 95,
-  temperatureCelsius: 22,
   recordedAt: "2026-10-20T22:00:00.000Z",
 };
 
@@ -50,7 +49,7 @@ describe("SimulateTelemetryModal component", () => {
       <SimulateTelemetryModal
         isOpen={true}
         onClose={vi.fn()}
-        containerId="ctr-uuid-sim-99"
+        containerId="CTR-CENTRAL-SIM"
         containerName="CTR-CENTRAL-SIM"
       />,
     );
@@ -61,19 +60,15 @@ describe("SimulateTelemetryModal component", () => {
 
     expect(screen.getByText("sensors.simulateModalTitle")).toBeTruthy();
     expect(screen.getByTestId("selected-container-name").textContent).toBe("CTR-CENTRAL-SIM");
-    expect(screen.getByTestId("selected-container-uuid").textContent).toContain("ctr-uuid-sim-99");
+    expect(screen.getByTestId("selected-container-uuid").textContent).toContain("CTR-CENTRAL-SIM");
 
     const fillInput = screen.getByRole("spinbutton", { name: "sensors.simulateFillLevel" });
     expect(fillInput).toBeTruthy();
     expect((fillInput as HTMLInputElement).value).toBe("75");
 
-    const batteryInput = screen.getByRole("spinbutton", { name: "sensors.simulateBatteryLevel" });
-    expect(batteryInput).toBeTruthy();
-    expect((batteryInput as HTMLInputElement).value).toBe("95");
-
-    const tempInput = screen.getByRole("spinbutton", { name: "sensors.simulateTemperature" });
-    expect(tempInput).toBeTruthy();
-    expect((tempInput as HTMLInputElement).value).toBe("22");
+    const distanceInput = screen.getByRole("spinbutton", { name: "sensors.simulateDistance" });
+    expect(distanceInput).toBeTruthy();
+    expect((distanceInput as HTMLInputElement).value).toBe("25");
 
     expect(screen.getByRole("button", { name: "sensors.simulateSubmit" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "sensors.simulateCancel" })).toBeTruthy();
@@ -84,7 +79,7 @@ describe("SimulateTelemetryModal component", () => {
       <SimulateTelemetryModal
         isOpen={false}
         onClose={vi.fn()}
-        containerId="ctr-uuid-sim-99"
+        containerId="CTR-CENTRAL-SIM"
         containerName="CTR-CENTRAL-SIM"
       />,
     );
@@ -99,7 +94,7 @@ describe("SimulateTelemetryModal component", () => {
       <SimulateTelemetryModal
         isOpen={true}
         onClose={handleClose}
-        containerId="ctr-uuid-sim-99"
+        containerId="CTR-CENTRAL-SIM"
         containerName="CTR-CENTRAL-SIM"
         onTelemetryRecorded={handleRecorded}
       />,
@@ -108,11 +103,8 @@ describe("SimulateTelemetryModal component", () => {
     const fillInput = screen.getByRole("spinbutton", { name: "sensors.simulateFillLevel" });
     fireEvent.change(fillInput, { target: { value: "82" } });
 
-    const batteryInput = screen.getByRole("spinbutton", { name: "sensors.simulateBatteryLevel" });
-    fireEvent.change(batteryInput, { target: { value: "91" } });
-
-    const tempInput = screen.getByRole("spinbutton", { name: "sensors.simulateTemperature" });
-    fireEvent.change(tempInput, { target: { value: "24.5" } });
+    const distanceInput = screen.getByRole("spinbutton", { name: "sensors.simulateDistance" });
+    fireEvent.change(distanceInput, { target: { value: "24.5" } });
 
     const submitBtn = screen.getByRole("button", { name: "sensors.simulateSubmit" });
     fireEvent.click(submitBtn);
@@ -122,10 +114,9 @@ describe("SimulateTelemetryModal component", () => {
     });
 
     expect(mocks.recordTelemetry).toHaveBeenCalledWith({
-      containerId: "ctr-uuid-sim-99",
-      fillLevel: 82,
-      batteryLevel: 91,
-      temperature: 24.5,
+      containerId: "CTR-CENTRAL-SIM",
+      fillPercentage: 82,
+      distanceCm: 24.5,
     });
 
     expect(handleRecorded).toHaveBeenCalledWith(mockSavedRecord);
@@ -148,9 +139,9 @@ describe("SimulateTelemetryModal component", () => {
     const select = screen.getByRole("combobox", { name: "sensors.simulateContainer" });
     expect(select).toBeTruthy();
 
-    fireEvent.change(select, { target: { value: "ctr-uuid-sim-2" } });
+    fireEvent.change(select, { target: { value: "CTR-BETA" } });
 
-    expect(screen.getByTestId("selected-container-uuid").textContent).toContain("ctr-uuid-sim-2");
+    expect(screen.getByTestId("selected-container-uuid").textContent).toContain("CTR-BETA");
 
     const submitBtn = screen.getByRole("button", { name: "sensors.simulateSubmit" });
     fireEvent.click(submitBtn);
@@ -161,7 +152,7 @@ describe("SimulateTelemetryModal component", () => {
 
     expect(mocks.recordTelemetry).toHaveBeenCalledWith(
       expect.objectContaining({
-        containerId: "ctr-uuid-sim-2",
+        containerId: "CTR-BETA",
       }),
     );
   });
@@ -173,7 +164,7 @@ describe("SimulateTelemetryModal component", () => {
       <SimulateTelemetryModal
         isOpen={true}
         onClose={handleClose}
-        containerId="ctr-uuid-sim-99"
+        containerId="CTR-CENTRAL-SIM"
       />,
     );
 
@@ -200,7 +191,7 @@ describe("SimulateTelemetryModal component", () => {
       <SimulateTelemetryModal
         isOpen={true}
         onClose={handleClose}
-        containerId="ctr-uuid-sim-99"
+        containerId="CTR-CENTRAL-SIM"
       />,
     );
 

@@ -49,6 +49,7 @@ const mockContainer = {
 };
 
 const mockTelemetry: TelemetryRecord = {
+  distanceCm: 40,
   id: "tel-live-1",
   containerId: "ctr-live-uuid",
   fillLevelPercent: 55,
@@ -76,21 +77,22 @@ beforeEach(() => {
 });
 
 describe("SensorsPage Live Auto-Refresh periodic telemetry", () => {
-  test("auto-refresh toggle is disabled by default and reflects paused state", async () => {
+  test("keeps the auto-refresh control hidden in the page header", async () => {
     render(<SensorsPage />);
 
     expect(await screen.findByText("CTR-LIVE-01")).toBeTruthy();
 
-    const toggle = screen.getByRole("switch", { name: "sensors.autoRefreshAriaLabel" });
-    expect(toggle).toBeTruthy();
-    expect(toggle.getAttribute("aria-checked")).toBe("false");
-    expect(screen.getByText("sensors.paused")).toBeTruthy();
+    expect(screen.queryByRole("switch", {
+      name: "sensors.autoRefreshAriaLabel",
+    })).toBeNull();
+    expect(screen.queryByText("sensors.paused")).toBeNull();
+    expect(screen.queryByText("sensors.autoRefresh")).toBeNull();
   });
 
-  test("activates auto-refresh on toggle click and triggers periodic refresh every 10s", async () => {
+  test("retains internal auto-refresh when enabled by configuration", async () => {
     vi.useFakeTimers();
 
-    render(<SensorsPage />);
+    render(<SensorsPage initialAutoRefresh={true} />);
 
     // Resuelve la primera carga
     await act(async () => {
@@ -101,15 +103,9 @@ describe("SensorsPage Live Auto-Refresh periodic telemetry", () => {
     const initialCalls = mocks.getLatestTelemetry.mock.calls.length;
     expect(initialCalls).toBeGreaterThanOrEqual(1);
 
-    const toggle = screen.getByRole("switch", { name: "sensors.autoRefreshAriaLabel" });
-
-    // Activar toggle
-    await act(async () => {
-      fireEvent.click(toggle);
-    });
-
-    expect(toggle.getAttribute("aria-checked")).toBe("true");
-    expect(screen.getByText("sensors.live")).toBeTruthy();
+    expect(screen.queryByRole("switch", {
+      name: "sensors.autoRefreshAriaLabel",
+    })).toBeNull();
 
     // Avanzar 10 segundos
     await act(async () => {
@@ -126,7 +122,7 @@ describe("SensorsPage Live Auto-Refresh periodic telemetry", () => {
     expect(mocks.getLatestTelemetry.mock.calls.length).toBe(initialCalls + 2);
   });
 
-  test("cleans up timer on toggle deactivation and component unmount without orphaned executions", async () => {
+  test("cleans up the internal timer on unmount without orphaned executions", async () => {
     vi.useFakeTimers();
 
     const { unmount } = render(<SensorsPage initialAutoRefresh={true} />);
@@ -135,27 +131,7 @@ describe("SensorsPage Live Auto-Refresh periodic telemetry", () => {
       await vi.advanceTimersByTimeAsync(10);
     });
 
-    const toggle = screen.getByRole("switch", { name: "sensors.autoRefreshAriaLabel" });
-    expect(toggle.getAttribute("aria-checked")).toBe("true");
-
-    // Desactivar toggle
-    await act(async () => {
-      fireEvent.click(toggle);
-    });
-
-    expect(toggle.getAttribute("aria-checked")).toBe("false");
-    expect(screen.getByText("sensors.paused")).toBeTruthy();
-
-    const callsAfterPause = mocks.getLatestTelemetry.mock.calls.length;
-
-    // Avanzar 20 segundos: no deben ocurrir nuevas llamadas
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(20000);
-    });
-
-    expect(mocks.getLatestTelemetry.mock.calls.length).toBe(callsAfterPause);
-
-    // Desmontar el componente
+    const callsBeforeUnmount = mocks.getLatestTelemetry.mock.calls.length;
     unmount();
 
     // Avanzar otros 30 segundos
@@ -163,7 +139,7 @@ describe("SensorsPage Live Auto-Refresh periodic telemetry", () => {
       await vi.advanceTimersByTimeAsync(30000);
     });
 
-    expect(mocks.getLatestTelemetry.mock.calls.length).toBe(callsAfterPause);
+    expect(mocks.getLatestTelemetry.mock.calls.length).toBe(callsBeforeUnmount);
   });
 
   test("pauses periodic auto-refresh while history modal is open", async () => {

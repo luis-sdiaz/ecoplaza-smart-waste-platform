@@ -34,6 +34,7 @@ import { findTopRevenueCategory } from "../services/dashboardRevenueCategory";
 import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import {
   fetchLatestTelemetryByContainer,
+  isTelemetryFresh,
   type SensorTelemetry,
 } from "../services/telemetryService";
 
@@ -224,7 +225,9 @@ function UserDashboardPage({ userId }: { userId: string }) {
       void fetchLatestTelemetryByContainer("CTR-BOG-001")
         .then((data) => {
           if (requestRevision !== telemetryRevisionRef.current) return;
-          setLiveTelemetry(data);
+          setLiveTelemetry(
+            data && isTelemetryFresh(data.recordedAt) ? data : null,
+          );
         })
         .catch(() => {
           if (requestRevision !== telemetryRevisionRef.current) return;
@@ -264,6 +267,9 @@ function UserDashboardPage({ userId }: { userId: string }) {
   const topRevenueCategory = statistics === null
     ? null
     : findTopRevenueCategory(statistics.salesByCategory, statistics.grossSalesValue);
+  const demoSensorCount = showDemoData ? 3 : 0;
+  const physicalSensorCount = liveTelemetry === null ? 0 : 1;
+  const monitoredSensorCount = demoSensorCount + physicalSensorCount;
 
   return (
     <section className="p-8">
@@ -330,21 +336,22 @@ function UserDashboardPage({ userId }: { userId: string }) {
         </div>
       )}
 
-      <div className={`mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 ${showDemoData ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title={t("dashboard.registeredWaste")}
           value={metricValue((data) => formatWeight(data.totalRegisteredWeightKg))}
           description={t("dashboard.realWasteDescription")}
           icon={<Trash2 size={22} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
         />
-        {showDemoData && (
-          <MetricCard
-            title={t("dashboard.activeSensors")}
-            value="8"
-            description={t("dashboard.registeredSensors", { count: 10 })}
-            icon={<Radio size={22} className="text-emerald-700 dark:text-emerald-400" aria-hidden="true" />}
-          />
-        )}
+        <MetricCard
+          title={t("dashboard.monitoredSensors")}
+          value={String(monitoredSensorCount)}
+          description={t("dashboard.monitoredSensorsDescription", {
+            demoCount: demoSensorCount,
+            physicalCount: physicalSensorCount,
+          })}
+          icon={<Radio size={22} className="text-emerald-700 dark:text-emerald-400" aria-hidden="true" />}
+        />
         <MetricCard
           title={t("dashboard.availableInventory")}
           value={metricValue((data) => formatWeight(data.availableWeightKg))}
@@ -441,9 +448,13 @@ function UserDashboardPage({ userId }: { userId: string }) {
                     hasTelemetry={true}
                   />
                 )}
-                <SensorStatusCard name={`${t("waste.container")} 01`} category={t("common.wasteOrganic")} fillLevel={68} status={t("common.active")} />
-                <SensorStatusCard name={`${t("waste.container")} 02`} category={t("common.wasteRecyclable")} fillLevel={42} status={t("common.active")} />
-                <SensorStatusCard name={`${t("waste.container")} 03`} category={t("common.wasteNonRecyclable")} fillLevel={81} status={t("common.active")} />
+                {showDemoData && (
+                  <>
+                    <SensorStatusCard name={`${t("waste.container")} 01`} category={t("common.wasteOrganic")} fillLevel={68} status={t("common.active")} />
+                    <SensorStatusCard name={`${t("waste.container")} 02`} category={t("common.wasteRecyclable")} fillLevel={42} status={t("common.active")} />
+                    <SensorStatusCard name={`${t("waste.container")} 03`} category={t("common.wasteNonRecyclable")} fillLevel={81} status={t("common.active")} />
+                  </>
+                )}
               </div>
             </div>
           </div>

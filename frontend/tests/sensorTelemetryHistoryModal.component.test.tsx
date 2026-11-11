@@ -25,25 +25,22 @@ const mockRecords: TelemetryRecord[] = [
   {
     id: "telem-rec-1",
     containerId: "ctr-test-01",
+    distanceCm: 11.5,
     fillLevelPercent: 88, // > 80: critical alert badge, red bar
-    batteryLevelPercent: 18, // <= 20: BatteryWarning (danger)
-    temperatureCelsius: 25.5,
     recordedAt: "2026-10-25T10:00:00.000Z",
   },
   {
     id: "telem-rec-2",
     containerId: "ctr-test-01",
+    distanceCm: 45,
     fillLevelPercent: 45, // <= 80: normal
-    batteryLevelPercent: 42, // <= 50: BatteryMedium (warning)
-    temperatureCelsius: null, // null: renders "—"
     recordedAt: "2026-10-25T09:00:00.000Z",
   },
   {
     id: "telem-rec-3",
     containerId: "ctr-test-01",
+    distanceCm: 80.25,
     fillLevelPercent: 10,
-    batteryLevelPercent: 95, // > 50: Battery (primary)
-    temperatureCelsius: 19.8,
     recordedAt: "2026-10-25T08:00:00.000Z",
   },
 ];
@@ -179,7 +176,7 @@ describe("SensorTelemetryHistoryModal component", () => {
     expect(mocks.getTelemetryHistory).toHaveBeenCalledTimes(2);
   });
 
-  test("renders empty state when no telemetry exists, and table with metrics, alert badge and battery indicators when telemetry is present", async () => {
+  test("renders empty state and real telemetry columns when history is present", async () => {
     // Sub-caso A: Colección vacía
     mocks.getTelemetryHistory.mockResolvedValueOnce([]);
 
@@ -214,8 +211,7 @@ describe("SensorTelemetryHistoryModal component", () => {
     // Columnas de encabezado
     expect(screen.getByRole("columnheader", { name: "sensors.historyColDate" })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "sensors.historyColFill" })).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "sensors.historyColBattery" })).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "sensors.historyColTemperature" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "sensors.historyColDistance" })).toBeTruthy();
 
     // Valores de llenado
     expect(screen.getByText("88%")).toBeTruthy();
@@ -225,15 +221,9 @@ describe("SensorTelemetryHistoryModal component", () => {
     // Badge de alerta crítica para llenado > 80%
     expect(screen.getByText("sensors.alertStatus")).toBeTruthy();
 
-    // Valores de batería
-    expect(screen.getByText("18%")).toBeTruthy();
-    expect(screen.getByText("42%")).toBeTruthy();
-    expect(screen.getByText("95%")).toBeTruthy();
-
-    // Valores de temperatura (incluyendo null -> "—")
-    expect(screen.getByText("25.5 °C")).toBeTruthy();
-    expect(screen.getByText("19.8 °C")).toBeTruthy();
-    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText("11.5 cm")).toBeTruthy();
+    expect(screen.getByText("45 cm")).toBeTruthy();
+    expect(screen.getByText("80.25 cm")).toBeTruthy();
   });
 });
 

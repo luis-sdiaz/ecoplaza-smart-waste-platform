@@ -77,20 +77,18 @@ const mockContainerEmpty = {
 
 const telemetryAlpha: TelemetryRecord = {
   id: "tel-001",
-  containerId: "ctr-uuid-alpha",
+  containerId: "CTR-ALPHA",
+  distanceCm: 35,
   fillLevelPercent: 65,
-  batteryLevelPercent: 92,
-  temperatureCelsius: 21.8,
-  recordedAt: "2026-10-20T14:00:00.000Z",
+  recordedAt: new Date().toISOString(),
 };
 
 const telemetryCritical: TelemetryRecord = {
   id: "tel-002",
-  containerId: "ctr-uuid-critical",
+  containerId: "CTR-CRITICAL",
+  distanceCm: 12,
   fillLevelPercent: 88,
-  batteryLevelPercent: 18,
-  temperatureCelsius: 26.4,
-  recordedAt: "2026-10-20T14:15:00.000Z",
+  recordedAt: new Date().toISOString(),
 };
 
 afterEach(() => {
@@ -113,7 +111,7 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
       containerId: "CTR-BOG-001",
       distanceCm: 21.2,
       fillPercentage: 78.8,
-      recordedAt: "2026-11-05T12:00:00.000Z",
+      recordedAt: new Date().toISOString(),
       status: "warning",
     };
     mocks.listContainers.mockResolvedValue({ ok: true, data: [mockContainerA] });
@@ -129,13 +127,13 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
     expect(screen.getByTestId("sensor-alerts-kpi").textContent).toContain("1");
   });
 
-  test("renders complete telemetry data correctly (fill level, battery, temperature, formatted date)", async () => {
+  test("renders complete real telemetry data with fill and measured distance", async () => {
     mocks.listContainers.mockResolvedValue({
       ok: true,
       data: [mockContainerA],
     });
     mocks.getLatestTelemetry.mockImplementation(async (id: string) => {
-      if (id === mockContainerA.id) return telemetryAlpha;
+      if (id === mockContainerA.code) return telemetryAlpha;
       return null;
     });
 
@@ -149,9 +147,7 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
     expect(screen.getAllByText("65%").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("common.active")).toBeTruthy();
 
-    // Batería y temperatura
-    expect(screen.getByText("92%")).toBeTruthy();
-    expect(screen.getByText("21.8 °C")).toBeTruthy();
+    expect(screen.getAllByText("—")).toHaveLength(2);
 
     // Telemetría con fecha válida (no muestra fallback de sin lectura)
     expect(screen.queryByText("sensors.noTelemetry")).toBeNull();
@@ -173,9 +169,6 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
     expect(screen.getByText("sensors.criticalFillAlert")).toBeTruthy();
     expect(screen.getByText("sensors.alertStatus")).toBeTruthy();
 
-    // Nivel de batería baja
-    expect(screen.getByText("18%")).toBeTruthy();
-    expect(screen.getByText("26.4 °C")).toBeTruthy();
   });
 
   test("omits database containers without telemetry from the active monitoring grid", async () => {
@@ -200,7 +193,7 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
       data: [mockContainerA, mockContainerEmpty],
     });
     mocks.getLatestTelemetry.mockImplementation(async (id: string) => {
-      if (id === mockContainerA.id) return telemetryAlpha;
+      if (id === mockContainerA.code) return telemetryAlpha;
       throw new Error("Supabase timeout on telemetry query");
     });
 
@@ -229,6 +222,12 @@ describe("IoT Telemetry integration in SensorsPage and SensorDeviceCard", () => 
     expect(mocks.getLatestTelemetry).toHaveBeenCalledTimes(1);
 
     const refreshBtn = screen.getByRole("button", { name: "sensors.refreshTelemetry" });
+    expect(screen.queryByRole("switch", {
+      name: "sensors.autoRefreshAriaLabel",
+    })).toBeNull();
+    expect(screen.queryByRole("button", {
+      name: "sensors.simulateReading",
+    })).toBeNull();
     fireEvent.click(refreshBtn);
 
     // Verifica que se volvió a consultar

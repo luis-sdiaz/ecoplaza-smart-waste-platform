@@ -47,10 +47,8 @@ vi.mock("react-i18next", () => ({
 const mockBuyer: Buyer = {
   id: "buyer-abc-123",
   name: "Recuperadora Bolívar S.A.S.",
-  documentNumber: "901234567-8",
   phone: "3101234567",
   email: "contacto@bolivar.com",
-  address: "Zona Industrial Lote 4",
   status: "active",
   createdAt: "2026-10-01T12:00:00.000Z",
   updatedAt: "2026-10-01T12:00:00.000Z",

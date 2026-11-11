@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, AlertTriangle, LoaderCircle, Radio, RefreshCw } from "lucide-react";
+import { AlertTriangle, LoaderCircle, Radio, RefreshCw } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import PageHeader from "../components/PageHeader";
 import LiveTelemetryCard from "../components/LiveTelemetryCard";
@@ -13,7 +13,10 @@ import { useAuth } from "../auth/AuthContext";
 import { useDemoVisibility } from "../context/DemoVisibilityContext";
 import { listContainers, type Container } from "../services/containerService";
 import { getLatestTelemetry, type TelemetryRecord } from "../services/sensorService";
-import type { SensorTelemetry } from "../services/telemetryService";
+import {
+  isTelemetryFresh,
+  type SensorTelemetry,
+} from "../services/telemetryService";
 
 type ContainerTelemetryMap = Map<string, TelemetryRecord | null>;
 
@@ -83,7 +86,7 @@ function SensorsPageView({
   const [isLoading, setIsLoading] = useState(initialContainers === undefined && Boolean(user));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [historyTarget, setHistoryTarget] = useState<{ id: string; name: string } | null>(null);
-  const [isAutoRefreshEnabled, setIsAutoRefreshEnabled] = useState(initialAutoRefresh);
+  const [isAutoRefreshEnabled] = useState(initialAutoRefresh);
   const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false);
   const [simulateTarget, setSimulateTarget] = useState<{ id: string; name: string } | null>(null);
   const [simulationNotice, setSimulationNotice] = useState(false);
@@ -96,11 +99,14 @@ function SensorsPageView({
   const handleTelemetryRecorded = useCallback((record: TelemetryRecord) => {
     setTelemetryByContainer((prev) => {
       const next = new Map(prev);
-      next.set(record.containerId, record);
+      const matchingContainer = containers.find(
+        (container) => container.code === record.containerId,
+      );
+      if (matchingContainer) next.set(matchingContainer.id, record);
       return next;
     });
     setSimulationNotice(true);
-  }, []);
+  }, [containers]);
 
   const isBusyRef = useRef(isLoading);
   useEffect(() => {
@@ -140,7 +146,7 @@ function SensorsPageView({
         const telemetryEntries = await Promise.all(
           loadedContainers.map(async (container) => {
             try {
-              const telemetry = await getLatestTelemetry(container.id);
+              const telemetry = await getLatestTelemetry(container.code);
               return [container.id, telemetry] as const;
             } catch {
               return [container.id, null] as const;
@@ -204,18 +210,20 @@ function SensorsPageView({
   const telemetryList = containers
     .map((c) => telemetryByContainer.get(c.id))
     .filter((t): t is TelemetryRecord => t !== null && t !== undefined);
+  const currentTelemetryList = telemetryList.filter((telemetry) =>
+    isTelemetryFresh(telemetry.recordedAt),
+  );
   const telemetryForKpis = physicalTelemetry
-    ? telemetryList.filter((telemetry) => {
-        const container = containers.find((item) => item.id === telemetry.containerId);
+    ? currentTelemetryList.filter((telemetry) => {
+        const container = containers.find((item) => item.code === telemetry.containerId);
         return !container || !isPhysicalContainer(container);
       })
-    : telemetryList;
-  const activeContainers = containers.filter((container) =>
-    telemetryByContainer.get(container.id),
+    : currentTelemetryList;
+  const monitoredContainers = containers.filter((container) =>
+    telemetryByContainer.get(container.id) != null,
   );
   const hasPhysicalContainer = containers.some(isPhysicalContainer);
-  const hasOnlyPhysicalContainer = containers.length === 1 && hasPhysicalContainer;
-  const showNetworkFallback = showDemoData || hasOnlyPhysicalContainer;
+  const showNetworkFallback = showDemoData;
   const networkFillLevels = showNetworkFallback
     ? [...NETWORK_NODE_FILL_LEVELS]
     : telemetryForKpis.map((telemetry) => telemetry.fillLevelPercent ?? 0);
@@ -276,62 +284,6 @@ function SensorsPageView({
         actions={
           user ? (
             <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 backdrop-blur-md">
-              {/* Toggle de Auto-refresco en vivo */}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isAutoRefreshEnabled}
-                onClick={() => setIsAutoRefreshEnabled((current) => !current)}
-                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 ${
-                  isAutoRefreshEnabled
-                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shadow-sm"
-                    : "border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:border-emerald-500/30 hover:text-emerald-600 dark:hover:text-emerald-400"
-                }`}
-                aria-label={t("sensors.autoRefreshAriaLabel")}
-                title={t("sensors.refreshEvery10s")}
-              >
-                <span className="relative flex h-2.5 w-2.5 items-center justify-center">
-                  {isAutoRefreshEnabled && (
-                    <span
-                      className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <span
-                    className={`relative inline-flex h-2 w-2 rounded-full transition-colors ${
-                      isAutoRefreshEnabled
-                        ? "bg-emerald-500"
-                        : "bg-slate-400 dark:bg-slate-600"
-                    }`}
-                    aria-hidden="true"
-                  />
-                </span>
-                <span>
-                  {t(isAutoRefreshEnabled ? "sensors.live" : "sensors.paused")}
-                </span>
-                <span className="hidden sm:inline text-[11px] font-normal opacity-80">
-                  ({t("sensors.autoRefresh")})
-                </span>
-              </button>
-
-              {/* Botón Simular lectura */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSimulateTarget(null);
-                  setIsSimulateModalOpen(true);
-                }}
-                disabled={isLoading || containers.length === 0}
-                className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                aria-label={t("sensors.simulateReading")}
-                title={t("sensors.simulateReading")}
-              >
-                <Activity size={15} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
-                <span className="hidden sm:inline">
-                  {t("sensors.simulateReading")}
-                </span>
-              </button>
-
               {/* Botón de recarga manual */}
               <button
                 type="button"
@@ -363,6 +315,9 @@ function SensorsPageView({
               containers.find(
                 (c) => c.code === "CTR-BOG-001" || c.id === "CTR-BOG-001",
               )?.code ?? "CTR-BOG-001"
+            }
+            refreshIntervalMs={
+              isAutoRefreshEnabled ? AUTO_REFRESH_INTERVAL_MS : undefined
             }
             onTelemetryChange={handlePhysicalTelemetryChange}
           />
@@ -414,6 +369,13 @@ function SensorsPageView({
             </p>
           </div>
 
+          {showNetworkFallback && (
+            <div className="mt-5 rounded-xl border border-amber-300/70 bg-amber-50/80 px-4 py-3 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              <p className="text-sm font-semibold">{t("sensors.demoTitle")}</p>
+              <p className="mt-0.5 text-xs">{t("sensors.demoDescription")}</p>
+            </div>
+          )}
+
           {isLoading ? (
             <div
               role="status"
@@ -447,7 +409,7 @@ function SensorsPageView({
                 {t("containers.retry")}
               </button>
             </div>
-          ) : activeContainers.length === 0 && !showNetworkFallback ? (
+          ) : monitoredContainers.length === 0 && !showNetworkFallback ? (
             <div className="mt-6 flex min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-8 text-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <Radio size={24} strokeWidth={1.8} aria-hidden="true" />
@@ -483,8 +445,9 @@ function SensorsPageView({
                     className="h-full"
                   />
                 ))
-                : activeContainers.map((container) => {
+                : monitoredContainers.map((container) => {
                   const telemetry = telemetryByContainer.get(container.id)!;
+                   const isCurrent = isTelemetryFresh(telemetry.recordedAt);
 
                   return (
                   <SensorDeviceCard
@@ -493,17 +456,17 @@ function SensorsPageView({
                     sensorId={container.id}
                     hasTelemetry={true}
                     fillLevel={telemetry.fillLevelPercent}
-                    batteryLevel={telemetry.batteryLevelPercent}
-                    temperatureCelsius={telemetry.temperatureCelsius}
                     status={
-                      telemetry.fillLevelPercent > 80
+                      !isCurrent
+                        ? t("sensors.historicalStatus")
+                        : telemetry.fillLevelPercent > 80
                         ? t("sensors.alertStatus")
                         : t("common.active")
                     }
                     lastUpdate={formatTelemetryTimestamp(telemetry.recordedAt, locale)}
                     onViewHistory={() =>
                       setHistoryTarget({
-                        id: container.id,
+                        id: container.code,
                         name: container.code,
                       })
                     }

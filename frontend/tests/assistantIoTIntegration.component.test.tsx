@@ -56,20 +56,18 @@ const mockContainers: Container[] = [
 
 const mockTelemetry1: TelemetryRecord = {
   id: "tel-01",
-  containerId: "ctr-iot-01",
+  containerId: "CTR-PLAZA-CENTRAL",
+  distanceCm: 8,
   fillLevelPercent: 93,
-  batteryLevelPercent: 14,
-  temperatureCelsius: 22.4,
-  recordedAt: "2026-10-21T18:00:00.000Z",
+  recordedAt: new Date().toISOString(),
 };
 
 const mockTelemetry2: TelemetryRecord = {
   id: "tel-02",
-  containerId: "ctr-iot-02",
+  containerId: "CTR-PLAZA-SUR",
+  distanceCm: 55,
   fillLevelPercent: 45,
-  batteryLevelPercent: 88,
-  temperatureCelsius: 19.8,
-  recordedAt: "2026-10-21T18:02:00.000Z",
+  recordedAt: new Date().toISOString(),
 };
 
 function LocationObserver() {
@@ -88,8 +86,8 @@ describe("Integración Reactiva de Telemetría IoT en Panel del Asistente (Tarea
       data: mockContainers,
     });
     mocks.getLatestTelemetry.mockImplementation(async (id: string) => {
-      if (id === "ctr-iot-01") return mockTelemetry1;
-      if (id === "ctr-iot-02") return mockTelemetry2;
+      if (id === "CTR-PLAZA-CENTRAL") return mockTelemetry1;
+      if (id === "CTR-PLAZA-SUR") return mockTelemetry2;
       return null;
     });
   });
@@ -111,23 +109,20 @@ describe("Integración Reactiva de Telemetría IoT en Panel del Asistente (Tarea
     });
     const sendButton = screen.getByRole("button", { name: "Enviar mensaje" });
 
-    // Consultar por estado de baterías
+    // Consultar por estado general con las mediciones disponibles en el esquema.
     fireEvent.change(input, {
-      target: { value: "¿Cuál es el estado de la batería de los sensores?" },
+      target: { value: "¿Cuál es el estado de los sensores?" },
     });
     fireEvent.click(sendButton);
 
-    // Debe mostrar la respuesta generada con heurística de batería
+    // Debe mostrar la respuesta generada con telemetría real, sin batería inventada.
     expect(
-      await screen.findByText(/Estado de Baterías de Sensores IoT/i),
+      await screen.findByText(/Diagnóstico General de Flota y Sensores IoT/i),
     ).toBeDefined();
-    expect(await screen.findByText(/14% de batería/i)).toBeDefined();
-    expect(await screen.findByText(/CTR-PLAZA-CENTRAL/i)).toBeDefined();
-
     // Validar que se invocaron los servicios de contenedores y telemetría en vivo
     expect(mocks.listContainers).toHaveBeenCalledTimes(1);
-    expect(mocks.getLatestTelemetry).toHaveBeenCalledWith("ctr-iot-01");
-    expect(mocks.getLatestTelemetry).toHaveBeenCalledWith("ctr-iot-02");
+    expect(mocks.getLatestTelemetry).toHaveBeenCalledWith("CTR-PLAZA-CENTRAL");
+    expect(mocks.getLatestTelemetry).toHaveBeenCalledWith("CTR-PLAZA-SUR");
   });
 
   test("b) Validar renderizado accesible de la acción rápida hacia /sensors cuando se genera una respuesta de diagnóstico IoT", async () => {

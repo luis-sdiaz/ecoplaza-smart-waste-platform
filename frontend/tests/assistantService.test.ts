@@ -247,7 +247,7 @@ test("generates projection response by multiplying available weight with average
   assert.match(response, /\$ 300\.000.*COP/);
 });
 
-test("generates general operational summary with containers, waste volume, and sales", async () => {
+test("does not invent an operational summary for an unsupported general question", async () => {
   const context = buildAssistantAnalyticsContext(
     mockWasteRecords,
     mockSales,
@@ -260,12 +260,9 @@ test("generates general operational summary with containers, waste volume, and s
     context,
   );
 
-  assert.match(response, /2 contenedores registrados/);
-  assert.match(response, /4 entradas/);
-  assert.match(response, /250 kg/);
-  assert.match(response, /200 kg/);
-  assert.match(response, /2 ventas/);
-  assert.match(response, /\$ 150\.000.*COP/);
+  assert.match(response, /no puedo responder con precisión/i);
+  assert.match(response, /modo local/i);
+  assert.doesNotMatch(response, /250 kg|2 ventas|150\.000/);
 });
 
 test("handles empty datasets safely without NaN or crashes", async () => {
@@ -294,8 +291,7 @@ test("handles empty datasets safely without NaN or crashes", async () => {
   assert.match(projRes, /Sin datos suficientes/);
 
   const genRes = formatAssistantGeneralResponse(emptyContext);
-  assert.match(genRes, /0 contenedores/);
-  assert.match(genRes, /0 entradas/);
+  assert.match(genRes, /no puedo responder con precisión/i);
 });
 
 test("supports custom data provider for seamless integration and mocking", async () => {
@@ -854,7 +850,6 @@ test("generateAssistantResponseWithProvider: fallback a modo local ante timeout 
     geminiAiService.configure({ enabled: false });
   }
 });
-
 
 
 

@@ -13,6 +13,11 @@ const reportMocks = vi.hoisted(() => ({
 
 const telemetryMocks = vi.hoisted(() => ({
   fetchLatestTelemetryByContainer: vi.fn(),
+  isFresh: true,
+}));
+
+const demoVisibility = vi.hoisted(() => ({
+  showDemoData: true,
 }));
 
 const mockStats: ReportStatistics = {
@@ -35,7 +40,13 @@ const mockStats: ReportStatistics = {
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: Record<string, unknown>) => {
+      if (key === "dashboard.monitoredSensors") return "Sensores monitoreados";
+      if (key === "dashboard.monitoredSensorsDescription") {
+        return `${options?.demoCount} demostrativos · ${options?.physicalCount} físico en línea`;
+      }
+      return key;
+    },
     i18n: { resolvedLanguage: "es" },
   }),
 }));
@@ -45,7 +56,7 @@ vi.mock("../src/auth/AuthContext", () => ({
 }));
 
 vi.mock("../src/context/DemoVisibilityContext", () => ({
-  useDemoVisibility: () => ({ showDemoData: true }),
+  useDemoVisibility: () => demoVisibility,
 }));
 
 vi.mock("../src/services/reportService", () => ({
@@ -66,6 +77,7 @@ vi.mock("../src/services/containerService", () => ({
 
 vi.mock("../src/services/telemetryService", () => ({
   fetchLatestTelemetryByContainer: telemetryMocks.fetchLatestTelemetryByContainer,
+  isTelemetryFresh: () => telemetryMocks.isFresh,
 }));
 
 import DashboardPage from "../src/pages/DashboardPage";
@@ -73,6 +85,8 @@ import DashboardPage from "../src/pages/DashboardPage";
 describe("DashboardPage IoT Telemetry Integration (CTR-BOG-001)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    demoVisibility.showDemoData = true;
+    telemetryMocks.isFresh = true;
     reportMocks.getReportStatistics.mockResolvedValue({ ok: true, data: mockStats });
   });
 
@@ -86,7 +100,7 @@ describe("DashboardPage IoT Telemetry Integration (CTR-BOG-001)", () => {
       containerId: "CTR-BOG-001",
       distanceCm: 25.0,
       fillPercentage: 75.5,
-      recordedAt: "2026-11-04T18:00:00Z",
+      recordedAt: new Date().toISOString(),
       status: "warning",
     };
 
@@ -104,6 +118,10 @@ describe("DashboardPage IoT Telemetry Integration (CTR-BOG-001)", () => {
     expect(screen.getByText("waste.container 01")).toBeTruthy();
     expect(screen.getByText("waste.container 02")).toBeTruthy();
     expect(screen.getByText("waste.container 03")).toBeTruthy();
+
+    const monitoredSensors = screen.getByText("Sensores monitoreados").closest("article")!;
+    expect(monitoredSensors.textContent).toContain("4");
+    expect(monitoredSensors.textContent).toContain("3 demostrativos · 1 físico en línea");
   });
 
   test("incorpora reactivamente la lectura de CTR-BOG-001 con estado Critical cuando supera el 90%", async () => {
@@ -112,7 +130,7 @@ describe("DashboardPage IoT Telemetry Integration (CTR-BOG-001)", () => {
       containerId: "CTR-BOG-001",
       distanceCm: 8.0,
       fillPercentage: 92.0,
-      recordedAt: "2026-11-04T18:05:00Z",
+      recordedAt: new Date().toISOString(),
       status: "critical",
     };
 
@@ -135,6 +153,52 @@ describe("DashboardPage IoT Telemetry Integration (CTR-BOG-001)", () => {
     expect(screen.getByText("waste.container 03")).toBeTruthy();
     expect(screen.queryByText("CTR-BOG-001")).toBeNull();
     expect(screen.queryByTestId("iot-live-badge")).toBeNull();
+
+    const monitoredSensors = screen.getByText("Sensores monitoreados").closest("article")!;
+    expect(monitoredSensors.textContent).toContain("3");
+    expect(monitoredSensors.textContent).toContain("3 demostrativos · 0 físico en línea");
+  });
+
+  test("no contabiliza como físico en línea una lectura histórica", async () => {
+    telemetryMocks.isFresh = false;
+    telemetryMocks.fetchLatestTelemetryByContainer.mockResolvedValueOnce({
+      id: "telem-stale",
+      containerId: "CTR-BOG-001",
+      distanceCm: 25,
+      fillPercentage: 75,
+      recordedAt: "2026-11-01T12:00:00.000Z",
+      status: "warning",
+    } satisfies SensorTelemetry);
+
+    render(<DashboardPage />);
+
+    const monitoredSensors = await screen.findByText("Sensores monitoreados");
+    const card = monitoredSensors.closest("article")!;
+    expect(card.textContent).toContain("3");
+    expect(card.textContent).toContain("3 demostrativos · 0 físico en línea");
+    expect(screen.queryByText("CTR-BOG-001")).toBeNull();
+  });
+
+  test("cuenta únicamente el sensor físico cuando los demostrativos están ocultos", async () => {
+    demoVisibility.showDemoData = false;
+    telemetryMocks.fetchLatestTelemetryByContainer.mockResolvedValueOnce({
+      id: "telem-physical-only",
+      containerId: "CTR-BOG-001",
+      distanceCm: 20,
+      fillPercentage: 80,
+      recordedAt: new Date().toISOString(),
+      status: "warning",
+    } satisfies SensorTelemetry);
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("CTR-BOG-001")).toBeTruthy();
+    const card = screen.getByText("Sensores monitoreados").closest("article")!;
+    expect(card.textContent).toContain("1");
+    expect(card.textContent).toContain("0 demostrativos · 1 físico en línea");
+    expect(screen.queryByText("waste.container 01")).toBeNull();
+    expect(screen.queryByText("waste.container 02")).toBeNull();
+    expect(screen.queryByText("waste.container 03")).toBeNull();
   });
 });
 

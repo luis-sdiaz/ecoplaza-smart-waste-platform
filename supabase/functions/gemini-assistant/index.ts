@@ -51,8 +51,12 @@ function errorResponse(
   code: ErrorCode,
   message: string,
   retryable = false,
+  diagnostics?: { providerStatus?: number; model?: string },
 ): Response {
-  return jsonResponse({ ok: false, error: { code, message, retryable } }, status);
+  return jsonResponse(
+    { ok: false, error: { code, message, retryable, ...diagnostics } },
+    status,
+  );
 }
 
 function getPublishableKey(): string {
@@ -99,6 +103,9 @@ function classifyProviderError(status: number): {
   }
   if (status === 404) return { code: "model_unavailable", status: 503, retryable: true };
   if (status === 429) return { code: "quota_exceeded", status: 503, retryable: true };
+  if (status === 500) {
+    return { code: "provider_unavailable", status: 503, retryable: true };
+  }
   if (status === 503 || status === 504) {
     return { code: "provider_unavailable", status: 503, retryable: true };
   }
@@ -166,9 +173,12 @@ Deno.serve(async (request: Request) => {
       : 1_024;
 
   let lastFailure = { code: "model_unavailable" as ErrorCode, status: 503, retryable: true };
+  let lastModel = readModels()[0] ?? "unknown";
+  let lastProviderStatus = 404;
   const startedAt = performance.now();
 
   for (const model of readModels()) {
+    lastModel = model;
     try {
       const response = await fetch(
         `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:generateContent`,
@@ -191,6 +201,10 @@ Deno.serve(async (request: Request) => {
 
       if (!response.ok) {
         lastFailure = classifyProviderError(response.status);
+        lastProviderStatus = response.status;
+        console.warn(
+          `[gemini-assistant] provider_failure status=${response.status} model=${model}`,
+        );
         if (response.status === 404 || response.status === 503 || response.status === 504) {
           continue;
         }
@@ -219,9 +233,13 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       if (error instanceof DOMException && error.name === "TimeoutError") {
         lastFailure = { code: "timeout", status: 504, retryable: true };
+        lastProviderStatus = 504;
+        console.warn(`[gemini-assistant] provider_timeout model=${model}`);
         continue;
       }
       lastFailure = { code: "provider_unavailable", status: 503, retryable: true };
+      lastProviderStatus = 0;
+      console.warn(`[gemini-assistant] provider_network_failure model=${model}`);
       continue;
     }
   }
@@ -244,5 +262,9 @@ Deno.serve(async (request: Request) => {
     lastFailure.code,
     safeMessages[lastFailure.code],
     lastFailure.retryable,
+    {
+      ...(lastProviderStatus > 0 ? { providerStatus: lastProviderStatus } : {}),
+      model: lastModel,
+    },
   );
 });

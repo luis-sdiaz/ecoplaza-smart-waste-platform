@@ -144,12 +144,6 @@ export default function DeleteBuyerModal({
                     <span className="font-medium text-ecoplaza-text">BUY-{selectedBuyer.id.slice(0, 8).toUpperCase()}</span>
                     {" • "}
                     <span>{selectedBuyer.name}</span>
-                    {selectedBuyer.documentNumber && (
-                      <>
-                        {" • "}
-                        <span>{selectedBuyer.documentNumber}</span>
-                      </>
-                    )}
                   </p>
                 </div>
               )}

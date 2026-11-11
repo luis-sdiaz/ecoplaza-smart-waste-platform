@@ -56,10 +56,9 @@ function storePreference(key: string, value: string): boolean {
 function SettingsPanel() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
-  const { showDemoData, setShowDemoData } = useDemoVisibility();
+  const { setShowDemoData } = useDemoVisibility();
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(readWeightUnit);
-  const [demoCategory, setDemoCategory] =
-    useState<DemoCategory>(readDemoCategory);
+  const [, setDemoCategory] = useState<DemoCategory>(readDemoCategory);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetToastId, setResetToastId] = useState<number | null>(null);
 
@@ -88,22 +87,6 @@ function SettingsPanel() {
 
     setWeightUnit(DEFAULT_WEIGHT_UNIT);
     storePreference(WEIGHT_UNIT_STORAGE_KEY, DEFAULT_WEIGHT_UNIT);
-  };
-
-  const handleDemoCategoryChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ): void => {
-    if (
-      event.target.value !== "organic" &&
-      event.target.value !== "recyclable" &&
-      event.target.value !== "non-recyclable"
-    ) {
-      return;
-    }
-
-    const category = event.target.value as DemoCategory;
-    setDemoCategory(category);
-    storePreference(DEMO_CATEGORY_STORAGE_KEY, category);
   };
 
   const handleResetPreferences = (): void => {
@@ -144,8 +127,8 @@ function SettingsPanel() {
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <article className="ecoplaza-settings-card rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <article className="ecoplaza-settings-card h-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6">
         <h2 className="text-base font-semibold text-ecoplaza-text">
           {t("settings.general")}
         </h2>
@@ -228,57 +211,7 @@ function SettingsPanel() {
         </div>
       </article>
 
-      <article className="ecoplaza-settings-card rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6">
-        <h2 className="text-base font-semibold text-ecoplaza-text">
-          {t("settings.demoContainer")}
-        </h2>
-
-        <p className="mt-1 text-sm text-ecoplaza-text-muted">
-          {t("settings.demoDescription")}
-        </p>
-
-        <div className="mt-6">
-          <label
-            htmlFor="demo-category"
-            className="block text-sm font-medium text-ecoplaza-text"
-          >
-            {t("settings.assignedCategory")}
-          </label>
-
-          <select
-            id="demo-category"
-            value={demoCategory}
-            onChange={handleDemoCategoryChange}
-            className="mt-2 w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-background px-4 py-3 text-sm text-ecoplaza-text outline-none"
-          >
-            <option value="organic">{t("common.wasteOrganic")}</option>
-            <option value="recyclable">{t("common.wasteRecyclable")}</option>
-            <option value="non-recyclable">{t("common.wasteNonRecyclable")}</option>
-          </select>
-
-          <p className="mt-3 text-xs leading-5 text-ecoplaza-text-muted">
-            {t("settings.demoHelp")}
-          </p>
-
-          <div className="mt-5 border-t border-ecoplaza-border pt-4">
-            <label htmlFor="show-demo-data" className="flex items-center justify-between cursor-pointer">
-              <span className="mr-3">
-                <span className="block text-sm font-medium text-ecoplaza-text">{t("settings.showDemoData")}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-ecoplaza-text-muted">{t("settings.showDemoDataDescription")}</span>
-              </span>
-              <input
-                id="show-demo-data"
-                type="checkbox"
-                checked={showDemoData}
-                onChange={(event) => setShowDemoData(event.target.checked)}
-                className="h-5 w-5 rounded border-ecoplaza-border text-ecoplaza-primary focus:ring-ecoplaza-primary"
-              />
-            </label>
-          </div>
-        </div>
-      </article>
-
-      <article className="ecoplaza-settings-card col-span-2 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6">
+      <article className="ecoplaza-settings-card h-full rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6">
         <h2 className="text-base font-semibold text-ecoplaza-text">
           {t("settings.appearance")}
         </h2>
@@ -288,7 +221,7 @@ function SettingsPanel() {
         </p>
 
         <fieldset
-          className="mt-5 grid max-w-2xl grid-cols-2 gap-3"
+          className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2"
           role="radiogroup"
           aria-label={t("settings.appearance")}
         >
@@ -376,7 +309,7 @@ function SettingsPanel() {
         </fieldset>
       </article>
 
-      <section className="ecoplaza-settings-card col-span-2 flex items-center justify-between gap-6 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-5">
+      <section className="ecoplaza-settings-card flex flex-col items-stretch justify-between gap-6 rounded-2xl border border-ecoplaza-border bg-ecoplaza-surface p-6 sm:flex-row sm:items-center lg:col-span-2">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ecoplaza-background text-ecoplaza-primary">
             <RotateCcw size={20} strokeWidth={2} aria-hidden="true" />

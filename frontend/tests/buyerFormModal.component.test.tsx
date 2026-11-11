@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import BuyerFormModal from "../src/components/BuyerFormModal";
 import es from "../src/i18n/translations/es";
+import { validateBuyerInput } from "../src/services/buyerService";
 
 // Extensión de matchers para compatibilidad con React Testing Library en Vitest
 declare module "vitest" {
@@ -62,10 +63,8 @@ vi.mock("react-i18next", () => ({
 const mockBuyerToEdit = {
   id: "buy-123",
   name: "Recuperadora Bolívar S.A.S.",
-  documentNumber: "901234567-8",
   phone: "3101234567",
   email: "contacto@bolivar.com",
-  address: "Zona Industrial Lote 4",
   createdAt: "2026-10-01T10:00:00Z",
   updatedAt: "2026-10-02T12:00:00Z",
 };
@@ -92,6 +91,50 @@ describe("BuyerFormModal Component - Gestión de Compradores y Accesibilidad", (
       props: defaultProps,
     };
   };
+
+  it("valida defensivamente todas las combinaciones de contacto en el servicio", () => {
+    expect(validateBuyerInput({ name: "Sin contacto", email: "", phone: "" })).toEqual({
+      ok: false,
+      error: { code: "missing_contact", retryable: false },
+    });
+    expect(validateBuyerInput({
+      name: "Solo correo",
+      email: " CONTACTO@EJEMPLO.COM ",
+      phone: "",
+    })).toMatchObject({
+      ok: true,
+      data: { email: "contacto@ejemplo.com", phone: null },
+    });
+    expect(validateBuyerInput({
+      name: "Solo teléfono",
+      email: "",
+      phone: " 300 123 4567 ",
+    })).toMatchObject({
+      ok: true,
+      data: { email: null, phone: "300 123 4567" },
+    });
+    expect(validateBuyerInput({
+      name: "Contactos inválidos",
+      email: "correo-invalido",
+      phone: "abc",
+    })).toMatchObject({
+      ok: false,
+      error: { code: "invalid_email" },
+    });
+    expect(validateBuyerInput({
+      name: "Teléfono inválido",
+      email: "contacto@ejemplo.com",
+      phone: "abc",
+    })).toMatchObject({
+      ok: false,
+      error: { code: "invalid_phone" },
+    });
+    expect(validateBuyerInput({
+      name: "Ambos contactos",
+      email: "ventas@ejemplo.com",
+      phone: "+57 300 123 4567",
+    })).toMatchObject({ ok: true });
+  });
 
   it('1. Renderiza el modal accesible con role="dialog", título visible y campos iniciales vacíos en modo creación', () => {
     const { container } = renderModal();
@@ -127,6 +170,11 @@ describe("BuyerFormModal Component - Gestión de Compradores y Accesibilidad", (
         screen.getAllByText(/requerido|obligatorio|ingrese/i);
       expect(errorElements.length).toBeGreaterThan(0);
     });
+
+    const emailInput = screen.getByLabelText(/correo|email/i);
+    const phoneInput = screen.getByLabelText(/teléfono|phone/i);
+    expect(emailInput.getAttribute("aria-invalid")).toBe("true");
+    expect(phoneInput.getAttribute("aria-invalid")).toBe("true");
   });
 
   it("3. Valida el formato de correo electrónico y rechaza formatos inválidos", async () => {
@@ -135,7 +183,9 @@ describe("BuyerFormModal Component - Gestión de Compradores y Accesibilidad", (
     const emailInput =
       screen.queryByLabelText(/correo|email/i) ||
       screen.getByPlaceholderText(/correo|email/i);
+    const nameInput = screen.getByLabelText(/nombre|razón social|name/i);
 
+    fireEvent.change(nameInput, { target: { value: "Comprador válido" } });
     fireEvent.change(emailInput, { target: { value: "correo-no-valido" } });
 
     const submitButton = screen.getByRole("button", {
@@ -144,6 +194,23 @@ describe("BuyerFormModal Component - Gestión de Compradores y Accesibilidad", (
     fireEvent.click(submitButton);
 
     expect(props.onSubmit).not.toHaveBeenCalled();
+    expect(emailInput.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(emailInput);
+  });
+
+  it("muestra un error claro y enfoca el teléfono cuando su formato es inválido", () => {
+    const { props } = renderModal();
+    fireEvent.change(screen.getByLabelText(/nombre|name/i), {
+      target: { value: "Comprador telefónico" },
+    });
+    const phoneInput = screen.getByLabelText(/teléfono|phone/i);
+    fireEvent.change(phoneInput, { target: { value: "abc" } });
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+
+    expect(props.onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText(es.buyers.invalidPhone)).toBeInTheDocument();
+    expect(phoneInput.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(phoneInput);
   });
 
   it("4. Precarga correctamente la información del comprador cuando se opera en modo edición", () => {
@@ -159,27 +226,21 @@ describe("BuyerFormModal Component - Gestión de Compradores y Accesibilidad", (
       screen.getByDisplayValue("Recuperadora Bolívar S.A.S.");
     expect(nameInput).toBeInTheDocument();
 
-    const docInput =
-      screen.queryByLabelText(/documento|nit/i) ||
-      screen.getByDisplayValue("901234567-8");
-    expect(docInput).toBeInTheDocument();
+    expect(screen.queryByLabelText(/documento|nit/i)).toBeNull();
+    expect(screen.queryByLabelText(/dirección|address/i)).toBeNull();
   });
 
-  it("5. Envía los datos sanitizados correctamente al registrar un nuevo comprador (Happy Path)", async () => {
+  it("5. Permite registrar con solo teléfono válido", async () => {
     const { props } = renderModal();
 
     const nameInput =
       screen.queryByLabelText(/nombre|razón social|name/i) ||
       screen.getByPlaceholderText(/nombre|razón social/i);
-    const docInput =
-      screen.queryByLabelText(/documento|nit/i) ||
-      screen.getByPlaceholderText(/documento|nit/i);
     const phoneInput =
       screen.queryByLabelText(/teléfono|phone/i) ||
       screen.getByPlaceholderText(/teléfono|celular/i);
 
     fireEvent.change(nameInput, { target: { value: "EcoMetales del Norte" } });
-    fireEvent.change(docInput, { target: { value: "800555666-1" } });
     fireEvent.change(phoneInput, { target: { value: "3009876543" } });
 
     const submitButton = screen.getByRole("button", {
@@ -191,11 +252,57 @@ describe("BuyerFormModal Component - Gestión de Compradores y Accesibilidad", (
       expect(props.onSubmit).toHaveBeenCalledTimes(1);
       const callData = props.onSubmit.mock.calls[0][0];
       expect(callData.name).toBe("EcoMetales del Norte");
-      expect(callData.documentNumber).toBe("800555666-1");
+      expect(callData.email).toBe("");
+      expect(callData.phone).toBe("3009876543");
     });
   });
 
-  it("6. Deshabilita los botones de acción en isSubmitting e invoca onClose al cancelar", () => {
+  it("6. Permite registrar con solo correo válido y con ambos contactos válidos", async () => {
+    const emailOnly = renderModal();
+    fireEvent.change(screen.getByLabelText(/nombre|name/i), {
+      target: { value: "Comprador por correo" },
+    });
+    fireEvent.change(screen.getByLabelText(/correo|email/i), {
+      target: { value: "contacto@ejemplo.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(emailOnly.props.onSubmit).toHaveBeenCalledWith({
+      name: "Comprador por correo",
+      email: "contacto@ejemplo.com",
+      phone: "",
+    });
+
+    cleanup();
+    const bothContacts = renderModal();
+    fireEvent.change(screen.getByLabelText(/nombre|name/i), {
+      target: { value: "Comprador completo" },
+    });
+    fireEvent.change(screen.getByLabelText(/correo|email/i), {
+      target: { value: "ventas@ejemplo.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/teléfono|phone/i), {
+      target: { value: "+57 300 123 4567" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(bothContacts.props.onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("7. Mantiene visible un comprador antiguo sin contacto y valida únicamente al guardar", () => {
+    const { props } = renderModal({
+      buyer: {
+        ...mockBuyerToEdit,
+        email: null,
+        phone: null,
+      },
+    });
+
+    expect(screen.getByDisplayValue("Recuperadora Bolívar S.A.S.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    expect(props.onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText(es.buyers.contactRequired)).toBeInTheDocument();
+  });
+
+  it("8. Deshabilita los botones de acción en isSubmitting e invoca onClose al cancelar", () => {
     const { props: submittingProps } = renderModal({ isSubmitting: true });
 
     const submitButton = screen.getByRole("button", {

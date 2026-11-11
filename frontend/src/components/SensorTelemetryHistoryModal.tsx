@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
-  Battery,
-  BatteryMedium,
-  BatteryWarning,
   History,
   LoaderCircle,
   Radio,
   RefreshCw,
-  Thermometer,
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -102,34 +98,6 @@ function SensorTelemetryHistoryModal({
   if (!isOpen) return null;
 
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "es-CO";
-
-  const getBatteryIcon = (level: number) => {
-    if (level <= 20) {
-      return (
-        <BatteryWarning
-          className="shrink-0 text-ecoplaza-danger"
-          size={16}
-          aria-hidden="true"
-        />
-      );
-    }
-    if (level <= 50) {
-      return (
-        <BatteryMedium
-          className="shrink-0 text-ecoplaza-warning"
-          size={16}
-          aria-hidden="true"
-        />
-      );
-    }
-    return (
-      <Battery
-        className="shrink-0 text-ecoplaza-primary"
-        size={16}
-        aria-hidden="true"
-      />
-    );
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]">
@@ -242,10 +210,7 @@ function SensorTelemetryHistoryModal({
                       {t("sensors.historyColFill")}
                     </th>
                     <th scope="col" className="px-3 pb-3">
-                      {t("sensors.historyColBattery")}
-                    </th>
-                    <th scope="col" className="pb-3 pl-3">
-                      {t("sensors.historyColTemperature")}
+                      {t("sensors.historyColDistance")}
                     </th>
                   </tr>
                 </thead>
@@ -295,29 +260,8 @@ function SensorTelemetryHistoryModal({
                           </div>
                         </td>
 
-                        <td className="px-3 py-3">
-                          <div className="flex items-center gap-1.5 text-ecoplaza-text">
-                            {getBatteryIcon(record.batteryLevelPercent)}
-                            <span className="font-medium">
-                              {record.batteryLevelPercent}%
-                            </span>
-                          </div>
-                        </td>
-
-                        <td className="py-3 pl-3">
-                          <div className="flex items-center gap-1.5 text-ecoplaza-text">
-                            <Thermometer
-                              size={15}
-                              className="shrink-0 text-ecoplaza-text-muted"
-                              aria-hidden="true"
-                            />
-                            <span className="font-medium">
-                              {record.temperatureCelsius !== null &&
-                              record.temperatureCelsius !== undefined
-                                ? `${record.temperatureCelsius} °C`
-                                : "—"}
-                            </span>
-                          </div>
+                        <td className="px-3 py-3 font-medium text-ecoplaza-text">
+                          {record.distanceCm} cm
                         </td>
                       </tr>
                     );

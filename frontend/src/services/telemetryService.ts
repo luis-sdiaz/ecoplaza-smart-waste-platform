@@ -9,6 +9,20 @@ export interface SensorTelemetry {
   status: FillStatus;
 }
 
+export const TELEMETRY_FRESHNESS_MS = 30_000;
+
+export function isTelemetryFresh(
+  recordedAt: string | null | undefined,
+  nowMs = Date.now(),
+  freshnessMs = TELEMETRY_FRESHNESS_MS,
+): boolean {
+  if (!recordedAt || !Number.isFinite(nowMs) || freshnessMs < 0) return false;
+  const recordedMs = Date.parse(recordedAt);
+  if (!Number.isFinite(recordedMs)) return false;
+  const ageMs = nowMs - recordedMs;
+  return ageMs >= 0 && ageMs <= freshnessMs;
+}
+
 export type SensorTelemetryRow = {
   id: string;
   container_id: string;
@@ -83,10 +97,21 @@ export function mapTelemetryRowToSensorTelemetry(
   row: SensorTelemetryRow,
 ): SensorTelemetry {
   const fillPercentage = Number(row.fill_percentage);
+  const distanceCm = Number(row.distance_cm);
+  if (
+    !Number.isFinite(fillPercentage) ||
+    fillPercentage < 0 ||
+    fillPercentage > 100
+  ) {
+    throw new Error("Invalid fill_percentage returned by sensor_telemetry");
+  }
+  if (!Number.isFinite(distanceCm) || distanceCm < 0) {
+    throw new Error("Invalid distance_cm returned by sensor_telemetry");
+  }
   return {
     id: row.id,
     containerId: row.container_id,
-    distanceCm: Number(row.distance_cm),
+    distanceCm,
     fillPercentage,
     recordedAt: row.recorded_at,
     status: calculateFillStatus(fillPercentage),

@@ -46,12 +46,9 @@ test("tauri.conf.json: valida configuración de empaquetado desktop y build", ()
     'productName debe contener "EcoPlaza"',
   );
 
-  // Valida identifier (compatible con dominio EcoPlaza / Luis Díaz)
-  assert.ok(
-    config.identifier === "com.luisdiaz.ecoplaza" ||
-      config.identifier === "com.ecoplaza.app",
-    'identifier debe ser "com.luisdiaz.ecoplaza" o "com.ecoplaza.app"',
-  );
+  // El identificador no debe terminar en `.app`, porque macOS lo interpreta
+  // como un sufijo reservado para bundles de aplicaciones.
+  assert.equal(config.identifier, "com.ecoplaza.smartwaste");
 
   // Valida beforeBuildCommand
   assert.equal(

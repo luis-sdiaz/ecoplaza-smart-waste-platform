@@ -35,7 +35,10 @@ import {
 import type { RemoteWasteRecord } from "../services/wasteService";
 import type { SaleHistoryItem } from "../services/salesService";
 import type { Buyer } from "../services/buyerService";
-import type { SensorTelemetry } from "../services/telemetryService";
+import {
+  isTelemetryFresh,
+  type SensorTelemetry,
+} from "../services/telemetryService";
 import {
   clearAssistantMessages,
   loadAssistantMessages,
@@ -153,15 +156,14 @@ async function fetchLiveTelemetrySnapshots(
     if (containersResult.ok && Array.isArray(containersResult.data)) {
       const telemetryPromises = containersResult.data.map(async (c) => {
         try {
-          const tel = await getLatestTelemetry(c.id);
-          if (!tel) return null;
+          const tel = await getLatestTelemetry(c.code);
+          if (!tel || !isTelemetryFresh(tel.recordedAt)) return null;
           const snapshot: ContainerTelemetrySnapshot = {
             containerId: c.id,
             containerName: c.code,
             fillLevel: tel.fillLevelPercent,
-            batteryLevel: tel.batteryLevelPercent,
-            temperature: tel.temperatureCelsius,
             updatedAt: tel.recordedAt,
+            distanceCm: tel.distanceCm,
           };
           return snapshot;
         } catch {
@@ -193,8 +195,6 @@ async function fetchLiveTelemetrySnapshots(
             : "iot-ctr-bog-001",
         containerName: "CTR-BOG-001",
         fillLevel: physicalTelemetry.fillPercentage,
-        batteryLevel: 100,
-        temperature: 22,
         updatedAt: physicalTelemetry.recordedAt,
         distanceCm: physicalTelemetry.distanceCm,
         status: physicalTelemetry.status,
@@ -402,9 +402,20 @@ function AssistantPanel({
             : undefined,
         });
       } else {
+        const diagnostics = result.fallbackReason;
         setConnectionState({
           kind: "local",
-          detail: result.fallbackReason?.message,
+          detail: diagnostics
+            ? [
+                diagnostics.message,
+                diagnostics.providerStatus
+                  ? `Proveedor HTTP ${diagnostics.providerStatus}`
+                  : undefined,
+                diagnostics.model ? `Modelo ${diagnostics.model}` : undefined,
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            : undefined,
         });
       }
 

@@ -70,7 +70,6 @@ describe("DeleteBuyerModal Component - Eliminación Segura de Compradores", () =
       name: "BioRecicladora del Norte",
       email: "contacto@biorecicladora.co",
       phone: "3101234567",
-      documentNumber: "900123456-1",
       createdAt: "2026-01-01T00:00:00Z",
       updatedAt: "2026-01-02T00:00:00Z",
       purchaseCount: 0,
@@ -80,7 +79,6 @@ describe("DeleteBuyerModal Component - Eliminación Segura de Compradores", () =
       name: "EcoIndustrias Bogotá",
       email: "compras@ecoindustrias.co",
       phone: "3209876543",
-      documentNumber: "800987654-2",
       createdAt: "2026-01-03T00:00:00Z",
       updatedAt: "2026-01-04T00:00:00Z",
       purchaseCount: 4, // Con ventas: NO elegible para eliminación
@@ -90,7 +88,6 @@ describe("DeleteBuyerModal Component - Eliminación Segura de Compradores", () =
       name: "Composteras Verdes S.A.S.",
       email: "ventas@composteras.co",
       phone: "3154443322",
-      documentNumber: "901555666-3",
       createdAt: "2026-01-05T00:00:00Z",
       updatedAt: "2026-01-06T00:00:00Z",
       purchaseCount: 0,
@@ -158,7 +155,7 @@ describe("DeleteBuyerModal Component - Eliminación Segura de Compradores", () =
     fireEvent.change(select, { target: { value: "cccccccc-cccc-4ccc-8ccc-ccccccccccc3" } });
 
     expect(screen.getByText("Composteras Verdes S.A.S.")).toBeInTheDocument();
-    expect(screen.getByText("901555666-3")).toBeInTheDocument();
+    expect(screen.getAllByText(/BUY-CCCCCCCC/).length).toBeGreaterThan(0);
   });
 
   it("4. Invoca onConfirm con el buyerId seleccionado al presionar el botón de eliminación", () => {

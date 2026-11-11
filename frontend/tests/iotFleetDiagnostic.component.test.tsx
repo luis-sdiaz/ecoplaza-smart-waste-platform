@@ -93,23 +93,21 @@ describe("IoTFleetDiagnosticCard", () => {
     });
 
     mocks.getLatestTelemetry.mockImplementation(async (id: string) => {
-      if (id === "c-1") {
+      if (id === "CTR-A") {
         return {
           id: "t-1",
-          containerId: "c-1",
+          containerId: "CTR-A",
+          distanceCm: 40,
           fillLevelPercent: 50,
-          batteryLevelPercent: 85,
-          temperatureCelsius: 22,
-          recordedAt: "2026-10-20T12:00:00.000Z",
+          recordedAt: new Date().toISOString(),
         } satisfies TelemetryRecord;
       }
       return {
         id: "t-2",
-        containerId: "c-2",
+        containerId: "CTR-B",
+        distanceCm: 30,
         fillLevelPercent: 60,
-        batteryLevelPercent: 90,
-        temperatureCelsius: 24,
-        recordedAt: "2026-10-20T12:00:00.000Z",
+        recordedAt: new Date().toISOString(),
       } satisfies TelemetryRecord;
     });
 
@@ -155,33 +153,30 @@ describe("IoTFleetDiagnosticCard", () => {
     });
 
     mocks.getLatestTelemetry.mockImplementation(async (id: string) => {
-      if (id === "c-crit") {
+      if (id === "CTR-CRITICO") {
         return {
           id: "t-crit",
-          containerId: "c-crit",
+          containerId: "CTR-CRITICO",
+          distanceCm: 4,
           fillLevelPercent: 96,
-          batteryLevelPercent: 12, // Batería baja < 20%
-          temperatureCelsius: 21,
-          recordedAt: "2026-10-20T12:00:00.000Z",
+          recordedAt: new Date().toISOString(),
         } satisfies TelemetryRecord;
       }
-      if (id === "c-warn") {
+      if (id === "CTR-ALERTA") {
         return {
           id: "t-warn",
-          containerId: "c-warn",
+          containerId: "CTR-ALERTA",
+          distanceCm: 18,
           fillLevelPercent: 82,
-          batteryLevelPercent: 75,
-          temperatureCelsius: 23,
-          recordedAt: "2026-10-20T12:00:00.000Z",
+          recordedAt: new Date().toISOString(),
         } satisfies TelemetryRecord;
       }
       return {
         id: "t-norm",
-        containerId: "c-norm",
+        containerId: "CTR-NORMAL",
+        distanceCm: 70,
         fillLevelPercent: 30,
-        batteryLevelPercent: 95,
-        temperatureCelsius: 20,
-        recordedAt: "2026-10-20T12:00:00.000Z",
+        recordedAt: new Date().toISOString(),
       } satisfies TelemetryRecord;
     });
 
@@ -202,9 +197,9 @@ describe("IoTFleetDiagnosticCard", () => {
     expect(screen.getByText("82%")).toBeDefined();
     expect(screen.getByText("Programada")).toBeDefined();
 
-    // Contador de batería baja detecta 1
+    // El esquema actual no reporta batería; no se inventa una lectura.
     const lowBattery = screen.getByTestId("diagnostic-low-battery");
-    expect(lowBattery.textContent).toBe("1");
+    expect(lowBattery.textContent).toBe("0");
 
     // Severidad crítica reflejada
     const severityBadge = screen.getByTestId("diagnostic-severity-badge");

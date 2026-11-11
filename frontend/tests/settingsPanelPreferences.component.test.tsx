@@ -66,17 +66,12 @@ describe("SettingsPanel Component - Preferencias de Usuario y Accesibilidad UI/U
     );
   };
 
-  it("1. Renderiza adecuadamente las secciones principales de configuración y sus controles interactivos", () => {
+  it("1. Renderiza únicamente las preferencias generales, apariencia y restablecimiento", () => {
     renderSettingsPanel();
 
     // Verificación de secciones principales mediante encabezados y textos clave
     expect(
       screen.getByRole("heading", { name: /preferencias generales|general/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
-        name: /contenedor asignado|assigned container|contenedor de demostración|demo/i,
-      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /apariencia|appearance/i }),
@@ -105,6 +100,20 @@ describe("SettingsPanel Component - Preferencias de Usuario y Accesibilidad UI/U
     });
     expect(resetButton).toBeInTheDocument();
     expect(resetButton.getAttribute("aria-haspopup")).toBe("dialog");
+
+    expect(
+      screen.queryByLabelText(/categoría asignada|assigned category/i),
+    ).toBeNull();
+    expect(
+      screen.queryByLabelText(
+        /mostrar registros históricos adicionales|show additional historical records/i,
+      ),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        /contenedor asignado|assigned container|contenedor de demostración/i,
+      ),
+    ).toBeNull();
   });
 
   it("2. Permite alternar la preferencia de tema (claro/oscuro) invocando la función y reflejando el estado", () => {
@@ -181,6 +190,41 @@ describe("SettingsPanel Component - Preferencias de Usuario y Accesibilidad UI/U
     // Cancelar cierra el diálogo modal
     fireEvent.click(cancelButton);
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("5. Restablece las preferencias ocultas sin volver a exponer sus controles", async () => {
+    localStorage.setItem("ecoplaza-demo-category", "recyclable");
+    localStorage.setItem("ecoplaza-show-demo-data", "false");
+
+    renderSettingsPanel();
+
+    expect(localStorage.getItem("ecoplaza-demo-category")).toBe("recyclable");
+    expect(localStorage.getItem("ecoplaza-show-demo-data")).toBe("false");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /restablecer preferencias|reset preferences/i,
+      }),
+    );
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: /^restablecer$|^confirm$/i,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(localStorage.getItem("ecoplaza-demo-category")).toBe("organic");
+      expect(localStorage.getItem("ecoplaza-show-demo-data")).toBe("true");
+    });
+    expect(
+      screen.queryByLabelText(/categoría asignada|assigned category/i),
+    ).toBeNull();
+    expect(
+      screen.queryByLabelText(
+        /mostrar registros históricos adicionales|show additional historical records/i,
+      ),
+    ).toBeNull();
   });
 });
 

@@ -6,6 +6,7 @@ import ContainerManagementPanel from "../components/ContainerManagementPanel";
 import type { Container } from "../services/containerService";
 import {
   fetchLatestTelemetryByContainer,
+  isTelemetryFresh,
   type SensorTelemetry,
 } from "../services/telemetryService";
 
@@ -51,7 +52,9 @@ export function ContainersPage({
       void fetchLatestTelemetryByContainer("CTR-BOG-001")
         .then((data) => {
           if (requestRevision !== telemetryRevisionRef.current) return;
-          setLiveTelemetry(data);
+          setLiveTelemetry(
+            data && isTelemetryFresh(data.recordedAt) ? data : null,
+          );
         })
         .catch(() => {
           if (requestRevision !== telemetryRevisionRef.current) return;

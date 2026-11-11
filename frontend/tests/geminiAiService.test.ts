@@ -123,8 +123,11 @@ describe("GeminiAiService - proxy seguro de Supabase Edge Functions", () => {
   });
 
   it.each([
+    [404, "model_unavailable"],
     [503, "quota_exceeded"],
     [503, "model_unavailable"],
+    [503, "provider_unavailable"],
+    [504, "timeout"],
     [502, "invalid_credentials"],
     [429, "rate_limited"],
   ] as const)("propaga el error estructurado %s/%s", async (status, code) => {
@@ -139,6 +142,34 @@ describe("GeminiAiService - proxy seguro de Supabase Edge Functions", () => {
     await expect(service.generateText("Consulta")).rejects.toMatchObject({
       code,
       status,
+    });
+  });
+
+  it("conserva el estado HTTP real y el modelo del proveedor en el diagnóstico", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse(
+        {
+          ok: false,
+          error: {
+            code: "provider_unavailable",
+            retryable: true,
+            providerStatus: 500,
+            model: "gemini-3.8-flash",
+          },
+        },
+        503,
+      ),
+    );
+    const service = new GeminiAiService({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      getAccessToken: accessToken,
+    });
+
+    await expect(service.generateText("Consulta")).rejects.toMatchObject({
+      code: "provider_unavailable",
+      status: 503,
+      providerStatus: 500,
+      model: "gemini-3.8-flash",
     });
   });
 

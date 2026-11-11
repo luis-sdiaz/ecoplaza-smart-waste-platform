@@ -24,19 +24,18 @@ function SimulateTelemetryModal({
   const { t } = useTranslation();
   const dialogRef = useDialogFocus(onClose, isOpen);
 
-  const fallbackContainerId = containerId ?? containers?.[0]?.id ?? "";
+  const fallbackContainerId = containerId ?? containers?.[0]?.code ?? "";
   const [selectedIdOverride, setSelectedIdOverride] = useState<string | null>(null);
   const selectedContainerId = selectedIdOverride ?? fallbackContainerId;
 
   const [fillLevel, setFillLevel] = useState<number>(75);
-  const [batteryLevel, setBatteryLevel] = useState<number>(95);
-  const [temperature, setTemperature] = useState<string>("22");
+  const [distanceCm, setDistanceCm] = useState<number>(25);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const currentContainer = containers?.find((c) => c.id === selectedContainerId);
+  const currentContainer = containers?.find((c) => c.code === selectedContainerId);
   const currentContainerName = containerName ?? currentContainer?.code ?? selectedContainerId;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,14 +49,10 @@ function SimulateTelemetryModal({
     setError(null);
 
     try {
-      const parsedTemp =
-        temperature.trim() !== "" ? Number(temperature) : null;
-
       const record = await recordTelemetry({
         containerId: selectedContainerId,
-        fillLevel: Number(fillLevel),
-        batteryLevel: Number(batteryLevel),
-        temperature: parsedTemp,
+        fillPercentage: Number(fillLevel),
+        distanceCm: Number(distanceCm),
       });
 
       onTelemetryRecorded?.(record);
@@ -136,7 +131,7 @@ function SimulateTelemetryModal({
                 className="mt-1.5 block w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
               >
                 {containers.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={c.code}>
                     {c.code}
                   </option>
                 ))}
@@ -148,7 +143,7 @@ function SimulateTelemetryModal({
                 {currentContainerName}
               </span>
               <span className="font-mono text-xs text-ecoplaza-text-muted" data-testid="selected-container-uuid">
-                UUID: {selectedContainerId}
+                {t("sensors.containerCode")}: {selectedContainerId}
               </span>
             </div>
           </div>
@@ -197,51 +192,28 @@ function SimulateTelemetryModal({
             </div>
           </div>
 
-          {/* Nivel de batería (%) */}
+          {/* Distancia medida (cm) */}
           <div>
             <label
-              htmlFor="simulate-battery-level"
+              htmlFor="simulate-distance"
               className="block text-xs font-semibold text-ecoplaza-text"
             >
-              {t("sensors.simulateBatteryLevel")}
+              {t("sensors.simulateDistance")}
             </label>
             <input
-              id="simulate-battery-level"
-              name="batteryLevel"
+              id="simulate-distance"
+              name="distanceCm"
               type="number"
               min={0}
-              max={100}
-              step={1}
-              value={batteryLevel}
+              max={9999.99}
+              step={0.01}
+              value={distanceCm}
               onChange={(e) => {
                 const val = Number(e.target.value);
-                if (!Number.isNaN(val)) setBatteryLevel(val);
+                if (!Number.isNaN(val)) setDistanceCm(val);
               }}
               disabled={isSaving}
               required
-              className="mt-1.5 block w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
-            />
-          </div>
-
-          {/* Temperatura (°C) */}
-          <div>
-            <label
-              htmlFor="simulate-temperature"
-              className="block text-xs font-semibold text-ecoplaza-text"
-            >
-              {t("sensors.simulateTemperature")}
-            </label>
-            <input
-              id="simulate-temperature"
-              name="temperature"
-              type="number"
-              step={0.1}
-              min={-50}
-              max={100}
-              value={temperature}
-              onChange={(e) => setTemperature(e.target.value)}
-              placeholder={t("sensors.simulateTemperaturePlaceholder")}
-              disabled={isSaving}
               className="mt-1.5 block w-full rounded-xl border border-ecoplaza-border bg-ecoplaza-surface px-3 py-2 text-sm text-ecoplaza-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ecoplaza-primary"
             />
           </div>

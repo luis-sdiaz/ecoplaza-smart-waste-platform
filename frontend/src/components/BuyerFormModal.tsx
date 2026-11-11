@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,12 +21,14 @@ type BuyerFormErrors = {
   name: boolean;
   email: boolean;
   phone: boolean;
+  contact: boolean;
 };
 
 const emptyErrors: BuyerFormErrors = {
   name: false,
   email: false,
   phone: false,
+  contact: false,
 };
 
 function BuyerFormModal({
@@ -37,22 +39,24 @@ function BuyerFormModal({
 }: BuyerFormModalProps) {
   const { t } = useTranslation();
   const [name, setName] = useState(buyer?.name ?? "");
-  const [documentNumber, setDocumentNumber] = useState(
-    buyer?.documentNumber ?? "",
-  );
   const [email, setEmail] = useState(buyer?.email ?? "");
   const [phone, setPhone] = useState(buyer?.phone ?? "");
-  const [address, setAddress] = useState(buyer?.address ?? "");
   const [errors, setErrors] = useState<BuyerFormErrors>(emptyErrors);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useDialogFocus(onClose, !isSubmitting);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
 
+    const hasEmail = email.trim() !== "";
+    const hasPhone = phone.trim() !== "";
     const nextErrors: BuyerFormErrors = {
       name: !isValidBuyerName(name),
-      email: !isValidBuyerEmail(email),
-      phone: !isValidBuyerPhone(phone),
+      email: hasEmail && !isValidBuyerEmail(email),
+      phone: hasPhone && !isValidBuyerPhone(phone),
+      contact: !hasEmail && !hasPhone,
     };
     setErrors(nextErrors);
 
@@ -60,18 +64,16 @@ function BuyerFormModal({
       nextErrors.name ||
       nextErrors.email ||
       nextErrors.phone ||
+      nextErrors.contact ||
       isSubmitting
     ) {
+      if (nextErrors.name) nameInputRef.current?.focus();
+      else if (nextErrors.email || nextErrors.contact) emailInputRef.current?.focus();
+      else if (nextErrors.phone) phoneInputRef.current?.focus();
       return;
     }
 
-    onSubmit({
-      name,
-      documentNumber,
-      email,
-      phone,
-      address,
-    });
+    onSubmit({ name, email, phone });
   };
 
   const fieldClassName = (hasError: boolean): string =>
@@ -112,6 +114,7 @@ function BuyerFormModal({
             </label>
             <input
               id="buyer-name"
+              ref={nameInputRef}
               type="text"
               autoComplete="organization"
               maxLength={100}
@@ -141,26 +144,6 @@ function BuyerFormModal({
 
           <div>
             <label
-              htmlFor="buyer-document"
-              className="block text-sm font-medium text-ecoplaza-text"
-            >
-              Documento / NIT
-            </label>
-            <input
-              id="buyer-document"
-              type="text"
-              autoComplete="off"
-              maxLength={50}
-              disabled={isSubmitting}
-              value={documentNumber}
-              onChange={(event) => setDocumentNumber(event.target.value)}
-              placeholder="Documento o NIT"
-              className={fieldClassName(false)}
-            />
-          </div>
-
-          <div>
-            <label
               htmlFor="buyer-email"
               className="block text-sm font-medium text-ecoplaza-text"
             >
@@ -168,6 +151,7 @@ function BuyerFormModal({
             </label>
             <input
               id="buyer-email"
+              ref={emailInputRef}
               type="email"
               autoComplete="email"
               maxLength={254}
@@ -175,15 +159,23 @@ function BuyerFormModal({
               value={email}
               onChange={(event) => {
                 setEmail(event.target.value);
-                if (errors.email) {
-                  setErrors((current) => ({ ...current, email: false }));
+                if (errors.email || errors.contact) {
+                  setErrors((current) => ({
+                    ...current,
+                    email: false,
+                    contact: false,
+                  }));
                 }
               }}
-              aria-invalid={errors.email}
+              aria-invalid={errors.email || errors.contact}
               aria-describedby={
-                errors.email ? "buyer-email-error" : "buyer-contact-help"
+                errors.email
+                  ? "buyer-email-error"
+                  : errors.contact
+                    ? "buyer-contact-error"
+                    : "buyer-contact-help"
               }
-              className={fieldClassName(errors.email)}
+              className={fieldClassName(errors.email || errors.contact)}
             />
             {errors.email && (
               <p
@@ -205,6 +197,7 @@ function BuyerFormModal({
             </label>
             <input
               id="buyer-phone"
+              ref={phoneInputRef}
               type="tel"
               autoComplete="tel"
               maxLength={30}
@@ -212,15 +205,23 @@ function BuyerFormModal({
               value={phone}
               onChange={(event) => {
                 setPhone(event.target.value);
-                if (errors.phone) {
-                  setErrors((current) => ({ ...current, phone: false }));
+                if (errors.phone || errors.contact) {
+                  setErrors((current) => ({
+                    ...current,
+                    phone: false,
+                    contact: false,
+                  }));
                 }
               }}
-              aria-invalid={errors.phone}
+              aria-invalid={errors.phone || errors.contact}
               aria-describedby={
-                errors.phone ? "buyer-phone-error" : "buyer-contact-help"
+                errors.phone
+                  ? "buyer-phone-error"
+                  : errors.contact
+                    ? "buyer-contact-error"
+                    : "buyer-contact-help"
               }
-              className={fieldClassName(errors.phone)}
+              className={fieldClassName(errors.phone || errors.contact)}
             />
             {errors.phone && (
               <p
@@ -231,34 +232,22 @@ function BuyerFormModal({
                 {t("buyers.invalidPhone")}
               </p>
             )}
-            {!errors.email && !errors.phone && (
+            {errors.contact ? (
+              <p
+                id="buyer-contact-error"
+                role="alert"
+                className="mt-1.5 text-sm text-ecoplaza-danger"
+              >
+                {t("buyers.contactRequired")}
+              </p>
+            ) : (
               <p
                 id="buyer-contact-help"
                 className="mt-1.5 text-xs text-ecoplaza-text-muted"
               >
-                {t("buyers.optionalContactHelp")}
+                {t("buyers.contactHelp")}
               </p>
             )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="buyer-address"
-              className="block text-sm font-medium text-ecoplaza-text"
-            >
-              Dirección
-            </label>
-            <input
-              id="buyer-address"
-              type="text"
-              autoComplete="street-address"
-              maxLength={120}
-              disabled={isSubmitting}
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              placeholder="Dirección física"
-              className={fieldClassName(false)}
-            />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
