@@ -117,13 +117,16 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           CI: "true"
-          # vars.* son Repository Variables (no secretos); GitHub las enmascara en logs.
+          # NOTA: vars.* son Repository Variables, NO secretos.
+          # GitHub no garantiza su enmascaramiento en logs; no imprimir sus valores manualmente.
           # supabase.ts lanzaría un error en build-time si estuvieran vacías.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
           # Sin APPLE_CERTIFICATE ni APPLE_SIGNING_IDENTITY → firma ad hoc automática
         with:
           projectPath: frontend
+          # tauriScript evita "Missing script: tauri"; package.json no define ese script.
+          tauriScript: npx tauri
           args: --target x86_64-apple-darwin
 
       # 7. Publicar .dmg como artifact descargable
@@ -185,6 +188,7 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         with:
           projectPath: frontend
+          tauriScript: npx tauri
           args: --target aarch64-apple-darwin
 
       - name: Upload macOS Apple Silicon .dmg artifact
@@ -268,6 +272,7 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
         with:
           projectPath: frontend
+          tauriScript: npx tauri
           args: --target x86_64-unknown-linux-gnu
 
       # Subir .deb
